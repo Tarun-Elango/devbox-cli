@@ -5,12 +5,30 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"devbox-cli/internal/api"
 	"devbox-cli/internal/config"
 	"devbox-cli/internal/ws"
 )
+
+// readPublicKey returns the contents of the user's default SSH public key,
+// trying id_ed25519.pub then id_rsa.pub under ~/.ssh.
+func readPublicKey() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("could not determine home directory: %w", err)
+	}
+	for _, name := range []string{"id_ed25519.pub", "id_rsa.pub"} {
+		p := filepath.Join(home, ".ssh", name)
+		data, err := os.ReadFile(p)
+		if err == nil {
+			return strings.TrimSpace(string(data)), nil
+		}
+	}
+	return "", fmt.Errorf("no public key found in ~/.ssh (tried id_ed25519.pub, id_rsa.pub)")
+}
 
 // Box represents a devbox instance as returned by the API.
 type Box struct {
@@ -115,6 +133,13 @@ func Create(args []string) {
 		body["name"] = args[0]
 	}
 
+	// Include the user's public key if available, so they can SSH in without extra setup.
+	if pubKey, err := readPublicKey(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: %v; box will be created without your public key\n", err)
+	} else {
+		body["public_key"] = pubKey
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -141,6 +166,7 @@ func Create(args []string) {
 
 	fmt.Printf("Created box %s (%s). Waiting for it to start...\n", b.Name, b.ID)
 
+	// Watch the box's status via WebSocket until it reaches a terminal state.
 	if err := watchBox(cfg.ServerURL, cfg.Token, b.ID); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not watch box status: %v\n", err)
 		fmt.Printf("Box ID: %s\n", b.ID)

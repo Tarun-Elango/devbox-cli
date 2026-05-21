@@ -73,6 +73,28 @@ default:         usage(); os.Exit(1)
 
 ---
 
+## SSH Key Injection Flow
+
+No AWS credentials are required on the client. The server owns the EC2 lifecycle; the CLI only needs the user's public key at create-time and the private key at connect-time.
+
+### `devbox create <name>`
+1. CLI reads `~/.ssh/id_ed25519.pub` (falls back to `~/.ssh/id_rsa.pub`) and includes it as `public_key` in the POST `/v1/boxes` body.
+2. Server creates the EC2 with a fixed security group (port 22 open to `0.0.0.0/0`).
+3. Server injects the public key into `~/.ssh/authorized_keys` and disables `PasswordAuthentication` via EC2 user-data.
+4. CLI streams provisioning progress over WebSocket until the box reaches `running`.
+
+### `devbox ssh <id>`
+1. CLI fetches the box IP via GET `/v1/boxes/:id`.
+2. CLI execs `ssh -i ~/.ssh/id_ed25519 -p 22 <user>@<ip>`, replacing the current process.
+3. The `-i` key path defaults to `id_ed25519` → `id_rsa` (whichever exists) and can be overridden with the `-i` flag.
+
+```
+devbox create mybox   →  POST /v1/boxes  { "name": "mybox", "public_key": "<pubkey>" }
+devbox ssh mybox      →  exec ssh -i ~/.ssh/id_ed25519 root@<ip>
+```
+
+---
+
 ## Config
 Token stored at `~/.devbox/config.json`:
 ```json

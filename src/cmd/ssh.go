@@ -5,10 +5,27 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	"devbox-cli/internal/api"
 )
+
+// defaultKeyPath returns the path to the user's default SSH private key,
+// trying id_ed25519 then id_rsa under ~/.ssh. Returns "" if none found.
+func defaultKeyPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	for _, name := range []string{"id_ed25519", "id_rsa"} {
+		p := filepath.Join(home, ".ssh", name)
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
+}
 
 // SSH fetches the box's IP address and execs ssh, replacing the current process.
 func SSH(args []string) {
@@ -19,8 +36,9 @@ func SSH(args []string) {
 	fs := flag.NewFlagSet("ssh", flag.ExitOnError)
 	user := fs.String("u", "root", "SSH username")
 	port := fs.Int("p", 22, "SSH port")
+	identity := fs.String("i", defaultKeyPath(), "path to SSH private key")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox ssh [-u user] [-p port] <id> [-- ssh-args...]")
+		fmt.Fprintln(os.Stderr, "usage: devbox ssh [-u user] [-p port] [-i identity] <id> [-- ssh-args...]")
 		fs.PrintDefaults()
 	}
 
@@ -83,7 +101,13 @@ func SSH(args []string) {
 	target := fmt.Sprintf("%s@%s", *user, b.IP)
 	portArg := fmt.Sprintf("%d", *port)
 
-	argv := []string{sshBin, "-p", portArg, target}
+	// argv will be something like: ["ssh", "-p", "2222", "-i", "/path/to/key", "root@"<|...|> ]
+	argv := []string{sshBin, "-p", portArg}
+	// identity is optional, so only include it if the user specified one (either via -i or defaultKeyPath).
+	if *identity != "" {
+		argv = append(argv, "-i", *identity)
+	}
+	argv = append(argv, target)
 	argv = append(argv, extra...)
 
 	if err := syscall.Exec(sshBin, argv, os.Environ()); err != nil {
