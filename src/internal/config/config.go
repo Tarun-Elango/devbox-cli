@@ -1,0 +1,161 @@
+package config
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+const (
+	// fallbackServerURL is used when SERVER_URL is not found in the environment
+	// or in a .env.local file. Primary configuration lives in .env.local.
+	fallbackServerURL = "https://api.devbox.io"
+	configDir         = ".devbox"
+	configFile        = "config.json"
+)
+
+// resolveServerURL returns the server URL from, in priority order:
+//  1. SERVER_URL environment variable
+//  2. SERVER_URL key in a .env.local file (searched by walking up from CWD)
+//  3. Compiled-in fallbackServerURL
+func resolveServerURL() string {
+	if v := os.Getenv("SERVER_URL"); v != "" {
+		return v
+	}
+	if path := findEnvFile(".env.local"); path != "" {
+		if vars := parseDotEnv(path); vars["SERVER_URL"] != "" {
+			return vars["SERVER_URL"]
+		}
+	}
+	return fallbackServerURL
+}
+
+// findEnvFile walks up from the current working directory looking for a file
+// with the given name. Returns its absolute path or "" if not found.
+func findEnvFile(name string) string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	for {
+		candidate := filepath.Join(dir, name)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return ""
+}
+
+// parseDotEnv reads a simple KEY=VALUE env file, ignoring blank lines and
+// comments (lines starting with #). Surrounding quotes are stripped from values.
+func parseDotEnv(path string) map[string]string {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	vars := make(map[string]string)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		line = strings.TrimPrefix(line, "export ")
+		idx := strings.IndexByte(line, '=')
+		if idx < 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:idx])
+		val := strings.TrimSpace(line[idx+1:])
+		if len(val) >= 2 {
+			if (val[0] == '"' && val[len(val)-1] == '"') ||
+				(val[0] == '\'' && val[len(val)-1] == '\'') {
+				val = val[1 : len(val)-1]
+			}
+		}
+		if key != "" {
+			vars[key] = val
+		}
+	}
+	return vars
+}
+
+// Config holds the persistent CLI configuration stored at ~/.devbox/config.json.
+type Config struct {
+	Token     string `json:"token"`
+	ServerURL string `json:"serverUrl"`
+}
+
+// configPath returns the absolute path to the config file.
+func configPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home dir: %w", err)
+	}
+	return filepath.Join(home, configDir, configFile), nil
+}
+
+// Load reads Config from ~/.devbox/config.json.
+// If the file does not exist an empty Config with the default server URL is returned.
+func Load() (*Config, error) {
+	path, err := configPath()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return &Config{ServerURL: resolveServerURL()}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read config: %w", err)
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parse config: %w", err)
+	}
+	if cfg.ServerURL == "" {
+		cfg.ServerURL = resolveServerURL()
+	}
+	return &cfg, nil
+}
+
+// Save writes cfg to ~/.devbox/config.json, creating the directory if needed.
+func Save(cfg *Config) error {
+	path, err := configPath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
+	}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	return nil
+}
+
+// Clear removes the saved token, effectively logging the user out.
+func Clear() error {
+	cfg, err := Load()
+	if err != nil {
+		return err
+	}
+	cfg.Token = ""
+	return Save(cfg)
+}
