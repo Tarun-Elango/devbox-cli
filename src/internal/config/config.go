@@ -2,11 +2,13 @@ package config
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -92,8 +94,19 @@ func parseDotEnv(path string) map[string]string {
 
 // Config holds the persistent CLI configuration stored at ~/.devbox/config.json.
 type Config struct {
-	Token     string `json:"token"`
-	ServerURL string `json:"serverUrl"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
+	TokenExpiry  time.Time `json:"token_expiry"`
+	ServerURL    string    `json:"serverUrl"`
+}
+
+// IsTokenExpired reports whether the access token is expired or will expire
+// within the next 30 seconds (buffer to avoid using a token right at its edge).
+func (c *Config) IsTokenExpired() bool {
+	if c.TokenExpiry.IsZero() {
+		return true
+	}
+	return time.Now().After(c.TokenExpiry.Add(-30 * time.Second))
 }
 
 // configPath returns the absolute path to the config file.
@@ -150,12 +163,35 @@ func Save(cfg *Config) error {
 	return nil
 }
 
-// Clear removes the saved token, effectively logging the user out.
+// Clear removes the saved tokens, effectively logging the user out.
 func Clear() error {
 	cfg, err := Load()
 	if err != nil {
 		return err
 	}
 	cfg.Token = ""
+	cfg.RefreshToken = ""
+	cfg.TokenExpiry = time.Time{}
 	return Save(cfg)
+}
+
+// ParseTokenExpiry decodes the exp claim from a JWT payload without verifying
+// the signature. The token is assumed to be well-formed — it was just issued
+// by a trusted server.
+func ParseTokenExpiry(token string) time.Time {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return time.Time{}
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return time.Time{}
+	}
+	var claims struct {
+		Exp int64 `json:"exp"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil || claims.Exp == 0 {
+		return time.Time{}
+	}
+	return time.Unix(claims.Exp, 0)// return time.Unix(claims.Exp, 0)
 }
