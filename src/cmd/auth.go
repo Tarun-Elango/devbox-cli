@@ -74,7 +74,7 @@ func Login(args []string) {
 	cfg.Token = result.Token
 	cfg.RefreshToken = result.RefreshToken
 	cfg.TokenExpiry = config.ParseTokenExpiry(result.Token)
-	if err := config.Save(cfg); err != nil {. // writes to ./devbox/config.json
+	if err := config.Save(cfg); err != nil { // writes to ~/.devbox/config.json
 		fmt.Fprintf(os.Stderr, "save config: %v\n", err)
 		os.Exit(1)
 	}
@@ -163,25 +163,15 @@ func Signup(args []string) {
 	fmt.Println("Account created and logged in.")
 }
 
-// Logout POSTs to /v1/auth/logout and clears the locally stored token.
+// Logout clears the locally stored JWT. Because tokens are stateless there is
+// no server-side session to invalidate — removing the local token is sufficient.
 func Logout() {
 	if TestMode {
 		fmt.Println("[test] logout: done")
 		return
 	}
-	client, err := api.NewDefault()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
 
-	resp, err := client.Post("/v1/auth/logout", nil)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "logout failed: %v\n", err)
-		os.Exit(1)
-	}
-	resp.Body.Close()
-
+	// just need to clear the saved tokens; there is no server-side session to invalidate
 	if err := config.Clear(); err != nil {
 		fmt.Fprintf(os.Stderr, "clear config: %v\n", err)
 		os.Exit(1)

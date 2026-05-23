@@ -193,5 +193,5 @@ func ParseTokenExpiry(token string) time.Time {
 	if err := json.Unmarshal(payload, &claims); err != nil || claims.Exp == 0 {
 		return time.Time{}
 	}
-	return time.Unix(claims.Exp, 0)// return time.Unix(claims.Exp, 0)
+	return time.Unix(claims.Exp, 0)
 }
