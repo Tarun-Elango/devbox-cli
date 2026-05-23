@@ -10,10 +10,10 @@ import (
 
 // Template represents a devbox template as returned by the API.
 type Template struct {
-	ID          string `json:"id"`
+	AmiID       string `json:"amiId"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	OS          string `json:"os"`
+	State       string `json:"state"`
 }
 
 // Templates lists all available box templates.
@@ -49,9 +49,9 @@ func Templates() {
 		return
 	}
 
-	fmt.Printf("%-24s  %-20s  %-12s  %s\n", "ID", "NAME", "OS", "DESCRIPTION")
+	fmt.Printf("%-24s  %-20s  %-12s  %s\n", "AMI ID", "NAME", "STATE", "DESCRIPTION")
 	fmt.Println(strings.Repeat("-", 90))
 	for _, t := range templates {
-		fmt.Printf("%-24s  %-20s  %-12s  %s\n", t.ID, t.Name, t.OS, t.Description)
+		fmt.Printf("%-24s  %-20s  %-12s  %s\n", t.AmiID, t.Name, t.State, t.Description)
 	}
 }

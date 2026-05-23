@@ -92,7 +92,7 @@ func SSH(args []string) {
 		os.Exit(1)
 	}
 
-	sshBin, err := exec.LookPath("ssh")
+	sshBin, err := exec.LookPath("ssh") // LookPath only returns an error if the binary isn't found, so we don't need to check for exec.ErrNotFound specifically.
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ssh: ssh binary not found in PATH")
 		os.Exit(1)
