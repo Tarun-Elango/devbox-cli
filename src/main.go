@@ -14,7 +14,7 @@ Commands:
   login               Authenticate with the devbox server
   signup              Create a new account
   logout              Clear saved credentials
-  create <name> [--from <snapshot_id>]  Create a new box (optionally restore from snapshot)
+	create <name> [--from <snapshot_ami_id>]  Create a new box (optionally restore from snapshot)
   ls                  List all boxes
   status <id>         Show details for a box
   stop <id>           Stop a running box

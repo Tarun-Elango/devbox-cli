@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +9,6 @@ import (
 
 	"devbox-cli/internal/api"
 	"devbox-cli/internal/config"
-	"devbox-cli/internal/ws"
 )
 
 // readPublicKey returns the contents of the user's default SSH public key,
@@ -124,20 +121,20 @@ func Status(args []string) {
 }
 
 // Create creates a new box with an optional name and streams progress via WebSocket.
-// Pass --from <snapshot_id> to restore from a previously saved snapshot.
+// Pass --from <snapshot_ami_id> to restore from a previously saved snapshot.
 func Create(args []string) {
 	if TestMode {
 		fmt.Println("[test] create: done")
 		return
 	}
 
-	// Parse positional name and optional --from <snapshot_id> flag.
+	// Parse positional name and optional --from <snapshot_ami_id> flag.
 	var name, fromSnapshot string
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--from":
 			if i+1 >= len(args) {
-				fmt.Fprintln(os.Stderr, "error: --from requires a snapshot id")
+				fmt.Fprintln(os.Stderr, "error: --from requires a snapshot AMI ID")
 				os.Exit(1)
 			}
 			i++
@@ -150,7 +147,7 @@ func Create(args []string) {
 	}
 
 	if name == "" {
-		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--from <snapshot_id>]")
+		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--from <snapshot_ami_id>]")
 		os.Exit(1)
 	}
 
@@ -177,7 +174,7 @@ func Create(args []string) {
 	client := api.NewWithTimeout(cfg.ServerURL, cfg.Token, 15*time.Minute)
 
 	if fromSnapshot != "" {
-		fmt.Printf("Restoring box %q from snapshot %s — waiting for it to be ready (this may take a few minutes)...\n", name, fromSnapshot)
+		fmt.Printf("Restoring box %q from snapshot AMI %s - waiting for it to be ready (this may take a few minutes)...\n", name, fromSnapshot)
 	} else {
 		fmt.Printf("Creating box %q — waiting for it to be ready (this may take a few minutes)...\n", name)
 	}
@@ -205,56 +202,6 @@ func Create(args []string) {
 		fmt.Printf("  Public IP: %s\n", b.PublicIP)
 		fmt.Printf("\n  Connect:   devbox ssh %s\n", b.ID)
 	}
-}
-
-// watchBox connects to the WebSocket watch endpoint for boxID and prints
-// status events until the box reaches a terminal state or the server closes
-// the connection.
-func watchBox(serverURL, token, boxID string) error {
-	wsURL := httpToWS(serverURL) + "/v1/boxes/" + boxID + "/status"
-
-	conn, err := ws.Dial(wsURL, token)
-	if err != nil {
-		return fmt.Errorf("dial watch endpoint: %w", err)
-	}
-	defer conn.Close()
-
-	for {
-		msg, err := conn.ReadMessage()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return fmt.Errorf("read event: %w", err)
-		}
-
-		var event struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		}
-		if jsonErr := json.Unmarshal([]byte(msg), &event); jsonErr != nil {
-			// Non-JSON message — print raw.
-			fmt.Println(msg)
-			continue
-		}
-
-		if event.Message != "" {
-			fmt.Printf("  %s\n", event.Message)
-		} else if event.Status != "" {
-			fmt.Printf("  status: %s\n", event.Status)
-		}
-
-		switch event.Status {
-		case "running":
-			fmt.Println("Box is running.")
-			return nil
-		case "error", "failed":
-			return fmt.Errorf("box reached error state: %s", event.Status)
-		}
-	}
-
-	fmt.Println("Box provisioning complete.")
-	return nil
 }
 
 // httpToWS converts an http(s) base URL to its ws(s) equivalent.
@@ -292,11 +239,11 @@ func Stop(args []string) {
 		fmt.Fprintf(os.Stderr, "stop failed: %v\n", err)
 		os.Exit(1)
 	}
-	resp.Body.Close()
 	if err := api.CheckStatus(resp); err != nil {
 		fmt.Fprintf(os.Stderr, "stop failed: %v\n", err)
 		os.Exit(1)
 	}
+	resp.Body.Close()
 
 	fmt.Printf("Box %s stopped.\n", id)
 }
@@ -324,11 +271,11 @@ func Start(args []string) {
 		fmt.Fprintf(os.Stderr, "start failed: %v\n", err)
 		os.Exit(1)
 	}
-	resp.Body.Close()
 	if err := api.CheckStatus(resp); err != nil {
 		fmt.Fprintf(os.Stderr, "start failed: %v\n", err)
 		os.Exit(1)
 	}
+	resp.Body.Close()
 
 	fmt.Printf("Box %s started.\n", id)
 }
@@ -364,11 +311,11 @@ func Delete(args []string) {
 		fmt.Fprintf(os.Stderr, "delete failed: %v\n", err)
 		os.Exit(1)
 	}
-	resp.Body.Close()
 	if err := api.CheckStatus(resp); err != nil {
 		fmt.Fprintf(os.Stderr, "delete failed: %v\n", err)
 		os.Exit(1)
 	}
+	resp.Body.Close()
 
 	fmt.Printf("Box %s deleted.\n", id)
 }
