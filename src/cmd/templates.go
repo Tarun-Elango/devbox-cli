@@ -28,7 +28,7 @@ func Templates() {
 		os.Exit(1)
 	}
 
-	resp, err := client.Get("/v1/templates")
+	resp, err := client.Get("/v1/snapshots")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "templates failed: %v\n", err)
 		os.Exit(1)
