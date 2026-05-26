@@ -27,19 +27,24 @@ The CLI is a one-shot command — it performs an action and exits. It does **not
 
 **Common commands:**
 
-| Command | Description |
-|---|---|
-| `login` | Authenticate (prompts for username/password) |
-| `logout` | Clear saved credentials |
-| `create [name]` | Create a new box |
-| `ls` | List all boxes |
-| `status <id>` | Show box details |
-| `start <id>` / `stop <id>` | Start or stop a box |
-| `delete <id>` | Delete a box |
-| `ssh <id>` | Open an SSH session (`exec`s into ssh, replaces process) |
-| `forward <id> <port>` | Request a port-forward and print the URL |
-| `snapshot <id>` | Create a snapshot |
-| `templates` | List available templates |
+| Command                                    | Notes (what it does)                                    |
+| ------------------------------------------ | ------------------------------------------------------- |
+| `login`                                    | Authenticate with the devbox server                     |
+| `signup`                                   | Create a new account                                    |
+| `logout`                                   | Clear saved credentials                                 |
+| `create <name> [--from <snapshot_ami_id>]` | Create a new box (optionally restore from a snapshot)   |
+| `ls`                                       | List all boxes                                          |
+| `status <id>`                              | Show details for a box                                  |
+| `start <id>`                               | Start a stopped box                                     |
+| `stop <id>`                                | Stop a running box                                      |
+| `delete <id>`                              | Delete a box                                            |
+| `ssh <id>`                                 | Open an SSH session to a box (replaces current process) |
+| `forward <id> <port>`                      | Forward a port from a box and print a URL               |
+| `snapshot <id> [name]`                     | Create a snapshot of a box                              |
+| `snapshots`                                | List all snapshots                                      |
+| `snapshots ls <boxId>`                     | List snapshots for a specific box                       |
+| `snapshots delete <amiId>`                 | Delete a snapshot                                       |
+
 
 **Config** is stored in the default config directory (`~/.config/devbox/` on Linux/macOS). `login` saves the auth token there; all other commands read it automatically.
 
