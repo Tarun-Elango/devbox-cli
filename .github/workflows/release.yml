@@ -40,21 +40,26 @@ jobs:
             latest_tag=""
           fi
 
-    echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+        echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
 
       - name: Delete latest release (if exists)
         if: steps.latest.outputs.latest_tag != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Deleting release: ${{ steps.latest.outputs.latest_tag }}"
-          
-          release_id=$(gh api repos/${{ github.repository }}/releases/tags/${{ steps.latest.outputs.latest_tag }} --jq '.id')
-          
-          gh api -X DELETE repos/${{ github.repository }}/releases/$release_id || true
-          
-          git tag -d ${{ steps.latest.outputs.latest_tag }} || true
-          git push origin :refs/tags/${{ steps.latest.outputs.latest_tag }} || true
+          latest="${{ steps.latest.outputs.latest_tag }}"
+
+          echo "Attempting delete for: $latest"
+
+          release_id=$(gh api repos/${{ github.repository }}/releases/tags/$latest --jq '.id' 2>/dev/null || echo "")
+
+          if [ -n "$release_id" ]; then
+            gh api -X DELETE repos/${{ github.repository }}/releases/$release_id || true
+            git tag -d "$latest" || true
+            git push origin ":refs/tags/$latest" || true
+          else
+            echo "No release found for tag $latest — skipping delete"
+          fi
 
       - name: Create new release
         env:
