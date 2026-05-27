@@ -117,6 +117,11 @@ func Status(args []string) {
 // Create creates a new box with an optional name and streams progress via WebSocket.
 // Pass --from <snapshot_ami_id> to restore from a previously saved snapshot.
 func Create(args []string) {
+	if len(args) > 0 && args[0] == "--template" {
+		CreateTemplate(args[1:])
+		return
+	}
+
 	if TestMode {
 		fmt.Println("[test] create: done")
 		return
@@ -142,6 +147,11 @@ func Create(args []string) {
 
 	if name == "" {
 		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--from <snapshot_ami_id>]")
+		os.Exit(1)
+	}
+	// name cannot start with -- 
+	if strings.HasPrefix(name, "--") {
+		fmt.Fprintln(os.Stderr, "error: name cannot start with --")
 		os.Exit(1)
 	}
 
