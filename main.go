@@ -28,8 +28,8 @@ Commands:
   snapshots delete <amiId>   Delete a snapshot
 
   templates                  List available templates
-  create template <templateId> <name> Create a new box from a template with a name
-  create template <templateId> <name> --from <snapshot_ami_id> Create a new box from a template with a name and restore from a snapshot
+  create --template <templateId> <name> Create a new box from a template with a name
+  create --template <templateId> <name> --from <snapshot_ami_id> Create a new box from a template with a name and restore from a snapshot
   `)
 }
 
