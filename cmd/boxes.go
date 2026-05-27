@@ -38,6 +38,12 @@ type Box struct {
 	PrivateIP        string `json:"privateIpAddress"`
 }
 
+// failBox prints a clean error for a box subcommand and exits.
+func failBox(cmd string, err error) {
+	fmt.Fprintf(os.Stderr, "%s failed: %s\n", cmd, err)
+	os.Exit(1)
+}
+
 // Ls lists all boxes belonging to the authenticated user.
 func Ls() {
 	if TestMode {
@@ -52,18 +58,15 @@ func Ls() {
 
 	resp, err := client.Get("/v1/boxes")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ls failed: %v\n", err)
-		os.Exit(1)
+		failBox("ls", err)
 	}
 	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "ls failed: %v\n", err)
-		os.Exit(1)
+		failBox("ls", err)
 	}
 
 	var boxes []Box
 	if err := api.DecodeJSON(resp, &boxes); err != nil {
-		fmt.Fprintf(os.Stderr, "ls failed: %v\n", err)
-		os.Exit(1)
+		failBox("ls", err)
 	}
 
 	if len(boxes) == 0 {
@@ -98,18 +101,15 @@ func Status(args []string) {
 
 	resp, err := client.Get("/v1/boxes/" + id)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "status failed: %v\n", err)
-		os.Exit(1)
+		failBox("status", err)
 	}
 	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "status failed: %v\n", err)
-		os.Exit(1)
+		failBox("status", err)
 	}
 
 	var b Box
 	if err := api.DecodeJSON(resp, &b); err != nil {
-		fmt.Fprintf(os.Stderr, "status failed: %v\n", err)
-		os.Exit(1)
+		failBox("status", err)
 	}
 
 	fmt.Printf("ID:        %s\n", b.ID)
@@ -181,18 +181,15 @@ func Create(args []string) {
 
 	resp, err := client.Post("/v1/boxes", body)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "create failed: %v\n", err)
-		os.Exit(1)
+		failBox("create", err)
 	}
 	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "create failed: %v\n", err)
-		os.Exit(1)
+		failBox("create", err)
 	}
 
 	var b Box
 	if err := api.DecodeJSON(resp, &b); err != nil {
-		fmt.Fprintf(os.Stderr, "create failed: %v\n", err)
-		os.Exit(1)
+		failBox("create", err)
 	}
 
 	fmt.Printf("Box is ready.\n")
@@ -236,12 +233,10 @@ func Stop(args []string) {
 
 	resp, err := client.Post("/v1/boxes/"+id+"/stop", nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "stop failed: %v\n", err)
-		os.Exit(1)
+		failBox("stop", err)
 	}
 	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "stop failed: %v\n", err)
-		os.Exit(1)
+		failBox("stop", err)
 	}
 	resp.Body.Close()
 
@@ -268,12 +263,10 @@ func Start(args []string) {
 
 	resp, err := client.Post("/v1/boxes/"+id+"/start", nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "start failed: %v\n", err)
-		os.Exit(1)
+		failBox("start", err)
 	}
 	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "start failed: %v\n", err)
-		os.Exit(1)
+		failBox("start", err)
 	}
 	resp.Body.Close()
 
@@ -308,12 +301,10 @@ func Delete(args []string) {
 
 	resp, err := client.Delete("/v1/boxes/" + id)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "delete failed: %v\n", err)
-		os.Exit(1)
+		failBox("delete", err)
 	}
 	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "delete failed: %v\n", err)
-		os.Exit(1)
+		failBox("delete", err)
 	}
 	resp.Body.Close()
 

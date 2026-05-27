@@ -3,9 +3,11 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"devbox-cli/internal/config"
@@ -180,7 +182,58 @@ func CheckStatus(resp *http.Response) error {
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+		return errors.New(ParseErrorBody(body))
 	}
 	return nil
+}
+
+// ParseErrorBody extracts a human-readable message from an API error response.
+// Handles JSON objects ({error, detail, message}), plain JSON strings, and raw text.
+func ParseErrorBody(body []byte) string {
+	trimmed := strings.TrimSpace(string(body))
+	if trimmed == "" {
+		return "request failed"
+	}
+
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err == nil {
+		if msg := jsonStringField(obj, "message"); msg != "" {
+			return msg
+		}
+		if detail := jsonStringField(obj, "detail"); detail != "" {
+			return cleanSpringDetail(detail)
+		}
+		if errMsg := jsonStringField(obj, "error"); errMsg != "" {
+			return errMsg
+		}
+	}
+
+	var str string
+	if err := json.Unmarshal(body, &str); err == nil && str != "" {
+		return str
+	}
+
+	return trimmed
+}
+
+func jsonStringField(obj map[string]json.RawMessage, key string) string {
+	raw, ok := obj[key]
+	if !ok {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil || s == "" {
+		return ""
+	}
+	return s
+}
+
+// cleanSpringDetail turns `404 NOT_FOUND "Box not found: abc"` into `Box not found: abc`.
+func cleanSpringDetail(detail string) string {
+	if i := strings.Index(detail, `"`); i >= 0 {
+		if j := strings.LastIndex(detail, `"`); j > i {
+			return detail[i+1 : j]
+		}
+	}
+	return detail
 }

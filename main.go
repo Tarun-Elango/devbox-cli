@@ -14,7 +14,7 @@ Commands:
   login               Authenticate with the devbox server
   signup              Create a new account
   logout              Clear saved credentials
-	create <name> [--from <snapshot_ami_id>]  Create a new box (optionally restore from snapshot)
+  create <name> --from <snapshot_ami_id>  Create a new box (optionally restore from snapshot)
   ls                  List all boxes
   status <id>         Show details for a box
   stop <id>           Stop a running box
@@ -26,7 +26,11 @@ Commands:
   snapshots                  List all your snapshots
   snapshots ls <boxId>       List snapshots for a specific box
   snapshots delete <amiId>   Delete a snapshot
-`)
+
+  templates                  List available templates
+  create template <templateId> <name> Create a new box from a template with a name
+  create template <templateId> <name> --from <snapshot_ami_id> Create a new box from a template with a name and restore from a snapshot
+  `)
 }
 
 func main() {
