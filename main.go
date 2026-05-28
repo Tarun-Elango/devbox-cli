@@ -28,8 +28,8 @@ Commands:
   snapshots delete <amiId>   Delete a snapshot
 
   templates                  List available templates
-  create --template <templateId> <name> Create a new box from a template with a name
-  create --template <templateId> <name> --from <snapshot_ami_id> Create a new box from a template with a name and restore from a snapshot
+  create --template <templateId> [<templateId>...] <name> Create a new box from one or more templates
+  create --template <templateId> [<templateId>...] <name> --from <snapshot_ami_id> Create from templates and restore from a snapshot
 
   schedule (start|stop) <id> --at <RFC3339>              Start box once at time
   schedule (start|stop) <id> --cron "<expr>" [--tz TZ]   Recurring start (cron + optional IANA TZ)
@@ -39,6 +39,9 @@ Commands:
   schedule pause <scheduleId>                     Pause a schedule
   schedule resume <scheduleId>                    Resume a schedule
   schedule delete <scheduleId>                    Delete a schedule
+
+  billing                      Show billing information
+  billing hard-limit <amount>  Set a hard limit for the current month
   `)
 }
 
