@@ -106,7 +106,7 @@ func SSH(args []string) {
 	argv := []string{sshBin,
 		"-p", portArg,
 		"-o", "ConnectTimeout=15",
-		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "StrictHostKeyChecking=accept-new", // TODO: StrictHostKeyChecking=yes plus managing known_hosts
 	}
 	// identity is optional, so only include it if the user specified one (either via -i or defaultKeyPath).
 	if *identity != "" {

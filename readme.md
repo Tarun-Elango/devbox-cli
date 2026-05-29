@@ -1,6 +1,6 @@
 # devbox-cli
 
-Cli to manage your dev boxes
+Manage remote dev boxes from the CLI — provision, connect, or destroy them. 
 
 ## Build
 
@@ -18,8 +18,7 @@ go install .
 
 ## Run
 
-The CLI is a one-shot command — it performs an action and exits. It does **not** run a server or listen on any port (unless you use `forward`, which prints a forwarded URL and exits).
-
+The CLI is a one-shot command — it performs an action and exits.
 ```
 ./devbox <command> [args]
 ```
@@ -43,6 +42,9 @@ The CLI is a one-shot command — it performs an action and exits. It does **not
 | `snapshots`                                | List all snapshots                                      |
 | `snapshots ls <boxId>`                     | List snapshots for a specific box                       |
 | `snapshots delete <amiId>`                 | Delete a snapshot                                       |
+| `templates`                                | List available templates                                |
+| `create --template <templateId> [<templateId>...] <name>` | Create a new box from one or more templates |
+| `create --template <templateId> [<templateId>...] <name> --from <snapshot_ami_id>` | Create from templates and restore from a snapshot |
 
 
 **Config** is stored in the default config directory (`~/.config/devbox/` on Linux/macOS). `login` saves the auth token there; all other commands read it automatically.

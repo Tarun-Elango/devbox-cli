@@ -30,6 +30,13 @@ Commands:
   templates                  List available templates
   create --template <templateId> [<templateId>...] <name> Create a new box from one or more templates
   create --template <templateId> [<templateId>...] <name> --from <snapshot_ami_id> Create from templates and restore from a snapshot
+  `)
+}
+/*
+  change create implementation
+  reset
+  email verification
+  custom security group for each ssh 
 
   schedule (start|stop) <id> --at <RFC3339>              Start box once at time
   schedule (start|stop) <id> --cron "<expr>" [--tz TZ]   Recurring start (cron + optional IANA TZ)
@@ -42,8 +49,7 @@ Commands:
 
   billing                      Show billing information
   billing hard-limit <amount>  Set a hard limit for the current month
-  `)
-}
+*/
 
 func main() {
 	if len(os.Args) < 2 {
