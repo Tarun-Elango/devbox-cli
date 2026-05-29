@@ -69,28 +69,28 @@ func CreateTemplate(args []string) {
 	var name, fromSnapshot string
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
-		case "--from":
+		case "--from": // means next arg is the snapshot ami id
 			if i+1 >= len(args) {
 				fmt.Fprintln(os.Stderr, "error: --from requires a snapshot AMI ID")
 				os.Exit(1)
 			}
-			i++
+			i++ // next has to ba a snapshot ami id
 			if err := validateSnapshotAmiID(args[i]); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 				os.Exit(1)
 			}
 			fromSnapshot = strings.TrimSpace(args[i])
-		default:
+		default: // means next arg is the template id
 			if strings.HasPrefix(args[i], "--") {
 				fmt.Fprintf(os.Stderr, "error: %v\n", unknownCreateFlagError(args[i]))
 				os.Exit(1)
 			}
-			arg := strings.TrimSpace(args[i])
+			arg := strings.TrimSpace(args[i]) 
 			if arg == "" {
 				fmt.Fprintln(os.Stderr, "error: template ID is required")
 				os.Exit(1)
 			}
-			positionalArgs = append(positionalArgs, arg)
+			positionalArgs = append(positionalArgs, arg) // add the template id to the positional args, also means last arg is the name
 		}
 	}
 
@@ -100,7 +100,7 @@ func CreateTemplate(args []string) {
 	}
 
 	name = positionalArgs[len(positionalArgs)-1]
-	templateIDs := positionalArgs[:len(positionalArgs)-1]
+	templateIDs := positionalArgs[:len(positionalArgs)-1] // get all the template ids except the last one which is the name
 
 	if len(templateIDs) == 0 {
 		fmt.Fprintln(os.Stderr, "error: at least one template ID is required")
