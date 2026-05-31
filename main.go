@@ -32,23 +32,6 @@ Commands:
   create --template <templateId> [<templateId>...] <name> --from <snapshot_ami_id> Create from templates and restore from a snapshot
   `)
 }
-/*
-  reset
-  email verification
-  custom security group for each ssh 
-
-  schedule (start|stop) <id> --at <RFC3339>              Start box once at time
-  schedule (start|stop) <id> --cron "<expr>" [--tz TZ]   Recurring start (cron + optional IANA TZ)
-  schedule (start|stop) <id> --daily HH:MM [--tz TZ]         Every day at HH:MM (optional sugar)
-  schedule (start|stop) <id> --weekdays HH:MM [--tz TZ]      Mon–Fri at HH:MM
-  schedule list                                   List schedules (id, box, action, next run, paused)
-  schedule pause <scheduleId>                     Pause a schedule
-  schedule resume <scheduleId>                    Resume a schedule
-  schedule delete <scheduleId>                    Delete a schedule
-
-  billing                      Show billing information
-  billing hard-limit <amount>  Set a hard limit for the current month
-*/
 
 func main() {
 	if len(os.Args) < 2 {
