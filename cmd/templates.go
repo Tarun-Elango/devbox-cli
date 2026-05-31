@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"devbox-cli/internal/api"
-	"devbox-cli/internal/config"
 )
 type Template struct {
 	ID          string `json:"id"`
@@ -132,21 +130,19 @@ func CreateTemplate(args []string) {
 		body["publicKey"] = pubKey
 	}
 
-	cfg, err := config.Load()
+	client, err := api.NewDefault()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	client := api.NewWithTimeout(cfg.ServerURL, cfg.Token, 15*time.Minute)
-
 	if fromSnapshot != "" {
-		fmt.Printf("Creating box %q from templates %s (snapshot %s) — waiting for it to be ready (this may take a few minutes)...\n", name, strings.Join(templateIDs, ", "), fromSnapshot)
+		fmt.Printf("Creating box %q from templates %s (snapshot %s)...\n", name, strings.Join(templateIDs, ", "), fromSnapshot)
 	} else {
-		fmt.Printf("Creating box %q from templates %s — waiting for it to be ready (this may take a few minutes)...\n", name, strings.Join(templateIDs, ", "))
+		fmt.Printf("Creating box %q from templates %s...\n", name, strings.Join(templateIDs, ", "))
 	}
 
-	resp, err := client.Post("/v1/boxes/templates", body)
+	resp, err := client.Post("/v2/boxes", body)
 	if err != nil {
 		api.FailBox("create template", err)
 	}
@@ -159,11 +155,14 @@ func CreateTemplate(args []string) {
 		api.FailBox("create template", err)
 	}
 
-	fmt.Printf("Box is ready.\n")
+	fmt.Printf("Box created.\n")
 	fmt.Printf("  ID:        %s\n", b.ID)
 	fmt.Printf("  Name:      %s\n", b.Name)
+	fmt.Printf("  Status:    %s\n", b.Status)
 	if b.PublicIP != "" {
 		fmt.Printf("  Public IP: %s\n", b.PublicIP)
 		fmt.Printf("\n  Connect:   devbox ssh %s\n", b.ID)
+	} else {
+		fmt.Printf("\n  Provisioning — check status: devbox status %s\n", b.ID)
 	}
 }
