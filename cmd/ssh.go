@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"syscall"
 
 	"devbox-cli/internal/api"
@@ -16,6 +16,8 @@ const (
 	devboxReadyPath    = "/var/lib/devbox/ready"
 	devboxReadyMessage = "the user data script is completed"
 )
+
+var execCommand = exec.Command
 
 // defaultKeyPath returns the path to the user's default SSH private key,
 // trying id_ed25519 then id_rsa under ~/.ssh. Returns "" if none found.
@@ -51,17 +53,29 @@ func sshBaseArgs(identity, portArg string) []string {
 	return argv
 }
 
+//ssh ec2-user@ip 'test "$(cat /var/lib/devbox/ready 2>/dev/null)" = "the user data script is completed"'; echo "exit code: $?"
 // checkDevboxReady runs one SSH probe for the user-data ready marker.
-func checkDevboxReady(sshBin, identity, user, host, portArg string) bool {
+func checkDevboxReady(sshBin, identity, user, host, portArg string) (bool, error) {
 	target := fmt.Sprintf("%s@%s", user, host)
+	probe := fmt.Sprintf(`test "$(cat %s 2>/dev/null)" = %q`, devboxReadyPath, devboxReadyMessage)
 	argv := append([]string{sshBin}, sshBaseArgs(identity, portArg)...)
 	argv = append(argv,
 		"-o", "BatchMode=yes",
+		"-o", "LogLevel=ERROR",
 		target,
-		"cat", devboxReadyPath,
+		probe,
 	)
-	out, err := exec.Command(argv[0], argv[1:]...).CombinedOutput()
-	return err == nil && strings.TrimSpace(string(out)) == devboxReadyMessage
+	err := execCommand(argv[0], argv[1:]...).Run()
+	if err == nil {
+		return true, nil
+	}
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+		return false, nil
+	}
+
+	return false, err
 }
 
 // SSH checks EC2 health and the devbox ready marker, then execs ssh.
@@ -148,7 +162,10 @@ func SSH(args []string) {
 	target := fmt.Sprintf("%s@%s", *user, b.PublicIP)
 	portArg := fmt.Sprintf("%d", *port)
 
-	if !checkDevboxReady(sshBin, *identity, *user, b.PublicIP, portArg) {
+	ready, err := checkDevboxReady(sshBin, *identity, *user, b.PublicIP, portArg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ssh: readiness probe failed (%v); attempting SSH anyway\n", err)
+	} else if !ready {
 		fmt.Fprintln(os.Stderr, "ssh: devbox is not ready yet — try again in a minute")
 		os.Exit(1)
 	}
