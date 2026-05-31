@@ -33,7 +33,6 @@ Commands:
   `)
 }
 /*
-  change create implementation
   reset
   email verification
   custom security group for each ssh 
