@@ -42,9 +42,10 @@ The CLI is a one-shot command — it performs an action and exits.
 | `snapshots`                                | List all snapshots                                      |
 | `snapshots ls <boxId>`                     | List snapshots for a specific box                       |
 | `snapshots delete <amiId>`                 | Delete a snapshot                                       |
-| `templates`                                | List available templates                                |
-| `create --template <templateId> [<templateId>...] <name>` | Create a new box from one or more templates |
-| `create --template <templateId> [<templateId>...] <name> --from <snapshot_ami_id>` | Create from templates and restore from a snapshot |
+| `templates`                                | List available templates                                | 
+| `template new <name> [command string]`     | Create a new template with a command to run on startup  |
+| `create --template <template> [<template>...] <name>` | Create a new box from one or more templates (built-in slug or custom template name) |
+| `create --template <template> [<template>...] <name> --from <snapshot_ami_id>` | Create from templates and restore from a snapshot |
 
 
 **Config** is stored in the default config directory (`~/.config/devbox/` on Linux/macOS). `login` saves the auth token there; all other commands read it automatically.
