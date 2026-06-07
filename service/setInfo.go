@@ -56,9 +56,9 @@ func SaveAWSCredentials(secret, accessKey, region string) error {
 }
 
 
-// ensureLocalModeAndgetCurrMode returns the configured mode. If unset, it
+// EnsureLocalModeAndGetCurrMode returns the configured mode. If unset, it
 // persists "local" and returns "local".
-func ensureLocalModeAndgetCurrMode() (string, error) {
+func EnsureLocalModeAndGetCurrMode() (string, error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return "", err
