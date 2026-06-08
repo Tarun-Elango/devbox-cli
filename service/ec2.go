@@ -410,15 +410,91 @@ func getInstanceFromAWS(instanceId string) (*Instance, error) {
 // 	return nil, fmt.Errorf("not implemented")
 // }
 
-// // used to start an instance by id
-// func startInstance(instanceId string, userId string) (*Instance, error) {
-// 	return nil, fmt.Errorf("not implemented")
-// }
+// ActionResult mirrors lighthouse ActionResult for stop/start/delete responses.
+type ActionResult struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
 
-// // used to stop an instance by id
-// func stopInstance(instanceId string, userId string) (*Instance, error) {
-// 	return nil, fmt.Errorf("not implemented")
-// }
+// StopInstance stops a running box owned by userID.
+// Mirrors Lighthouse POST /v1/boxes/{id}/stop: ec2Service.stopInstance(id, userId).
+func StopInstance(instanceID, userID string) (*ActionResult, error) {
+	db, err := localDb.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("box not found: %s", instanceID)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := context.Background()
+	client, err := awsclient.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ec2Client := ec2.NewFromConfig(client.Config())
+	_, err = ec2Client.StopInstances(ctx, &ec2.StopInstancesInput{
+		InstanceIds: []string{instanceID},
+	})
+	if err != nil {
+		return &ActionResult{
+			Success: false,
+			Message: fmt.Sprintf("Failed to stop instance %s: %v", instanceID, err),
+		}, nil
+	}
+
+	return &ActionResult{
+		Success: true,
+		Message: fmt.Sprintf("Instance %s stopped successfully.", instanceID),
+	}, nil
+}
+
+// StartInstance starts a stopped box owned by userID.
+// Mirrors Lighthouse POST /v1/boxes/{id}/start: ec2Service.startInstance(id, userId).
+func StartInstance(instanceID, userID string) (*ActionResult, error) {
+	db, err := localDb.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("box not found: %s", instanceID)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := context.Background()
+	client, err := awsclient.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ec2Client := ec2.NewFromConfig(client.Config())
+	_, err = ec2Client.StartInstances(ctx, &ec2.StartInstancesInput{
+		InstanceIds: []string{instanceID},
+	})
+	if err != nil {
+		return &ActionResult{
+			Success: false,
+			Message: fmt.Sprintf("Failed to start instance %s: %v", instanceID, err),
+		}, nil
+	}
+
+	return &ActionResult{
+		Success: true,
+		Message: fmt.Sprintf("Instance %s started successfully.", instanceID),
+	}, nil
+}
 
 // SshStatus mirrors lighthouse SshStatusResponse for local mode.
 type SshStatus struct {

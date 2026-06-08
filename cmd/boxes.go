@@ -271,20 +271,38 @@ func Stop(args []string) {
 	}
 	id := args[0]
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Post("/v1/boxes/"+id+"/stop", nil)
-	if err != nil {
-		api.FailBox("stop", err)
+	if mode == "local" {
+		result, err := service.StopInstance(id, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if !result.Success {
+			fmt.Fprintf(os.Stderr, "error: %s\n", result.Message)
+			os.Exit(1)
+		}
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Post("/v1/boxes/"+id+"/stop", nil)
+		if err != nil {
+			api.FailBox("stop", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("stop", err)
+		}
+		resp.Body.Close()
 	}
-	if err := api.CheckStatus(resp); err != nil {
-		api.FailBox("stop", err)
-	}
-	resp.Body.Close()
 
 	fmt.Printf("Box %s stopped.\n", id)
 }
@@ -301,20 +319,38 @@ func Start(args []string) {
 	}
 	id := args[0]
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Post("/v1/boxes/"+id+"/start", nil)
-	if err != nil {
-		api.FailBox("start", err)
+	if mode == "local" {
+		result, err := service.StartInstance(id, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if !result.Success {
+			fmt.Fprintf(os.Stderr, "error: %s\n", result.Message)
+			os.Exit(1)
+		}
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Post("/v1/boxes/"+id+"/start", nil)
+		if err != nil {
+			api.FailBox("start", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("start", err)
+		}
+		resp.Body.Close()
 	}
-	if err := api.CheckStatus(resp); err != nil {
-		api.FailBox("start", err)
-	}
-	resp.Body.Close()
 
 	fmt.Printf("Box %s started.\n", id)
 }
