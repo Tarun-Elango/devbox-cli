@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"devbox-cli/internal/api"
+	"devbox-cli/service"
 )
 
 const (
@@ -112,26 +113,45 @@ func SSH(args []string) {
 	}
 	id := fs.Arg(0)
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Get("/v2/boxes/" + id + "/ssh-status") // check the two conditions from server
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
-		os.Exit(1)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
-		os.Exit(1)
-	}
+	var status SshStatusResponse
+	if mode == "local" {
+		sshStatus, err := service.GetSshStatus(id, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
+			os.Exit(1)
+		}
+		status.Ready = sshStatus.Ready
+		if sshStatus.Instance != nil {
+			
+			box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
+			status.Instance = &box
+		}
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
 
-	var status SshStatusResponse // check response type
-	if err := api.DecodeJSON(resp, &status); err != nil {
-		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
-		os.Exit(1)
+		resp, err := client.Get("/v2/boxes/" + id + "/ssh-status")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
+			os.Exit(1)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
+			os.Exit(1)
+		}
+		if err := api.DecodeJSON(resp, &status); err != nil {
+			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	if !status.Ready {
@@ -181,3 +201,20 @@ func SSH(args []string) {
 		os.Exit(1)
 	}
 }
+
+/*
+ssh flowchart
+flowchart TD
+    A[Parse flags + box id] --> B{mode}
+    B -->|local| C[GetSshStatus + manual map to Box]
+    B -->|remote| D[GET /v2/boxes/id/ssh-status]
+    C --> E[Unified validation]
+    D --> E
+    E --> F{ready?}
+    F -->|no| X[exit]
+    F -->|yes| G{instance + IP + running?}
+    G -->|no| X
+    G -->|yes| H[checkDevboxReady probe]
+    H --> I[syscall.Exec ssh]
+
+*/
