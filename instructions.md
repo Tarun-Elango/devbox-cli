@@ -7,6 +7,20 @@ cd src
 go build -o devbox .
 ```
 
+## Run
+
+```bash
+# Install so you can use it system-wide
+go install .
+```
+
+## Test
+
+```bash
+# Run all tests
+go test ./...
+```
+
 This produces a `devbox` binary in `src/`.
 
 To install it to your `$GOPATH/bin`:

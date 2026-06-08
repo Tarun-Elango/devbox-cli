@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"devbox-cli/internal/api"
+	"devbox-cli/service"
 )
 
 // findFreePort asks the OS for an available TCP port on localhost.
@@ -36,34 +37,44 @@ func Forward(args []string) {
 	id := args[0]
 	port := args[1]
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	body := map[string]string{"port": port}
-	resp, err := client.Post("/v1/boxes/"+id+"/ports", body)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-		os.Exit(1)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-		os.Exit(1)
+	var result service.PortForwardResponse
+	if mode == "local" {
+		resp, err := service.ForwardPort(id, port, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+			os.Exit(1)
+		}
+		result = *resp
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		body := map[string]string{"port": port}
+		resp, err := client.Post("/v1/boxes/"+id+"/ports", body)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+			os.Exit(1)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+			os.Exit(1)
+		}
+		if err := api.DecodeJSON(resp, &result); err != nil { // add to result var
+			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
-	var result struct {
-		Host       string `json:"host"`
-		User       string `json:"user"`
-		RemotePort string `json:"remotePort"`
-	}
-	if err := api.DecodeJSON(resp, &result); err != nil {
-		fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Find a free local port to forward to.  We can't assume the requested port is free, 
+	// Find a free local port to forward to.  We can't assume the requested port is free,
 	// and we don't want to require the user to specify a local port at all.
 	localPort, err := findFreePort()
 	if err != nil {

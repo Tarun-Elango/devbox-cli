@@ -5,10 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"devbox-cli/internal/api"
-	"devbox-cli/internal/config"
+	"devbox-cli/service"
 )
 
 // readPublicKey returns the contents of the user's default SSH public key,
@@ -38,32 +37,61 @@ type Box struct {
 	PrivateIP        string `json:"privateIpAddress"`
 }
 
+func instancesToBoxes(instances []*service.Instance) []Box {
+	boxes := make([]Box, len(instances))
+	for i, inst := range instances {
+		boxes[i] = Box{
+			ID:           inst.ID,
+			Name:         inst.Name,
+			Status:       inst.Status,
+			InstanceType: inst.InstanceType,
+			PublicIP:     inst.IPAddress,
+			PrivateIP:    inst.PrivateIPAddress,
+		}
+	}
+	return boxes
+}
+
 // Ls lists all boxes belonging to the authenticated user.
 func Ls() {
 	if TestMode {
 		fmt.Println("[test] ls: done")
 		return
 	}
-	client, err := api.NewDefault()
+
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Get("/v1/boxes")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ls failed: %v\n", err)
-		os.Exit(1)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "ls failed: %v\n", err)
-		os.Exit(1)
-	}
-
 	var boxes []Box
-	if err := api.DecodeJSON(resp, &boxes); err != nil {
-		fmt.Fprintf(os.Stderr, "ls failed: %v\n", err)
-		os.Exit(1)
+	if mode == "local" {
+		fmt.Println("Listing local boxes")
+		instances, err := service.ListInstances(service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		boxes = instancesToBoxes(instances)
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Get("/v1/boxes")
+		if err != nil {
+			api.FailBox("ls", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("ls", err)
+		}
+
+		if err := api.DecodeJSON(resp, &boxes); err != nil {
+			api.FailBox("ls", err)
+		}
 	}
 
 	if len(boxes) == 0 {
@@ -90,26 +118,38 @@ func Status(args []string) {
 	}
 	id := args[0]
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Get("/v1/boxes/" + id)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "status failed: %v\n", err)
-		os.Exit(1)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "status failed: %v\n", err)
-		os.Exit(1)
-	}
-
 	var b Box
-	if err := api.DecodeJSON(resp, &b); err != nil {
-		fmt.Fprintf(os.Stderr, "status failed: %v\n", err)
-		os.Exit(1)
+	if mode == "local" {
+		inst, err := service.GetInstance(id, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		b = instancesToBoxes([]*service.Instance{inst})[0] // from the returned instance, create a Box struct used below
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Get("/v1/boxes/" + id)
+		if err != nil {
+			api.FailBox("status", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("status", err)
+		}
+
+		if err := api.DecodeJSON(resp, &b); err != nil {
+			api.FailBox("status", err)
+		}
 	}
 
 	fmt.Printf("ID:        %s\n", b.ID)
@@ -120,87 +160,90 @@ func Status(args []string) {
 	fmt.Printf("Type:       %s\n", b.InstanceType)
 }
 
-// Create creates a new box with an optional name and streams progress via WebSocket.
+// Create creates a new box with an optional name and returns as soon as EC2 accepts the launch.
 // Pass --from <snapshot_ami_id> to restore from a previously saved snapshot.
 func Create(args []string) {
+	if len(args) > 0 && args[0] == "--template" {
+		CreateTemplate(args[1:])
+		return
+	}
+
 	if TestMode {
 		fmt.Println("[test] create: done")
 		return
 	}
 
-	// Parse positional name and optional --from <snapshot_ami_id> flag.
-	var name, fromSnapshot string
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--from":
-			if i+1 >= len(args) {
-				fmt.Fprintln(os.Stderr, "error: --from requires a snapshot AMI ID")
-				os.Exit(1)
-			}
-			i++
-			fromSnapshot = args[i]
-		default:
-			if name == "" {
-				name = strings.TrimSpace(args[i])
-			}
-		}
-	}
-
-	if name == "" {
-		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--from <snapshot_ami_id>]")
-		os.Exit(1)
-	}
-
-	body := map[string]string{"name": name}
-
-	if fromSnapshot != "" {
-		body["fromSnapshot"] = fromSnapshot
-	}
-
-	// Include the user's public key if available, so they can SSH in without extra setup.
-	if pubKey, err := readPublicKey(); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: %v; box will be created without your public key\n", err)
-	} else {
-		body["publicKey"] = pubKey
-	}
-
-	cfg, err := config.Load()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Use a long timeout: the server blocks until EC2 status checks pass (up to ~10 min).
-	client := api.NewWithTimeout(cfg.ServerURL, cfg.Token, 15*time.Minute)
+	name, fromSnapshot, err := ParseNameAndFromFlag(args) // should have at least name
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--from <snapshot_ami_id>]")
+		os.Exit(1)
+	}
+
+	pubKey := ""
+	if pk, err := readPublicKey(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: %v; box will be created without your public key\n", err)
+	} else {
+		pubKey = pk
+	}
 
 	if fromSnapshot != "" {
-		fmt.Printf("Restoring box %q from snapshot AMI %s - waiting for it to be ready (this may take a few minutes)...\n", name, fromSnapshot)
+		fmt.Printf("Creating box %q from snapshot AMI %s...\n", name, fromSnapshot)
 	} else {
-		fmt.Printf("Creating box %q — waiting for it to be ready (this may take a few minutes)...\n", name)
-	}
-
-	resp, err := client.Post("/v1/boxes", body)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "create failed: %v\n", err)
-		os.Exit(1)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "create failed: %v\n", err)
-		os.Exit(1)
+		fmt.Printf("Creating box %q...\n", name)
 	}
 
 	var b Box
-	if err := api.DecodeJSON(resp, &b); err != nil {
-		fmt.Fprintf(os.Stderr, "create failed: %v\n", err)
-		os.Exit(1)
+	if mode == "local" {
+		inst, err := service.CreateInstance(name, pubKey, fromSnapshot, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		b = instancesToBoxes([]*service.Instance{inst})[0]
+	} else {
+		body := map[string]string{"name": name}
+		if fromSnapshot != "" {
+			body["fromSnapshot"] = fromSnapshot
+		}
+		if pubKey != "" {
+			body["publicKey"] = pubKey
+		}
+
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Post("/v2/boxes", body)
+		if err != nil {
+			api.FailBox("create", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("create", err)
+		}
+
+		if err := api.DecodeJSON(resp, &b); err != nil {
+			api.FailBox("create", err)
+		}
 	}
 
-	fmt.Printf("Box is ready.\n")
+	fmt.Printf("Box created.\n")
 	fmt.Printf("  ID:        %s\n", b.ID)
 	fmt.Printf("  Name:      %s\n", b.Name)
+	fmt.Printf("  Status:    %s\n", b.Status)
 	if b.PublicIP != "" {
 		fmt.Printf("  Public IP: %s\n", b.PublicIP)
 		fmt.Printf("\n  Connect:   devbox ssh %s\n", b.ID)
+	} else {
+		fmt.Printf("\n  Provisioning — check status: devbox status %s\n", b.ID)
 	}
 }
 
@@ -228,22 +271,38 @@ func Stop(args []string) {
 	}
 	id := args[0]
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Post("/v1/boxes/"+id+"/stop", nil)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "stop failed: %v\n", err)
-		os.Exit(1)
+	if mode == "local" {
+		result, err := service.StopInstance(id, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if !result.Success {
+			fmt.Fprintf(os.Stderr, "error: %s\n", result.Message)
+			os.Exit(1)
+		}
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Post("/v1/boxes/"+id+"/stop", nil)
+		if err != nil {
+			api.FailBox("stop", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("stop", err)
+		}
+		resp.Body.Close()
 	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "stop failed: %v\n", err)
-		os.Exit(1)
-	}
-	resp.Body.Close()
 
 	fmt.Printf("Box %s stopped.\n", id)
 }
@@ -260,22 +319,38 @@ func Start(args []string) {
 	}
 	id := args[0]
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Post("/v1/boxes/"+id+"/start", nil)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "start failed: %v\n", err)
-		os.Exit(1)
+	if mode == "local" {
+		result, err := service.StartInstance(id, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if !result.Success {
+			fmt.Fprintf(os.Stderr, "error: %s\n", result.Message)
+			os.Exit(1)
+		}
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Post("/v1/boxes/"+id+"/start", nil)
+		if err != nil {
+			api.FailBox("start", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("start", err)
+		}
+		resp.Body.Close()
 	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "start failed: %v\n", err)
-		os.Exit(1)
-	}
-	resp.Body.Close()
 
 	fmt.Printf("Box %s started.\n", id)
 }
@@ -300,22 +375,38 @@ func Delete(args []string) {
 		return
 	}
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Delete("/v1/boxes/" + id)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "delete failed: %v\n", err)
-		os.Exit(1)
+	if mode == "local" {
+		result, err := service.DeleteInstance(id, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if !result.Success {
+			fmt.Fprintf(os.Stderr, "error: %s\n", result.Message)
+			os.Exit(1)
+		}
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Delete("/v1/boxes/" + id)
+		if err != nil {
+			api.FailBox("delete", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("delete", err)
+		}
+		resp.Body.Close()
 	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "delete failed: %v\n", err)
-		os.Exit(1)
-	}
-	resp.Body.Close()
 
 	fmt.Printf("Box %s deleted.\n", id)
 }

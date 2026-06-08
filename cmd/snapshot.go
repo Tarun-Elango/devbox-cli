@@ -52,4 +52,5 @@ func Snapshot(args []string) {
 	}
 
 	fmt.Printf("Snapshot created: %s  name=%s  state=%s\n", result.AmiID, result.Name, result.State)
+	fmt.Printf("Snapshot creation may take a minute or so to finish. Check status with: devbox snapshots ls %s\n", result.AmiID)
 }

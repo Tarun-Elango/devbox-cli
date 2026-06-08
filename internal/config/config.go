@@ -98,6 +98,10 @@ type Config struct {
 	RefreshToken string    `json:"refresh_token"`
 	TokenExpiry  time.Time `json:"token_expiry"`
 	ServerURL    string    `json:"serverUrl"`
+	AwsSecret    string `json:"awsSecret"`
+	AwsAccessKey string `json:"awsAccessKey"`
+	AwsRegion    string `json:"awsRegion"`
+	Mode         string `json:"mode"`
 }
 
 // IsTokenExpired reports whether the access token is expired or will expire
@@ -141,7 +145,7 @@ func Load() (*Config, error) {
 	if cfg.ServerURL == "" {
 		cfg.ServerURL = resolveServerURL()
 	}
-	return &cfg, nil
+	return &cfg, nil // return config struct, and nil error
 }
 
 // Save writes cfg to ~/.devbox/config.json, creating the directory if needed.
