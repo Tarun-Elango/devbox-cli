@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
 	"devbox-cli/internal/api"
+	"devbox-cli/service"
 )
 
 // readPublicKey returns the contents of the user's default SSH public key,
@@ -35,29 +37,61 @@ type Box struct {
 	PrivateIP        string `json:"privateIpAddress"`
 }
 
+func instancesToBoxes(instances []*service.Instance) []Box {
+	boxes := make([]Box, len(instances))
+	for i, inst := range instances {
+		boxes[i] = Box{
+			ID:           inst.ID,
+			Name:         inst.Name,
+			Status:       inst.Status,
+			InstanceType: inst.InstanceType,
+			PublicIP:     inst.IPAddress,
+			PrivateIP:    inst.PrivateIPAddress,
+		}
+	}
+	return boxes
+}
+
 // Ls lists all boxes belonging to the authenticated user.
 func Ls() {
 	if TestMode {
 		fmt.Println("[test] ls: done")
 		return
 	}
-	client, err := api.NewDefault()
+
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Get("/v1/boxes")
-	if err != nil {
-		api.FailBox("ls", err)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		api.FailBox("ls", err)
-	}
-
 	var boxes []Box
-	if err := api.DecodeJSON(resp, &boxes); err != nil {
-		api.FailBox("ls", err)
+	if mode == "local" {
+		fmt.Println("Listing local boxes")
+		instances, err := service.ListInstances(service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		boxes = instancesToBoxes(instances)
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Get("/v1/boxes")
+		if err != nil {
+			api.FailBox("ls", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("ls", err)
+		}
+
+		if err := api.DecodeJSON(resp, &boxes); err != nil {
+			api.FailBox("ls", err)
+		}
 	}
 
 	if len(boxes) == 0 {
@@ -84,23 +118,38 @@ func Status(args []string) {
 	}
 	id := args[0]
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Get("/v1/boxes/" + id)
-	if err != nil {
-		api.FailBox("status", err)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		api.FailBox("status", err)
-	}
-
 	var b Box
-	if err := api.DecodeJSON(resp, &b); err != nil {
-		api.FailBox("status", err)
+	if mode == "local" {
+		inst, err := service.GetInstance(id, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		b = instancesToBoxes([]*service.Instance{inst})[0] // from the returned instance, create a Box struct used below
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Get("/v1/boxes/" + id)
+		if err != nil {
+			api.FailBox("status", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("status", err)
+		}
+
+		if err := api.DecodeJSON(resp, &b); err != nil {
+			api.FailBox("status", err)
+		}
 	}
 
 	fmt.Printf("ID:        %s\n", b.ID)
@@ -124,6 +173,12 @@ func Create(args []string) {
 		return
 	}
 
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+
 	name, fromSnapshot, err := ParseNameAndFromFlag(args) // should have at least name
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -131,23 +186,11 @@ func Create(args []string) {
 		os.Exit(1)
 	}
 
-	body := map[string]string{"name": name}
-
-	if fromSnapshot != "" {
-		body["fromSnapshot"] = fromSnapshot
-	}
-
-	// Include the user's public key if available, so they can SSH in without extra setup.
-	if pubKey, err := readPublicKey(); err != nil {
+	pubKey := ""
+	if pk, err := readPublicKey(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: %v; box will be created without your public key\n", err)
 	} else {
-		body["publicKey"] = pubKey
-	}
-
-	client, err := api.NewDefault()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		pubKey = pk
 	}
 
 	if fromSnapshot != "" {
@@ -156,17 +199,40 @@ func Create(args []string) {
 		fmt.Printf("Creating box %q...\n", name)
 	}
 
-	resp, err := client.Post("/v2/boxes", body)
-	if err != nil {
-		api.FailBox("create", err)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		api.FailBox("create", err)
-	}
-
 	var b Box
-	if err := api.DecodeJSON(resp, &b); err != nil {
-		api.FailBox("create", err)
+	if mode == "local" {
+		inst, err := service.CreateInstance(name, pubKey, fromSnapshot, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		b = instancesToBoxes([]*service.Instance{inst})[0]
+	} else {
+		body := map[string]string{"name": name}
+		if fromSnapshot != "" {
+			body["fromSnapshot"] = fromSnapshot
+		}
+		if pubKey != "" {
+			body["publicKey"] = pubKey
+		}
+
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Post("/v2/boxes", body)
+		if err != nil {
+			api.FailBox("create", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("create", err)
+		}
+
+		if err := api.DecodeJSON(resp, &b); err != nil {
+			api.FailBox("create", err)
+		}
 	}
 
 	fmt.Printf("Box created.\n")
