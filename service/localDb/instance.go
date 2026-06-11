@@ -49,6 +49,29 @@ func (db *DB) ListInstancesByUserID(userID string) ([]InstanceRecord, error) {
 	return records, rows.Err()
 }
 
+// GetInstanceByID returns the instance row for internal id, or sql.ErrNoRows if not found.
+func (db *DB) GetInstanceByID(id string) (*InstanceRecord, error) {
+	var r InstanceRecord
+	err := db.conn.QueryRow(`
+		SELECT id, aws_instance_id, name, user_id, ip_address, status, instance_type
+		FROM instances
+		WHERE id = ?`,
+		id,
+	).Scan(
+		&r.ID,
+		&r.AwsInstanceID,
+		&r.Name,
+		&r.UserID,
+		&r.IPAddress,
+		&r.Status,
+		&r.InstanceType,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
 // GetInstanceByAwsInstanceIDAndUserID returns the instance row for awsInstanceID
 // owned by userID, or sql.ErrNoRows if not found.
 func (db *DB) GetInstanceByAwsInstanceIDAndUserID(awsInstanceID, userID string) (*InstanceRecord, error) {
