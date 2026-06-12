@@ -11,7 +11,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `Usage: devbox <command> [args]
 
 Commands:
-  setup               Configure/Change AWS credentials and region 
+  setup               Configure/Change AWS credentials and region - stored in ~/.devbox/config.json
 
   create <name>       Create a new box
   ls                  List all boxes
