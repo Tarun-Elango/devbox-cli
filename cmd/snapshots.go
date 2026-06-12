@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"devbox-cli/internal/api"
+	"devbox-cli/service"
 )
 
 // snapshotItem represents a snapshot as returned by the API.
@@ -57,26 +58,41 @@ func Snapshots(args []string) {
 }
 
 func snapshotsList() {
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Get("/v1/snapshots")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-		os.Exit(1)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-		os.Exit(1)
-	}
-
 	var items []snapshotItem
-	if err := api.DecodeJSON(resp, &items); err != nil {
-		fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-		os.Exit(1)
+	if mode == "local" {
+		snaps, err := service.ListSnapshots(service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
+			os.Exit(1)
+		}
+		items = snapshotsToItems(snaps)
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Get("/v1/snapshots")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
+			os.Exit(1)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
+			os.Exit(1)
+		}
+
+		if err := api.DecodeJSON(resp, &items); err != nil { // add response to items
+			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	if len(items) == 0 {
@@ -87,27 +103,55 @@ func snapshotsList() {
 	printSnapshotTable(items)
 }
 
+func snapshotsToItems(snaps []*service.Snapshot) []snapshotItem {
+	items := make([]snapshotItem, len(snaps))
+	for i, s := range snaps {
+		items[i] = snapshotItem{
+			AmiID:    s.AmiID,
+			Name:     s.Name,
+			State:    s.State,
+			BoxAwsID: s.BoxAwsID,
+		}
+	}
+	return items
+}
+
 func snapshotsListByBox(boxID string) {
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Get("/v1/boxes/" + boxID + "/snapshots")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-		os.Exit(1)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-		os.Exit(1)
-	}
-
 	var items []snapshotItem
-	if err := api.DecodeJSON(resp, &items); err != nil {
-		fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-		os.Exit(1)
+	if mode == "local" {
+		snaps, err := service.ListSnapshotsByBox(boxID, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
+			os.Exit(1)
+		}
+		items = snapshotsToItems(snaps)
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Get("/v1/boxes/" + boxID + "/snapshots")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
+			os.Exit(1)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
+			os.Exit(1)
+		}
+
+		if err := api.DecodeJSON(resp, &items); err != nil {
+			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	if len(items) == 0 {
@@ -119,6 +163,25 @@ func snapshotsListByBox(boxID string) {
 }
 
 func snapshotsDelete(amiID string) {
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if mode == "local" {
+		if err := service.DeleteSnapshot(amiID, service.LocalUserID); err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				fmt.Fprintf(os.Stderr, "snapshot %s not found\n", amiID)
+			} else {
+				fmt.Fprintf(os.Stderr, "snapshot delete failed: %v\n", err)
+			}
+			os.Exit(1)
+		}
+		fmt.Printf("Snapshot %s deleted.\n", amiID)
+		return
+	}
+
 	client, err := api.NewDefault()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)

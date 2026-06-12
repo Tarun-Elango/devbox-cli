@@ -19,9 +19,9 @@ import (
 // EC2 defaults — mirrors Lighthouse application.properties.
 const (
 	defaultInstanceType    = "t4g.small"
-	defaultAmiID           = "ami-03834b8550547b809"
+	defaultAmiID           = "ami-096f34d377a72cea5" // amazon linux 2023 ami
 	defaultStorageSizeGB   = 20
-	defaultSecurityGroupID = "sg-053a61deae2e90570"
+	defaultSecurityGroupID = "" // we dont have one, so we will default to creating in the code
 	defaultSubnetID        = ""
 
 	isolatedSecurityGroupName = "devbox-isolated"
@@ -145,21 +145,63 @@ func instanceFromAWS(inst types.Instance) *Instance {
 
 // CreateInstance creates a new box locally.
 // Mirrors Lighthouse POST /v2/boxes: launchInstancev2(name, publicKey, snapshotAmiId, userId).
-func CreateInstance(name, publicKey, fromSnapshot, userID string) (*Instance, error) {
+func CreateInstance(name, publicKey, snapshotAmiID, userID string) (*Instance, error) {
+	return createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, nil)
+}
+
+func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID string, startupScripts []string) (*Instance, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("box name is required")
 	}
-	if fromSnapshot != "" {
-		return nil, fmt.Errorf("creating from snapshot is not supported in local mode yet")
+
+	snapshotAmiID = strings.TrimSpace(snapshotAmiID) // snapshotAmiId will only have the id
+	fromSnapshot := snapshotAmiID != ""
+	effectiveAmiID := defaultAmiID
+
+	ctx := context.Background()
+
+	if fromSnapshot {
+		db, err := localDb.Open()
+		if err != nil {
+			return nil, err
+		}
+		_, err = db.GetSnapshotByAmiIDAndUserID(snapshotAmiID, userID)
+		db.Close()
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("snapshot not found: %s", snapshotAmiID)
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		client, err := awsclient.NewClient(ctx)
+		if err != nil {
+			return nil, err
+		}
+		ec2Client := ec2.NewFromConfig(client.Config())
+		resp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+			Owners:   []string{"self"},
+			ImageIds: []string{snapshotAmiID},
+			Filters: []types.Filter{
+				{Name: aws.String("state"), Values: []string{"available"}},
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe images: %w", err)
+		}
+		if len(resp.Images) == 0 {
+			return nil, fmt.Errorf("snapshot AMI not found or not available: %s", snapshotAmiID)
+		}
+
+		effectiveAmiID = snapshotAmiID
 	}
 
-	userData, err := buildUserDataV2(publicKey, nil)
+	userData, err := buildUserDataV2(publicKey, startupScripts)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := context.Background()
 	client, err := awsclient.NewClient(ctx)
 	if err != nil {
 		return nil, err
@@ -175,7 +217,7 @@ func CreateInstance(name, publicKey, fromSnapshot, userID string) (*Instance, er
 	}
 
 	input := &ec2.RunInstancesInput{
-		ImageId:      aws.String(defaultAmiID),
+		ImageId:      aws.String(effectiveAmiID),
 		InstanceType: types.InstanceType(defaultInstanceType),
 		MinCount:     aws.Int32(1),
 		MaxCount:     aws.Int32(1),
@@ -187,7 +229,17 @@ func CreateInstance(name, publicKey, fromSnapshot, userID string) (*Instance, er
 				},
 			},
 		},
-		BlockDeviceMappings: []types.BlockDeviceMapping{
+		SecurityGroupIds: []string{effectiveSgID},
+		MetadataOptions: &types.InstanceMetadataOptionsRequest{
+			HttpTokens:              types.HttpTokensStateRequired,
+			HttpPutResponseHopLimit: aws.Int32(1),
+		},
+		UserData: aws.String(userData),
+	}
+	// When using the default base AMI apply our standard storage spec.
+	// When restoring from a snapshot, honour the AMI's own block device mapping.
+	if !fromSnapshot {
+		input.BlockDeviceMappings = []types.BlockDeviceMapping{
 			{
 				DeviceName: aws.String("/dev/xvda"),
 				Ebs: &types.EbsBlockDevice{
@@ -196,13 +248,7 @@ func CreateInstance(name, publicKey, fromSnapshot, userID string) (*Instance, er
 					DeleteOnTermination: aws.Bool(true),
 				},
 			},
-		},
-		SecurityGroupIds: []string{effectiveSgID},
-		MetadataOptions: &types.InstanceMetadataOptionsRequest{
-			HttpTokens:              types.HttpTokensStateRequired,
-			HttpPutResponseHopLimit: aws.Int32(1),
-		},
-		UserData: aws.String(userData),
+		}
 	}
 	if defaultSubnetID != "" {
 		input.SubnetId = aws.String(defaultSubnetID)
@@ -270,6 +316,7 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 		vpcID = aws.ToString(resp.Vpcs[0].VpcId)
 	}
 
+	// check if security group exists
 	existing, err := ec2Client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
 		Filters: []types.Filter{
 			{Name: aws.String("group-name"), Values: []string{isolatedSecurityGroupName}},
@@ -279,10 +326,11 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 	if err != nil {
 		return "", fmt.Errorf("describe security groups: %w", err)
 	}
-	if len(existing.SecurityGroups) > 0 {
+	if len(existing.SecurityGroups) > 0 { // if security group exists, return it
 		return aws.ToString(existing.SecurityGroups[0].GroupId), nil
 	}
 
+	// create security group
 	createResp, err := ec2Client.CreateSecurityGroup(ctx, &ec2.CreateSecurityGroupInput{
 		GroupName:   aws.String(isolatedSecurityGroupName),
 		Description: aws.String("Devbox isolated: SSH inbound only"),
@@ -563,6 +611,7 @@ func GetSshStatus(instanceID, userID string) (*SshStatus, error) {
 	return checkSshStatusFromAWS(instanceID), nil
 }
 
+// check if the two checks are ok, instance and system status
 func checkSshStatusFromAWS(instanceID string) *SshStatus {
 	notReady := &SshStatus{Ready: false}
 
@@ -614,10 +663,18 @@ func ForwardPort(instanceID, port, userID string) (*PortForwardResponse, error) 
 		return nil, fmt.Errorf("missing required field: port")
 	}
 
-	box, err := GetInstance(instanceID, userID)
+	sshStatus, err := GetSshStatus(instanceID, userID)
 	if err != nil {
 		return nil, err
 	}
+	if !sshStatus.Ready {
+		return nil, fmt.Errorf("box is not ready yet (EC2 status checks still pending)")
+	}
+	if sshStatus.Instance == nil {
+		return nil, fmt.Errorf("box is ready but instance details are unavailable, try again in a few minutes")
+	}
+
+	box := sshStatus.Instance
 	if box.Status != "running" {
 		return nil, fmt.Errorf("box is %s, not running", box.Status)
 	}
@@ -636,3 +693,4 @@ func ForwardPort(instanceID, port, userID string) (*PortForwardResponse, error) 
 		RemotePort: port,
 	}, nil
 }
+

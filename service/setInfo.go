@@ -52,6 +52,7 @@ func SaveAWSCredentials(secret, accessKey, region string) error {
 	cfg.AwsSecret = secret
 	cfg.AwsAccessKey = accessKey
 	cfg.AwsRegion = region
+	cfg.Mode = "local"
 	return config.Save(cfg)
 }
 

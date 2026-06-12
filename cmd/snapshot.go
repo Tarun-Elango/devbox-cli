@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"devbox-cli/internal/api"
+	"devbox-cli/service"
 )
 
 // Snapshot creates an AMI snapshot of the given box.
@@ -24,31 +25,41 @@ func Snapshot(args []string) {
 		name = args[1]
 	}
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	body := map[string]string{"name": name}
-	resp, err := client.Post("/v1/boxes/"+id+"/snapshots", body)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
-		os.Exit(1)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
-		os.Exit(1)
-	}
+	var result service.Snapshot
+	if mode == "local" {
+		snap, err := service.CreateSnapshot(id, name, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
+			os.Exit(1)
+		}
+		result = *snap
+	} else {
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
 
-	var result struct {
-		AmiID string `json:"amiId"`
-		Name  string `json:"name"`
-		State string `json:"state"`
-	}
-	if err := api.DecodeJSON(resp, &result); err != nil {
-		fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
-		os.Exit(1)
+		body := map[string]string{"name": name}
+		resp, err := client.Post("/v1/boxes/"+id+"/snapshots", body)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
+			os.Exit(1)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
+			os.Exit(1)
+		}
+		if err := api.DecodeJSON(resp, &result); err != nil {
+			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	fmt.Printf("Snapshot created: %s  name=%s  state=%s\n", result.AmiID, result.Name, result.State)

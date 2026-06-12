@@ -11,8 +11,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `Usage: devbox <command> [args]
 
 Commands:
-  mode                Set the mode to cloud or local (default is local)
-  setup               Configure/Change AWS credentials and region 
+  setup               Configure/Change AWS credentials and region - stored in ~/.devbox/config.json
 
   create <name>       Create a new box
   ls                  List all boxes
@@ -31,12 +30,9 @@ Commands:
 
   templates                  List available templates
   template new <name> [command string] Create a new template with a command to run on startup
+  template delete <id> 		 Delete a template
   create --template <template> [<template>...] <name> Create a new box from one or more templates
   create --template <template> [<template>...] <name> --from <snapshot_ami_id> Create from templates and restore from a snapshot
-  
-  login                 Authenticate for cloud mode
-  signup                Create a new account for cloud mode
-  logout                Clear saved credentials for cloud mode
   `)
 }
 
@@ -93,14 +89,13 @@ func main() {
 	case "templates":
 		cmd.Templates(args)
 	case "template":
-		cmd.TemplateNew(args)
+		cmd.Template(args)
 	default:
 		fmt.Fprintf(os.Stderr, "devbox: unknown command %q\n\n", command)
 		usage()
 		os.Exit(1)
 	}
 }
-
 
 /*
 # One-shot: stop tonight at 6pm UTC
@@ -124,5 +119,5 @@ devbox schedule start i-0abc123 --cron "0 9 * * MON-FRI"  --tz America/New_York
 0 9  * * MON-FRI  → Mon–Fri 09:00
 
 
-
+  mode                Set the mode to cloud or local (default is local)
 */
