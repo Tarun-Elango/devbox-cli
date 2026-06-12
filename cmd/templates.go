@@ -55,26 +55,15 @@ func Templates(args []string) {
 	}
 
 	const colSep = "  |  "
-	fmt.Printf("%-20s%s%-24s%s%s\n", "TEMPLATE", colSep, "DESCRIPTION", colSep, "STARTUP SCRIPT")
-	fmt.Println(strings.Repeat("-", 100))
+	fmt.Printf("%-20s%s%s\n", "TEMPLATE", colSep, "STARTUP SCRIPT")
+	fmt.Println(strings.Repeat("-", 60))
 	for _, t := range templates {
 		ref := t.ID
 		if ref == "" {
 			ref = t.Name
 		}
-		fmt.Printf("%-20s%s%-24s%s%s\n",
-			ref, colSep,
-			formatTemplateField(t.Description), colSep,
-			formatTemplateScript(t.StartupScript))
+		fmt.Printf("%-20s%s%s\n", ref, colSep, formatTemplateScript(t.StartupScript))
 	}
-}
-
-func formatTemplateField(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "-"
-	}
-	return s
 }
 
 func formatTemplateScript(s string) string {
@@ -88,7 +77,7 @@ func formatTemplateScript(s string) string {
 	if len(s) > maxLen {
 		s = s[:maxLen-3] + "..."
 	}
-	return fmt.Sprintf("%q", s)
+	return fmt.Sprintf(s)
 }
 // notes: check valid template id, name cannot start with --, 
 // -- from should be valid string and should have a snapshot ami id
