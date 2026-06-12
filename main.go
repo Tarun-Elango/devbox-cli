@@ -31,12 +31,9 @@ Commands:
 
   templates                  List available templates
   template new <name> [command string] Create a new template with a command to run on startup
+  template delete <id> 		 Delete a template
   create --template <template> [<template>...] <name> Create a new box from one or more templates
   create --template <template> [<template>...] <name> --from <snapshot_ami_id> Create from templates and restore from a snapshot
-  
-  login                 Authenticate for cloud mode
-  signup                Create a new account for cloud mode
-  logout                Clear saved credentials for cloud mode
   `)
 }
 
@@ -93,14 +90,13 @@ func main() {
 	case "templates":
 		cmd.Templates(args)
 	case "template":
-		cmd.TemplateNew(args)
+		cmd.Template(args)
 	default:
 		fmt.Fprintf(os.Stderr, "devbox: unknown command %q\n\n", command)
 		usage()
 		os.Exit(1)
 	}
 }
-
 
 /*
 # One-shot: stop tonight at 6pm UTC

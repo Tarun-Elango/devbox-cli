@@ -21,7 +21,7 @@ const (
 	defaultInstanceType    = "t4g.small"
 	defaultAmiID           = "ami-096f34d377a72cea5" // amazon linux 2023 ami
 	defaultStorageSizeGB   = 20
-	defaultSecurityGroupID = ""// we dont have one, so we will default to creating in the code
+	defaultSecurityGroupID = "" // we dont have one, so we will default to creating in the code
 	defaultSubnetID        = ""
 
 	isolatedSecurityGroupName = "devbox-isolated"
@@ -146,6 +146,10 @@ func instanceFromAWS(inst types.Instance) *Instance {
 // CreateInstance creates a new box locally.
 // Mirrors Lighthouse POST /v2/boxes: launchInstancev2(name, publicKey, snapshotAmiId, userId).
 func CreateInstance(name, publicKey, snapshotAmiID, userID string) (*Instance, error) {
+	return createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, nil)
+}
+
+func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID string, startupScripts []string) (*Instance, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("box name is required")
@@ -193,7 +197,7 @@ func CreateInstance(name, publicKey, snapshotAmiID, userID string) (*Instance, e
 		effectiveAmiID = snapshotAmiID
 	}
 
-	userData, err := buildUserDataV2(publicKey, nil)
+	userData, err := buildUserDataV2(publicKey, startupScripts)
 	if err != nil {
 		return nil, err
 	}
@@ -681,5 +685,3 @@ func ForwardPort(instanceID, port, userID string) (*PortForwardResponse, error) 
 	}, nil
 }
 
-
-// function for forward 

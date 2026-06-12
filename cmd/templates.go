@@ -6,40 +6,52 @@ import (
 	"strings"
 
 	"devbox-cli/internal/api"
+	"devbox-cli/service"
 )
-type Template struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	StartupScript string `json:"startupScript"`
-}
 
 func Templates(args []string) {
-	fmt.Println("Fetching Templates")
 	if TestMode {
 		fmt.Println("[test] templates: done")
 		return
 	}
 
-	client, err := api.NewDefault()
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	resp, err := client.Get("/v1/boxes/templates")
-	if err != nil {
-		api.FailBox("templates", err)
-	}
-	
-	if err := api.CheckStatus(resp); err != nil {
-		api.FailBox("templates", err)
+	var templates []*service.Template
+	if mode == "local" {
+		fmt.Println("Listing local templates")
+		templates, err = service.ListTemplates(service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Println("Fetching Templates")
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Get("/v1/boxes/templates")
+		if err != nil {
+			api.FailBox("templates", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("templates", err)
+		}
+		if err := api.DecodeJSON(resp, &templates); err != nil {
+			api.FailBox("templates", err)
+		}
 	}
 
-	// build a table of templates
-	var templates []Template
-	if err := api.DecodeJSON(resp, &templates); err != nil { // decode the response body into the templates slice
-		api.FailBox("templates", err)
+	if len(templates) == 0 {
+		fmt.Println("No templates found.")
+		return
 	}
 
 	const colSep = "  |  "
@@ -80,6 +92,8 @@ func formatTemplateScript(s string) string {
 }
 // notes: check valid template id, name cannot start with --, 
 // -- from should be valid string and should have a snapshot ami id
+
+// this is to create a new box with templates
 func CreateTemplate(args []string) {
 
 	// -args wont have --template flag
@@ -150,20 +164,11 @@ func CreateTemplate(args []string) {
 		os.Exit(1)
 	}
 
-	body := map[string]any{"name": name, "templateIds": templateRefs}
-	if fromSnapshot != "" {
-		body["fromSnapshot"] = fromSnapshot
-	}
-	if pubKey, err := readPublicKey(); err != nil {
+	pubKey := ""
+	if pk, err := readPublicKey(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: %v; box will be created without your public key\n", err)
 	} else {
-		body["publicKey"] = pubKey
-	}
-
-	client, err := api.NewDefault()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		pubKey = pk
 	}
 
 	if fromSnapshot != "" {
@@ -172,17 +177,45 @@ func CreateTemplate(args []string) {
 		fmt.Printf("Creating box %q from templates %s...\n", name, strings.Join(templateRefs, ", "))
 	}
 
-	resp, err := client.Post("/v2/boxes", body)
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
-		api.FailBox("create template", err)
-	}
-	if err := api.CheckStatus(resp); err != nil {
-		api.FailBox("create template", err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
 
 	var b Box
-	if err := api.DecodeJSON(resp, &b); err != nil {
-		api.FailBox("create template", err)
+	if mode == "local" {
+		inst, err := service.CreateBoxFromTemplates(name, templateRefs, pubKey, fromSnapshot, service.LocalUserID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		b = instancesToBoxes([]*service.Instance{inst})[0]
+	} else {
+		body := map[string]any{"name": name, "templateIds": templateRefs}
+		if fromSnapshot != "" {
+			body["fromSnapshot"] = fromSnapshot
+		}
+		if pubKey != "" {
+			body["publicKey"] = pubKey
+		}
+
+		client, err := api.NewDefault()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		resp, err := client.Post("/v2/boxes", body)
+		if err != nil {
+			api.FailBox("create template", err)
+		}
+		if err := api.CheckStatus(resp); err != nil {
+			api.FailBox("create template", err)
+		}
+		if err := api.DecodeJSON(resp, &b); err != nil {
+			api.FailBox("create template", err)
+		}
 	}
 
 	fmt.Printf("Box created.\n")
