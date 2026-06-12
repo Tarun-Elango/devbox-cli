@@ -611,6 +611,7 @@ func GetSshStatus(instanceID, userID string) (*SshStatus, error) {
 	return checkSshStatusFromAWS(instanceID), nil
 }
 
+// check if the two checks are ok, instance and system status
 func checkSshStatusFromAWS(instanceID string) *SshStatus {
 	notReady := &SshStatus{Ready: false}
 
@@ -662,10 +663,18 @@ func ForwardPort(instanceID, port, userID string) (*PortForwardResponse, error) 
 		return nil, fmt.Errorf("missing required field: port")
 	}
 
-	box, err := GetInstance(instanceID, userID)
+	sshStatus, err := GetSshStatus(instanceID, userID)
 	if err != nil {
 		return nil, err
 	}
+	if !sshStatus.Ready {
+		return nil, fmt.Errorf("box is not ready yet (EC2 status checks still pending)")
+	}
+	if sshStatus.Instance == nil {
+		return nil, fmt.Errorf("box is ready but instance details are unavailable, try again in a few minutes")
+	}
+
+	box := sshStatus.Instance
 	if box.Status != "running" {
 		return nil, fmt.Errorf("box is %s, not running", box.Status)
 	}
