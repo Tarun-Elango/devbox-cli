@@ -58,6 +58,37 @@ func Forward(args []string) {
 			os.Exit(1)
 		}
 
+		statusResp, err := client.Get("/v2/boxes/" + id + "/ssh-status")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+			os.Exit(1)
+		}
+		if err := api.CheckStatus(statusResp); err != nil {
+			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+			os.Exit(1)
+		}
+		var status SshStatusResponse
+		if err := api.DecodeJSON(statusResp, &status); err != nil {
+			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+			os.Exit(1)
+		}
+		if !status.Ready {
+			fmt.Fprintln(os.Stderr, "forward: box is not ready yet (EC2 status checks still pending)")
+			os.Exit(1)
+		}
+		if status.Instance == nil {
+			fmt.Fprintln(os.Stderr, "forward: server reported ready but returned no instance details, try the command again in a few minutes.")
+			os.Exit(1)
+		}
+		if status.Instance.PublicIP == "" {
+			fmt.Fprintln(os.Stderr, "forward: box has no IP address (is it running?)")
+			os.Exit(1)
+		}
+		if status.Instance.Status != "running" {
+			fmt.Fprintf(os.Stderr, "forward: box is %s, not running\n", status.Instance.Status)
+			os.Exit(1)
+		}
+
 		body := map[string]string{"port": port}
 		resp, err := client.Post("/v1/boxes/"+id+"/ports", body)
 		if err != nil {
@@ -74,17 +105,30 @@ func Forward(args []string) {
 		}
 	}
 
+	sshBin, err := exec.LookPath("ssh") // look for ssh binary in PATH
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "forward: ssh binary not found in PATH")
+		os.Exit(1)
+	}
+
+
+	// we also check if user-data script is completed
+	identity := defaultKeyPath()
+	ready, err := checkDevboxReady(sshBin, identity, result.User, result.Host, "22")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "forward: readiness probe failed: %v\n", err)
+		os.Exit(1)
+	}
+	if !ready {
+		fmt.Fprintln(os.Stderr, "forward: devbox is not ready yet — try again in a minute")
+		os.Exit(1)
+	}
+
 	// Find a free local port to forward to.  We can't assume the requested port is free,
 	// and we don't want to require the user to specify a local port at all.
 	localPort, err := findFreePort()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "forward: could not find a free local port: %v\n", err)
-		os.Exit(1)
-	}
-
-	sshBin, err := exec.LookPath("ssh")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "forward: ssh binary not found in PATH")
 		os.Exit(1)
 	}
 
@@ -98,8 +142,8 @@ func Forward(args []string) {
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "ConnectTimeout=15",
 	}
-	if key := defaultKeyPath(); key != "" {
-		argv = append(argv, "-i", key)
+	if identity != "" {
+		argv = append(argv, "-i", identity)
 	}
 	argv = append(argv, target)
 
