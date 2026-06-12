@@ -97,6 +97,7 @@ func (db *DB) GetInstanceByAwsInstanceIDAndUserID(awsInstanceID, userID string) 
 }
 
 // DeleteInstanceByAwsInstanceID removes an instance row by its AWS instance id.
+// Referencing snapshots keep their row with box_id cleared (ON DELETE SET NULL).
 func (db *DB) DeleteInstanceByAwsInstanceID(awsInstanceID string) error {
 	_, err := db.conn.Exec(`DELETE FROM instances WHERE aws_instance_id = ?`, awsInstanceID)
 	if err != nil {

@@ -24,7 +24,7 @@ var createTables = []string{
   ami_id     TEXT NOT NULL UNIQUE,
   name       TEXT NOT NULL,
   user_id    TEXT NOT NULL REFERENCES users(id),
-  box_id     TEXT REFERENCES instances(id),
+  box_id     TEXT REFERENCES instances(id) ON DELETE SET NULL,
   state      TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )`,

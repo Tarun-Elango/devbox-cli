@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -83,5 +84,50 @@ func (db *DB) migrate() error {
 			return fmt.Errorf("migrate: %w", err)
 		}
 	}
-	return nil
+	// CREATE TABLE IF NOT EXISTS does not alter existing tables; upgrade old DBs once.
+	return db.migrateSnapshotsBoxFK()
+}
+
+func (db *DB) migrateSnapshotsBoxFK() error {
+	var createSQL string
+	err := db.conn.QueryRow(
+		`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'snapshots'`,
+	).Scan(&createSQL)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect snapshots schema: %w", err)
+	}
+	if strings.Contains(createSQL, "ON DELETE SET NULL") {
+		return nil
+	}
+
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return fmt.Errorf("migrate snapshots fk: %w", err)
+	}
+	defer tx.Rollback()
+
+	stmts := []string{
+		`CREATE TABLE snapshots_new (
+  id         TEXT PRIMARY KEY,
+  ami_id     TEXT NOT NULL UNIQUE,
+  name       TEXT NOT NULL,
+  user_id    TEXT NOT NULL REFERENCES users(id),
+  box_id     TEXT REFERENCES instances(id) ON DELETE SET NULL,
+  state      TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`,
+		`INSERT INTO snapshots_new SELECT id, ami_id, name, user_id, box_id, state, created_at FROM snapshots`,
+		`DROP TABLE snapshots`,
+		`ALTER TABLE snapshots_new RENAME TO snapshots`,
+		`CREATE INDEX IF NOT EXISTS idx_snapshots_box ON snapshots(box_id)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := tx.Exec(stmt); err != nil {
+			return fmt.Errorf("migrate snapshots fk: %w", err)
+		}
+	}
+	return tx.Commit()
 }

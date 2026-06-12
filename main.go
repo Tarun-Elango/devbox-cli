@@ -24,7 +24,7 @@ Commands:
 
   snapshot <id> [name]       Create a snapshot of a box
   snapshots                  List all your snapshots
-  snapshots ls <boxId>       List snapshots for a specific box
+  snapshots ls <amiId>       Show details for a specific snapshot
   snapshots delete <amiId>   Delete a snapshot
   create <name> [--from <snapshot_ami_id>]  Create a new box (optionally restore from snapshot)
 

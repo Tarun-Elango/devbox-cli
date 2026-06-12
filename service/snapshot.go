@@ -191,34 +191,20 @@ func ListSnapshots(userID string) ([]*Snapshot, error) {
 	return snapshots, nil
 }
 
-// ListSnapshotsByBox returns snapshots for boxAwsID owned by userID, syncing state from AWS.
-// Mirrors Lighthouse Ec2Service.listSnapshotsByBox.
-func ListSnapshotsByBox(boxAwsID, userID string) ([]*Snapshot, error) {
+// GetSnapshot returns a snapshot by amiID owned by userID, syncing state from AWS.
+func GetSnapshot(amiID, userID string) (*Snapshot, error) {
 	db, err := localDb.Open()
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	box, err := db.GetInstanceByAwsInstanceIDAndUserID(boxAwsID, userID)
+	record, err := db.GetSnapshotByAmiIDAndUserID(amiID, userID)
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("box not found: %s", boxAwsID)
+		return nil, fmt.Errorf("snapshot not found: %s", amiID)
 	}
 	if err != nil {
 		return nil, err
-	}
-
-	records, err := db.ListSnapshotsByBoxIDAndUserID(box.ID, userID)
-	if err != nil {
-		return nil, err
-	}
-	if len(records) == 0 {
-		return nil, nil
-	}
-
-	amiIDs := make([]string, len(records))
-	for i, r := range records {
-		amiIDs[i] = r.AmiID
 	}
 
 	ctx := context.Background()
@@ -227,64 +213,48 @@ func ListSnapshotsByBox(boxAwsID, userID string) ([]*Snapshot, error) {
 		return nil, err
 	}
 
+	// check snapshot state from AWS
 	ec2Client := ec2.NewFromConfig(client.Config())
 	resp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 		Owners:   []string{"self"},
-		ImageIds: amiIDs,
+		ImageIds: []string{amiID},// detail snapshot by amiID
 	})
 	if err != nil {
 		return nil, fmt.Errorf("describe images: %w", err)
 	}
 
-	stateByAmiID := make(map[string]string, len(resp.Images))
-	for _, img := range resp.Images {
-		stateByAmiID[aws.ToString(img.ImageId)] = string(img.State)
+	if len(resp.Images) == 0 {
+		if err := db.DeleteSnapshotByAmiID(amiID); err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("snapshot not found: %s", amiID)
 	}
 
-	for _, record := range records {
-		awsState, ok := stateByAmiID[record.AmiID]
-		if !ok {
-			if err := db.DeleteSnapshotByAmiID(record.AmiID); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		dbState := ""
-		if record.State.Valid {
-			dbState = record.State.String
-		}
-		if dbState != awsState {
-			if err := db.UpdateSnapshotState(record.AmiID, awsState); err != nil {
-				return nil, err
-			}
+	awsState := string(resp.Images[0].State)
+	dbState := ""
+	if record.State.Valid {
+		dbState = record.State.String
+	}
+	if dbState != awsState {
+		if err := db.UpdateSnapshotState(amiID, awsState); err != nil {
+			return nil, err
 		}
 	}
 
-	records, err = db.ListSnapshotsByBoxIDAndUserID(box.ID, userID)
-	if err != nil {
-		return nil, err
-	}
-	if len(records) == 0 {
-		return nil, nil
-	}
-
-	snapshots := make([]*Snapshot, 0, len(records))
-	for _, r := range records {
-		state := "unknown"
-		if awsState, ok := stateByAmiID[r.AmiID]; ok {
-			state = awsState
-		} else if r.State.Valid {
-			state = r.State.String
+	boxAwsID := ""
+	if record.BoxID.Valid && record.BoxID.String != "" {
+		box, err := db.GetInstanceByID(record.BoxID.String)
+		if err == nil {
+			boxAwsID = box.AwsInstanceID
 		}
-		snapshots = append(snapshots, &Snapshot{
-			AmiID:    r.AmiID,
-			Name:     r.Name,
-			State:    state,
-			BoxAwsID: boxAwsID,
-		})
 	}
 
-	return snapshots, nil
+	return &Snapshot{
+		AmiID:    record.AmiID,
+		Name:     record.Name,
+		State:    awsState,
+		BoxAwsID: boxAwsID,
+	}, nil
 }
 
 // DeleteSnapshot removes a snapshot AMI and its backing EBS snapshots from AWS,

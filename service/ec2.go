@@ -245,7 +245,7 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 				Ebs: &types.EbsBlockDevice{
 					VolumeSize:          aws.Int32(defaultStorageSizeGB),
 					VolumeType:          types.VolumeTypeGp3,
-					DeleteOnTermination: aws.Bool(true),
+					DeleteOnTermination: aws.Bool(true), // make sure to delete the volume when the instance is terminated
 				},
 			},
 		}

@@ -21,7 +21,7 @@ type snapshotItem struct {
 // Snapshots dispatches snapshot sub-commands.
 //
 //	devbox snapshots              → list all user snapshots
-//	devbox snapshots ls <boxId>   → list snapshots for a specific box
+//	devbox snapshots ls <amiId>   → show details for a specific snapshot
 //	devbox snapshots delete <amiId> → delete a snapshot
 func Snapshots(args []string) {
 	if TestMode {
@@ -40,10 +40,10 @@ func Snapshots(args []string) {
 	switch sub {
 	case "ls":
 		if len(subArgs) < 1 {
-			fmt.Fprintln(os.Stderr, "usage: devbox snapshots ls <boxId>")
+			fmt.Fprintln(os.Stderr, "usage: devbox snapshots ls <amiId>")
 			os.Exit(1)
 		}
-		snapshotsListByBox(subArgs[0])
+		snapshotsShow(subArgs[0])
 	case "delete":
 		if len(subArgs) < 1 {
 			fmt.Fprintln(os.Stderr, "usage: devbox snapshots delete <amiId>")
@@ -52,7 +52,7 @@ func Snapshots(args []string) {
 		snapshotsDelete(subArgs[0])
 	default:
 		fmt.Fprintf(os.Stderr, "snapshots: unknown sub-command %q\n", sub)
-		fmt.Fprintln(os.Stderr, "usage: devbox snapshots [ls <boxId> | delete <amiId>]")
+		fmt.Fprintln(os.Stderr, "usage: devbox snapshots [ls <amiId> | delete <amiId>]")
 		os.Exit(1)
 	}
 }
@@ -116,50 +116,23 @@ func snapshotsToItems(snaps []*service.Snapshot) []snapshotItem {
 	return items
 }
 
-func snapshotsListByBox(boxID string) {
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
-	if err != nil {
+func snapshotsShow(amiID string) {
+	if _, err := service.EnsureLocalModeAndGetCurrMode(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	var items []snapshotItem
-	if mode == "local" {
-		snaps, err := service.ListSnapshotsByBox(boxID, service.LocalUserID)
-		if err != nil {
+	snap, err := service.GetSnapshot(amiID, service.LocalUserID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			fmt.Fprintf(os.Stderr, "snapshot %s not found\n", amiID)
+		} else {
 			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-			os.Exit(1)
 		}
-		items = snapshotsToItems(snaps)
-	} else {
-		client, err := api.NewDefault()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-
-		resp, err := client.Get("/v1/boxes/" + boxID + "/snapshots")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-			os.Exit(1)
-		}
-		if err := api.CheckStatus(resp); err != nil {
-			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-			os.Exit(1)
-		}
-
-		if err := api.DecodeJSON(resp, &items); err != nil {
-			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-			os.Exit(1)
-		}
+		os.Exit(1)
 	}
 
-	if len(items) == 0 {
-		fmt.Printf("No snapshots found for box %s.\n", boxID)
-		return
-	}
-
-	printSnapshotTable(items)
+	printSnapshotTable(snapshotsToItems([]*service.Snapshot{snap}))
 }
 
 func snapshotsDelete(amiID string) {
