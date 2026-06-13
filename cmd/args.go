@@ -7,6 +7,19 @@ import (
 )
 
 var snapshotAmiIDPattern = regexp.MustCompile(`^ami-[0-9a-f]{8,17}$`)
+var ec2InstanceIDPattern = regexp.MustCompile(`^i-[0-9a-f]{8,17}$`)
+
+// validateEc2InstanceID validates that the given ID is a valid EC2 instance ID.
+func validateEc2InstanceID(id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return fmt.Errorf("id is required")
+	}
+	if !ec2InstanceIDPattern.MatchString(strings.ToLower(id)) {
+		return fmt.Errorf("invalid instance ID %q (expected format: i-xxxxxxxx)", id)
+	}
+	return nil
+}
 
 // validateSnapshotAmiID validates that the given ID is a valid snapshot AMI ID.
 func validateSnapshotAmiID(id string) error {

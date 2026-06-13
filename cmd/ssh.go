@@ -54,7 +54,7 @@ func sshBaseArgs(identity, portArg string) []string {
 	return argv
 }
 
-//ssh ec2-user@ip 'test "$(cat /var/lib/devbox/ready 2>/dev/null)" = "the user data script is completed"'; echo "exit code: $?"
+// ssh ec2-user@ip 'test "$(cat /var/lib/devbox/ready 2>/dev/null)" = "the user data script is completed"'; echo "exit code: $?"
 // checkDevboxReady runs one SSH probe for the user-data ready marker.
 func checkDevboxReady(sshBin, identity, user, host, portArg string) (bool, error) {
 	target := fmt.Sprintf("%s@%s", user, host)
@@ -88,7 +88,7 @@ func SSH(args []string) {
 	fs := flag.NewFlagSet("ssh", flag.ExitOnError)
 	user := fs.String("u", "ec2-user", "SSH username")
 	port := fs.Int("p", 22, "SSH port")
-	identity := fs.String("i", defaultKeyPath(), "path to SSH private key")
+	identity := fs.String("i", defaultKeyPath(), "path to SSH private key") // ssh picks the ssh private key for creating the connection
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: devbox ssh -v -i [-u user] [-p port] [-i identity] <id> [-- ssh-args...]")
 		fs.PrintDefaults()
@@ -128,7 +128,7 @@ func SSH(args []string) {
 		}
 		status.Ready = sshStatus.Ready
 		if sshStatus.Instance != nil {
-			
+
 			box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
 			status.Instance = &box
 		}

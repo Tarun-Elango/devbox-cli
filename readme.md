@@ -27,25 +27,29 @@ The CLI is a one-shot command — it performs an action and exits.
 
 | Command                                    | Notes (what it does)                                    |
 | ------------------------------------------ | ------------------------------------------------------- |
-| `login`                                    | Authenticate with the devbox server                     |
-| `signup`                                   | Create a new account                                    |
-| `logout`                                   | Clear saved credentials                                 |
-| `create <name> [--from <snapshot_ami_id>]` | Create a new box (optionally restore from a snapshot)   |
+| `setup`                                    | Configure/change AWS credentials and region (stored in `~/.devbox/config.json`) |
+| `create <name>`                            | Create a new box                                        |
 | `ls`                                       | List all boxes                                          |
 | `status <id>`                              | Show details for a box                                  |
-| `start <id>`                               | Start a stopped box                                     |
 | `stop <id>`                                | Stop a running box                                      |
+| `start <id>`                               | Start a stopped box                                     |
 | `delete <id>`                              | Delete a box                                            |
-| `ssh <id>`                                 | Open an SSH session to a box (replaces current process) |
-| `forward <id> <port>`                      | Forward a port from a box and print a URL               |
+| `ssh <id>`                                 | Open an SSH session to a box                            |
+| `forward <id> <port>`                      | Forward a port from a box                               |
 | `snapshot <id> [name]`                     | Create a snapshot of a box                              |
-| `snapshots`                                | List all snapshots                                      |
-| `snapshots ls <boxId>`                     | List snapshots for a specific box                       |
+| `snapshots`                                | List all your snapshots                                 |
+| `snapshots ls <amiId>`                     | Show details for a specific snapshot                    |
 | `snapshots delete <amiId>`                 | Delete a snapshot                                       |
-| `templates`                                | List available templates                                | 
+| `create <name> [--from <snapshot_ami_id>]` | Create a new box (optionally restore from a snapshot)   |
+| `templates`                                | List available templates                                |
 | `template new <name> [command string]`     | Create a new template with a command to run on startup  |
-| `create --template <template> [<template>...] <name>` | Create a new box from one or more templates (built-in slug or custom template name) |
+| `template delete <id>`                     | Delete a template                                       |
+| `create --template <template> [<template>...] <name>` | Create a new box from one or more templates |
 | `create --template <template> [<template>...] <name> --from <snapshot_ami_id>` | Create from templates and restore from a snapshot |
+| `idle-stop <id> in <minutes>` | Stop the box after <minutes> minutes of inactivity |
+| `idle-stop <id> show` | Show the idle stop for a box |
+| `idle-stop <id> update <minutes>` | Update the idle stop for a box |
+| `idle-stop <id> delete` | Delete the idle stop for a box |
 
 
 **Config** is stored in the default config directory (`~/.config/devbox/` on Linux/macOS). `login` saves the auth token there; all other commands read it automatically.

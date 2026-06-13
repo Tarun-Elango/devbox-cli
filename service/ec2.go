@@ -20,7 +20,7 @@ import (
 const (
 	defaultInstanceType    = "t4g.small"
 	defaultAmiID           = "ami-096f34d377a72cea5" // amazon linux 2023 ami
-	defaultStorageSizeGB   = 20
+	defaultStorageSizeGB   = 16
 	defaultSecurityGroupID = "" // we dont have one, so we will default to creating in the code
 	defaultSubnetID        = ""
 
@@ -693,4 +693,3 @@ func ForwardPort(instanceID, port, userID string) (*PortForwardResponse, error) 
 		RemotePort: port,
 	}, nil
 }
-

@@ -7,19 +7,20 @@ import (
 
 // InstanceRecord is a row from the instances table.
 type InstanceRecord struct {
-	ID            string
-	AwsInstanceID string
-	Name          string
-	UserID        string
-	IPAddress     sql.NullString
-	Status        string
-	InstanceType  sql.NullString
+	ID               string
+	AwsInstanceID    string
+	Name             string
+	UserID           string
+	IPAddress        sql.NullString
+	Status           string
+	InstanceType     sql.NullString
+	IdleStopMinutes  sql.NullInt64 // NULL = off
 }
 
 // ListInstancesByUserID returns all instances owned by userID.
 func (db *DB) ListInstancesByUserID(userID string) ([]InstanceRecord, error) {
 	rows, err := db.conn.Query(`
-		SELECT id, aws_instance_id, name, user_id, ip_address, status, instance_type
+		SELECT id, aws_instance_id, name, user_id, ip_address, status, instance_type, idle_stop_minutes
 		FROM instances
 		WHERE user_id = ?
 		ORDER BY created_at`,
@@ -41,6 +42,7 @@ func (db *DB) ListInstancesByUserID(userID string) ([]InstanceRecord, error) {
 			&r.IPAddress,
 			&r.Status,
 			&r.InstanceType,
+			&r.IdleStopMinutes,
 		); err != nil {
 			return nil, fmt.Errorf("scan instance: %w", err)
 		}
@@ -53,7 +55,7 @@ func (db *DB) ListInstancesByUserID(userID string) ([]InstanceRecord, error) {
 func (db *DB) GetInstanceByID(id string) (*InstanceRecord, error) {
 	var r InstanceRecord
 	err := db.conn.QueryRow(`
-		SELECT id, aws_instance_id, name, user_id, ip_address, status, instance_type
+		SELECT id, aws_instance_id, name, user_id, ip_address, status, instance_type, idle_stop_minutes
 		FROM instances
 		WHERE id = ?`,
 		id,
@@ -65,6 +67,7 @@ func (db *DB) GetInstanceByID(id string) (*InstanceRecord, error) {
 		&r.IPAddress,
 		&r.Status,
 		&r.InstanceType,
+		&r.IdleStopMinutes,
 	)
 	if err != nil {
 		return nil, err
@@ -77,7 +80,7 @@ func (db *DB) GetInstanceByID(id string) (*InstanceRecord, error) {
 func (db *DB) GetInstanceByAwsInstanceIDAndUserID(awsInstanceID, userID string) (*InstanceRecord, error) {
 	var r InstanceRecord
 	err := db.conn.QueryRow(`
-		SELECT id, aws_instance_id, name, user_id, ip_address, status, instance_type
+		SELECT id, aws_instance_id, name, user_id, ip_address, status, instance_type, idle_stop_minutes
 		FROM instances
 		WHERE aws_instance_id = ? AND user_id = ?`,
 		awsInstanceID, userID,
@@ -89,6 +92,7 @@ func (db *DB) GetInstanceByAwsInstanceIDAndUserID(awsInstanceID, userID string) 
 		&r.IPAddress,
 		&r.Status,
 		&r.InstanceType,
+		&r.IdleStopMinutes,
 	)
 	if err != nil {
 		return nil, err
@@ -115,6 +119,40 @@ func (db *DB) InsertInstance(id, awsInstanceID, name, userID, status, instanceTy
 	)
 	if err != nil {
 		return fmt.Errorf("insert instance: %w", err)
+	}
+	return nil
+}
+
+// SetInstanceIdleStopMinutes sets idle_stop_minutes for an instance (nil = off).
+func (db *DB) SetInstanceIdleStopMinutes(awsInstanceID string, minutes *int) error {
+	var result sql.Result
+	var err error
+	if minutes == nil {
+		result, err = db.conn.Exec(`
+			UPDATE instances
+			SET idle_stop_minutes = NULL,
+			    updated_at = datetime('now')
+			WHERE aws_instance_id = ?`,
+			awsInstanceID,
+		)
+	} else {
+		result, err = db.conn.Exec(`
+			UPDATE instances
+			SET idle_stop_minutes = ?,
+			    updated_at = datetime('now')
+			WHERE aws_instance_id = ?`,
+			*minutes, awsInstanceID,
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("set idle_stop_minutes for %s: %w", awsInstanceID, err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("set idle_stop_minutes for %s: %w", awsInstanceID, err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("instance not found: %s", awsInstanceID)
 	}
 	return nil
 }

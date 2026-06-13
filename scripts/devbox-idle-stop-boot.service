@@ -1,0 +1,10 @@
+[Unit]
+Description=Reset devbox idle-stop activity on boot
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'mkdir -p /var/lib/devbox && date +%s > /var/lib/devbox/last-activity'
+
+[Install]
+WantedBy=multi-user.target

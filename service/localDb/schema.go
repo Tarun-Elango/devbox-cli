@@ -14,6 +14,7 @@ var createTables = []string{
   ip_address       TEXT,
   status           TEXT NOT NULL DEFAULT 'pending',
   instance_type    TEXT,
+  idle_stop_minutes  INTEGER,   -- NULL = off
   created_at       TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at       TEXT
 )`,
