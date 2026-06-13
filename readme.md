@@ -46,6 +46,10 @@ The CLI is a one-shot command — it performs an action and exits.
 | `template delete <id>`                     | Delete a template                                       |
 | `create --template <template> [<template>...] <name>` | Create a new box from one or more templates |
 | `create --template <template> [<template>...] <name> --from <snapshot_ami_id>` | Create from templates and restore from a snapshot |
+| `idle-stop <id> in <minutes>` | Stop the box after <minutes> minutes of inactivity |
+| `idle-stop <id> show` | Show the idle stop for a box |
+| `idle-stop <id> update <minutes>` | Update the idle stop for a box |
+| `idle-stop <id> delete` | Delete the idle stop for a box |
 
 
 **Config** is stored in the default config directory (`~/.config/devbox/` on Linux/macOS). `login` saves the auth token there; all other commands read it automatically.

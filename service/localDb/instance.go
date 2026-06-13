@@ -125,9 +125,10 @@ func (db *DB) InsertInstance(id, awsInstanceID, name, userID, status, instanceTy
 
 // SetInstanceIdleStopMinutes sets idle_stop_minutes for an instance (nil = off).
 func (db *DB) SetInstanceIdleStopMinutes(awsInstanceID string, minutes *int) error {
+	var result sql.Result
 	var err error
 	if minutes == nil {
-		_, err = db.conn.Exec(`
+		result, err = db.conn.Exec(`
 			UPDATE instances
 			SET idle_stop_minutes = NULL,
 			    updated_at = datetime('now')
@@ -135,7 +136,7 @@ func (db *DB) SetInstanceIdleStopMinutes(awsInstanceID string, minutes *int) err
 			awsInstanceID,
 		)
 	} else {
-		_, err = db.conn.Exec(`
+		result, err = db.conn.Exec(`
 			UPDATE instances
 			SET idle_stop_minutes = ?,
 			    updated_at = datetime('now')
@@ -145,6 +146,13 @@ func (db *DB) SetInstanceIdleStopMinutes(awsInstanceID string, minutes *int) err
 	}
 	if err != nil {
 		return fmt.Errorf("set idle_stop_minutes for %s: %w", awsInstanceID, err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("set idle_stop_minutes for %s: %w", awsInstanceID, err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("instance not found: %s", awsInstanceID)
 	}
 	return nil
 }

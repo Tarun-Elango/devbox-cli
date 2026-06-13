@@ -15,9 +15,11 @@ import (
 	"devbox-cli/service/localDb"
 )
 
+const idleStopUsage = "usage: devbox idle-stop <id> [in <minutes> | show | update <minutes> | delete]"
+
 func IdleRouter(args []string) {
-	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id> in <minutes>")
+	if len(args) < 2 {
+		fmt.Fprintln(os.Stderr, idleStopUsage)
 		os.Exit(1)
 	}
 
@@ -36,7 +38,8 @@ func IdleRouter(args []string) {
 	case "delete":
 		deleteIdleStop(args)
 	default:
-		fmt.Fprintln(os.Stderr, "error: invalid argument")
+		fmt.Fprintf(os.Stderr, "idle-stop: unknown sub-command %q\n", args[1])
+		fmt.Fprintln(os.Stderr, idleStopUsage)
 		os.Exit(1)
 	}
 

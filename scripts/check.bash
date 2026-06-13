@@ -21,6 +21,7 @@ fi
 [[ -f "$ACTIVITY" ]] || { echo "$NOW" > "$ACTIVITY"; exit 0; }
 
 LAST=$(cat "$ACTIVITY")
+[[ "$LAST" =~ ^[0-9]+$ && "$LAST" -gt 0 && "$LAST" -le "$NOW" ]] || exit 0
 IDLE_SEC=$((NOW - LAST))
 LIMIT_SEC=$((MINUTES * 60))
 
