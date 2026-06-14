@@ -48,7 +48,7 @@ func ListInstances(userID string) ([]*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close() // close in case of error or at the end of the function
+	defer func() { _ = db.Close() }()
 
 	records, err := db.ListInstancesByUserID(userID)
 	if err != nil {
@@ -166,8 +166,9 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 		if err != nil {
 			return nil, err
 		}
+		defer func() { _ = db.Close() }()
+
 		_, err = db.GetSnapshotByAmiIDAndUserID(snapshotAmiID, userID)
-		db.Close()
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("snapshot not found: %s", snapshotAmiID)
 		}
@@ -269,7 +270,7 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := db.InsertInstance(
 		uuid.New().String(),
@@ -411,7 +412,7 @@ func GetInstance(instanceId, userID string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceId, userID) // get instance from local db
 	if err == sql.ErrNoRows {
@@ -462,7 +463,7 @@ func DeleteInstance(instanceID, userID string) (*ActionResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
 	if err == sql.ErrNoRows {
@@ -512,7 +513,7 @@ func StopInstance(instanceID, userID string) (*ActionResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
 	if err == sql.ErrNoRows {
@@ -552,7 +553,7 @@ func StartInstance(instanceID, userID string) (*ActionResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
 	if err == sql.ErrNoRows {
@@ -598,7 +599,7 @@ func GetSshStatus(instanceID, userID string) (*SshStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
 	if err == sql.ErrNoRows {

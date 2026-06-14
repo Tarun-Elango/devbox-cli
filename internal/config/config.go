@@ -63,7 +63,7 @@ func parseDotEnv(path string) map[string]string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	vars := make(map[string]string)
 	scanner := bufio.NewScanner(f)

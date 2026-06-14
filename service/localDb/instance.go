@@ -29,7 +29,7 @@ func (db *DB) ListInstancesByUserID(userID string) ([]InstanceRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list instances: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var records []InstanceRecord
 	for rows.Next() {

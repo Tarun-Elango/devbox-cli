@@ -27,7 +27,7 @@ func (db *DB) ListTemplatesByUserID(userID string) ([]TemplateRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list templates: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var records []TemplateRecord
 	for rows.Next() {

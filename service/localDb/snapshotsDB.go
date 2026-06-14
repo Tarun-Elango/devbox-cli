@@ -97,7 +97,7 @@ func (db *DB) ListSnapshotsByBoxIDAndUserID(boxID, userID string) ([]SnapshotRec
 	if err != nil {
 		return nil, fmt.Errorf("list snapshots by box: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var records []SnapshotRecord
 	for rows.Next() {
@@ -130,7 +130,7 @@ func (db *DB) ListSnapshotsByUserID(userID string) ([]SnapshotRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list snapshots: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var records []SnapshotRecord
 	for rows.Next() {
