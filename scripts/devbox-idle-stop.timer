@@ -1,10 +1,10 @@
 # /etc/systemd/system/devbox-idle-stop.timer
 [Unit]
-Description=Run devbox idle-stop check every minute
+Description=Run devbox idle-stop check every 30 seconds
 
 [Timer]
-OnBootSec=2min
-OnUnitActiveSec=1min
+OnBootSec=1min
+OnUnitActiveSec=30s
 Persistent=true
 
 [Install]

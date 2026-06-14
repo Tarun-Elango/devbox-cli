@@ -166,9 +166,9 @@ func snapshotsDelete(amiID string) {
 		fmt.Fprintf(os.Stderr, "snapshot delete failed: %v\n", err)
 		os.Exit(1)
 	}
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
-		resp.Body.Close()
 		fmt.Fprintf(os.Stderr, "snapshot %s not found\n", amiID)
 		os.Exit(1)
 	}
@@ -177,7 +177,6 @@ func snapshotsDelete(amiID string) {
 		fmt.Fprintf(os.Stderr, "snapshot delete failed: %v\n", err)
 		os.Exit(1)
 	}
-	resp.Body.Close()
 
 	fmt.Printf("Snapshot %s deleted.\n", amiID)
 }

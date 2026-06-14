@@ -77,7 +77,7 @@ func formatTemplateScript(s string) string {
 	if len(s) > maxLen {
 		s = s[:maxLen-3] + "..."
 	}
-	return fmt.Sprintf(s)
+	return s
 }
 // notes: check valid template id, name cannot start with --, 
 // -- from should be valid string and should have a snapshot ami id

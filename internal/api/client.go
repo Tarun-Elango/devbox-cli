@@ -115,7 +115,7 @@ func (c *Client) do(method, path string, body any) (*http.Response, error) {
 	// 401 retry: the token may have expired mid-session or the pre-flight check
 	// had no expiry info. Attempt one silent refresh then retry.
 	if resp.StatusCode == http.StatusUnauthorized && c.cfg != nil && c.cfg.RefreshToken != "" {
-		resp.Body.Close() // close the original 401 response body before retrying
+		_ = resp.Body.Close() // close the original 401 response body before retrying
 		if err := refreshAccessToken(c.cfg); err != nil {
 			return nil, fmt.Errorf("session expired — please run `devbox login`")
 		}
@@ -138,7 +138,7 @@ func refreshAccessToken(cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("refresh request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("refresh rejected (status %d)", resp.StatusCode)
 	}
@@ -176,7 +176,7 @@ func FailBox(cmd string, err error) {
 
 // DecodeJSON reads and closes the response body, decoding it as JSON into dst.
 func DecodeJSON(resp *http.Response, dst any) error {
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if err := json.NewDecoder(resp.Body).Decode(dst); err != nil {
 		return fmt.Errorf("decode response: %w", err)
 	}
@@ -188,7 +188,9 @@ func DecodeJSON(resp *http.Response, dst any) error {
 func CheckStatus(resp *http.Response) error {
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			return fmt.Errorf("%s: close response body: %w", ParseErrorBody(body), err)
+		}
 		return errors.New(ParseErrorBody(body))
 	}
 	return nil

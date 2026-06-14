@@ -25,7 +25,7 @@ func ListTemplates(userID string) ([]*Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	records, err := db.ListTemplatesByUserID(userID)
 	if err != nil {
@@ -90,7 +90,7 @@ func CreateTemplate(name, startupScript, userID string) (*Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	taken, err := db.TemplateNameTaken(userID, name) // check if the template name is already taken
 	if err != nil {
@@ -123,7 +123,7 @@ func DeleteTemplate(templateID, userID string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetTemplateByNameAndUserID(templateID, userID) // check if the template exists
 	if err == sql.ErrNoRows {
@@ -146,7 +146,7 @@ func CreateBoxFromTemplates(name string, templateIDs []string, publicKey, fromSn
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	startupScripts := make([]string, 0, len(templateIDs))
 

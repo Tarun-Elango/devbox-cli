@@ -48,7 +48,7 @@ func ListInstances(userID string) ([]*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close() // close in case of error or at the end of the function
+	defer func() { _ = db.Close() }()
 
 	records, err := db.ListInstancesByUserID(userID)
 	if err != nil {
@@ -80,7 +80,7 @@ func ListInstances(userID string) ([]*Instance, error) {
 	})
 	//fmt.Println("Describe instances response:", resp)
 	if err != nil {
-		return nil, fmt.Errorf("describe instances: %w", err)
+		return nil, awsclient.WrapError("describe instances", err)
 	}
 
 	found := make(map[string]types.Instance)
@@ -166,8 +166,9 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 		if err != nil {
 			return nil, err
 		}
+		defer func() { _ = db.Close() }()
+
 		_, err = db.GetSnapshotByAmiIDAndUserID(snapshotAmiID, userID)
-		db.Close()
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("snapshot not found: %s", snapshotAmiID)
 		}
@@ -188,7 +189,7 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 			},
 		})
 		if err != nil {
-			return nil, fmt.Errorf("describe images: %w", err)
+			return nil, awsclient.WrapError("describe images", err)
 		}
 		if len(resp.Images) == 0 {
 			return nil, fmt.Errorf("snapshot AMI not found or not available: %s", snapshotAmiID)
@@ -256,7 +257,7 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 
 	resp, err := ec2Client.RunInstances(ctx, input)
 	if err != nil {
-		return nil, fmt.Errorf("run instances: %w", err)
+		return nil, awsclient.WrapError("run instances", err)
 	}
 	if len(resp.Instances) == 0 {
 		return nil, fmt.Errorf("run instances: no instances returned")
@@ -269,7 +270,7 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := db.InsertInstance(
 		uuid.New().String(),
@@ -295,7 +296,7 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 			SubnetIds: []string{defaultSubnetID},
 		})
 		if err != nil {
-			return "", fmt.Errorf("describe subnets: %w", err)
+			return "", awsclient.WrapError("describe subnets", err)
 		}
 		if len(resp.Subnets) == 0 {
 			return "", fmt.Errorf("subnet not found: %s", defaultSubnetID)
@@ -308,7 +309,7 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 			},
 		})
 		if err != nil {
-			return "", fmt.Errorf("describe vpcs: %w", err)
+			return "", awsclient.WrapError("describe vpcs", err)
 		}
 		if len(resp.Vpcs) == 0 {
 			return "", fmt.Errorf("no default vpc found")
@@ -324,7 +325,7 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 		},
 	})
 	if err != nil {
-		return "", fmt.Errorf("describe security groups: %w", err)
+		return "", awsclient.WrapError("describe security groups", err)
 	}
 	if len(existing.SecurityGroups) > 0 { // if security group exists, return it
 		return aws.ToString(existing.SecurityGroups[0].GroupId), nil
@@ -337,7 +338,7 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 		VpcId:       aws.String(vpcID),
 	})
 	if err != nil {
-		return "", fmt.Errorf("create security group: %w", err)
+		return "", awsclient.WrapError("create security group", err)
 	}
 	sgID := aws.ToString(createResp.GroupId)
 
@@ -358,7 +359,7 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 		},
 	})
 	if err != nil {
-		return "", fmt.Errorf("authorize security group ingress: %w", err)
+		return "", awsclient.WrapError("authorize security group ingress", err)
 	}
 
 	return sgID, nil
@@ -411,7 +412,7 @@ func GetInstance(instanceId, userID string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceId, userID) // get instance from local db
 	if err == sql.ErrNoRows {
@@ -436,7 +437,7 @@ func getInstanceFromAWS(instanceId string) (*Instance, error) {
 		InstanceIds: []string{instanceId},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("describe instances: %w", err)
+		return nil, awsclient.WrapError("describe instances", err)
 	}
 
 	for _, reservation := range resp.Reservations {
@@ -462,7 +463,7 @@ func DeleteInstance(instanceID, userID string) (*ActionResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
 	if err == sql.ErrNoRows {
@@ -512,7 +513,7 @@ func StopInstance(instanceID, userID string) (*ActionResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
 	if err == sql.ErrNoRows {
@@ -552,7 +553,7 @@ func StartInstance(instanceID, userID string) (*ActionResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
 	if err == sql.ErrNoRows {
@@ -598,7 +599,7 @@ func GetSshStatus(instanceID, userID string) (*SshStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
 	if err == sql.ErrNoRows {

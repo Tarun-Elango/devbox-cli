@@ -247,18 +247,6 @@ func Create(args []string) {
 	}
 }
 
-// httpToWS converts an http(s) base URL to its ws(s) equivalent.
-func httpToWS(serverURL string) string {
-	switch {
-	case strings.HasPrefix(serverURL, "https://"):
-		return "wss://" + serverURL[len("https://"):]
-	case strings.HasPrefix(serverURL, "http://"):
-		return "ws://" + serverURL[len("http://"):]
-	default:
-		return serverURL
-	}
-}
-
 // Stop stops a running box.
 func Stop(args []string) {
 	if TestMode {
@@ -301,7 +289,9 @@ func Stop(args []string) {
 		if err := api.CheckStatus(resp); err != nil {
 			api.FailBox("stop", err)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			api.FailBox("stop", err)
+		}
 	}
 
 	fmt.Printf("Box %s stopped.\n", id)
@@ -349,7 +339,9 @@ func Start(args []string) {
 		if err := api.CheckStatus(resp); err != nil {
 			api.FailBox("start", err)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			api.FailBox("start", err)
+		}
 	}
 
 	fmt.Printf("Box %s started.\n", id)
@@ -369,7 +361,7 @@ func Delete(args []string) {
 
 	fmt.Printf("Are you sure you want to delete box %s? [y/N] ", id)
 	var answer string
-	fmt.Scanln(&answer)
+	_, _ = fmt.Scanln(&answer)
 	if answer != "y" {
 		fmt.Println("Aborted.")
 		return
@@ -405,7 +397,9 @@ func Delete(args []string) {
 		if err := api.CheckStatus(resp); err != nil {
 			api.FailBox("delete", err)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			api.FailBox("delete", err)
+		}
 	}
 
 	fmt.Printf("Box %s deleted.\n", id)

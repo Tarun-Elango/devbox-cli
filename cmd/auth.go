@@ -197,14 +197,16 @@ func readPassword(prompt string) (string, error) {
 		newState := oldState
 		newState.Lflag &^= syscall.ECHO
 		newState.Lflag |= syscall.ICANON | syscall.ISIG
-		syscall.Syscall(syscall.SYS_IOCTL,
-			uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&newState)))
+		if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
+			uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&newState))); errno == 0 {
 
-		defer func() {
-			syscall.Syscall(syscall.SYS_IOCTL,
-				uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&oldState)))
-			fmt.Println() // print the newline the suppressed echo swallowed
-		}()
+			// restore the old state when the function returns
+			defer func() {
+				_, _, _ = syscall.Syscall(syscall.SYS_IOCTL,
+					uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&oldState)))
+				fmt.Println() // print the newline the suppressed echo swallowed
+			}()
+		}
 	}
 
 	reader := bufio.NewReader(os.Stdin)

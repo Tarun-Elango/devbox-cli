@@ -220,7 +220,7 @@ func enableRawMode() (func(), error) {
 	}
 
 	return func() {
-		syscall.Syscall(syscall.SYS_IOCTL,
+		_, _, _ = syscall.Syscall(syscall.SYS_IOCTL,
 			uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&oldState)))
 	}, nil
 }
