@@ -289,7 +289,9 @@ func Stop(args []string) {
 		if err := api.CheckStatus(resp); err != nil {
 			api.FailBox("stop", err)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			api.FailBox("stop", err)
+		}
 	}
 
 	fmt.Printf("Box %s stopped.\n", id)
@@ -337,7 +339,9 @@ func Start(args []string) {
 		if err := api.CheckStatus(resp); err != nil {
 			api.FailBox("start", err)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			api.FailBox("start", err)
+		}
 	}
 
 	fmt.Printf("Box %s started.\n", id)
@@ -393,7 +397,9 @@ func Delete(args []string) {
 		if err := api.CheckStatus(resp); err != nil {
 			api.FailBox("delete", err)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			api.FailBox("delete", err)
+		}
 	}
 
 	fmt.Printf("Box %s deleted.\n", id)

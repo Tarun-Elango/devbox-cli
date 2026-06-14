@@ -188,7 +188,9 @@ func DecodeJSON(resp *http.Response, dst any) error {
 func CheckStatus(resp *http.Response) error {
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			return fmt.Errorf("%s: close response body: %w", ParseErrorBody(body), err)
+		}
 		return errors.New(ParseErrorBody(body))
 	}
 	return nil

@@ -28,7 +28,7 @@ func CreateSnapshot(boxID, name, userID string) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	box, err := db.GetInstanceByAwsInstanceIDAndUserID(boxID, userID) // check if box exists
 	if err == sql.ErrNoRows {
@@ -91,7 +91,7 @@ func ListSnapshots(userID string) ([]*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	records, err := db.ListSnapshotsByUserID(userID)
 	if err != nil {
@@ -197,7 +197,7 @@ func GetSnapshot(amiID, userID string) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	record, err := db.GetSnapshotByAmiIDAndUserID(amiID, userID)
 	if err == sql.ErrNoRows {
@@ -264,7 +264,7 @@ func DeleteSnapshot(amiID, userID string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetSnapshotByAmiIDAndUserID(amiID, userID) // check if snapshot exists for user
 	if err == sql.ErrNoRows {
