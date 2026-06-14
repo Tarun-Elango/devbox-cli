@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	awsclient "devbox-cli/service/aws"
-	localDb "devbox-cli/service/localDb"
 )
 
 // Snapshot mirrors lighthouse SnapshotDto (amiId, name, state, boxAwsId).
@@ -23,12 +21,8 @@ type Snapshot struct {
 
 // CreateSnapshot creates an AMI snapshot of the given box.
 // Mirrors Lighthouse Ec2Service.createSnapshot.
-func CreateSnapshot(boxID, name, userID string) (*Snapshot, error) {
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) CreateSnapshot(boxID, name, userID string) (*Snapshot, error) {
+	db := r.DB()
 
 	box, err := db.GetInstanceByAwsInstanceIDAndUserID(boxID, userID) // check if box exists
 	if err == sql.ErrNoRows {
@@ -38,7 +32,7 @@ func CreateSnapshot(boxID, name, userID string) (*Snapshot, error) {
 		return nil, err
 	}
 
-	instance, err := getInstanceFromAWS(boxID) // get instance from AWS
+	instance, err := r.getInstanceFromAWS(boxID) // get instance from AWS
 	if err != nil {
 		return nil, err
 	}
@@ -46,13 +40,12 @@ func CreateSnapshot(boxID, name, userID string) (*Snapshot, error) {
 		return nil, fmt.Errorf("cannot snapshot a %s instance: %s", instance.Status, boxID)
 	}
 
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2()
 	if err != nil {
 		return nil, err
 	}
+	ctx := r.Context()
 	// create image in AWS
-	ec2Client := ec2.NewFromConfig(client.Config())
 	createResp, err := ec2Client.CreateImage(ctx, &ec2.CreateImageInput{
 		InstanceId: aws.String(boxID),
 		Name:       aws.String(name),
@@ -83,15 +76,10 @@ func CreateSnapshot(boxID, name, userID string) (*Snapshot, error) {
 	}, nil
 }
 
-
 // ListSnapshots returns snapshots for userID, syncing state from AWS.
 // Mirrors Lighthouse Ec2Service.listSnapshots.
-func ListSnapshots(userID string) ([]*Snapshot, error) {
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) ListSnapshots(userID string) ([]*Snapshot, error) {
+	db := r.DB()
 
 	records, err := db.ListSnapshotsByUserID(userID)
 	if err != nil {
@@ -102,17 +90,16 @@ func ListSnapshots(userID string) ([]*Snapshot, error) {
 	}
 
 	amiIDs := make([]string, len(records))
-	for i, r := range records {
-		amiIDs[i] = r.AmiID
+	for i, rec := range records {
+		amiIDs[i] = rec.AmiID
 	}
 
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2()
 	if err != nil {
 		return nil, err
 	}
 
-	ec2Client := ec2.NewFromConfig(client.Config())
+	ctx := r.Context()
 	resp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 		Owners:   []string{"self"},
 		ImageIds: amiIDs,
@@ -154,35 +141,35 @@ func ListSnapshots(userID string) ([]*Snapshot, error) {
 	}
 
 	boxAwsIDByBoxID := make(map[string]string)
-	for _, r := range records {
-		if !r.BoxID.Valid || r.BoxID.String == "" {
+	for _, rec := range records {
+		if !rec.BoxID.Valid || rec.BoxID.String == "" {
 			continue
 		}
-		if _, ok := boxAwsIDByBoxID[r.BoxID.String]; ok {
+		if _, ok := boxAwsIDByBoxID[rec.BoxID.String]; ok {
 			continue
 		}
-		box, err := db.GetInstanceByID(r.BoxID.String)
+		box, err := db.GetInstanceByID(rec.BoxID.String)
 		if err != nil {
 			continue
 		}
-		boxAwsIDByBoxID[r.BoxID.String] = box.AwsInstanceID
+		boxAwsIDByBoxID[rec.BoxID.String] = box.AwsInstanceID
 	}
 
 	snapshots := make([]*Snapshot, 0, len(records))
-	for _, r := range records {
+	for _, rec := range records {
 		state := "unknown"
-		if awsState, ok := stateByAmiID[r.AmiID]; ok {
+		if awsState, ok := stateByAmiID[rec.AmiID]; ok {
 			state = awsState
-		} else if r.State.Valid {
-			state = r.State.String
+		} else if rec.State.Valid {
+			state = rec.State.String
 		}
 		boxAwsID := ""
-		if r.BoxID.Valid {
-			boxAwsID = boxAwsIDByBoxID[r.BoxID.String]
+		if rec.BoxID.Valid {
+			boxAwsID = boxAwsIDByBoxID[rec.BoxID.String]
 		}
 		snapshots = append(snapshots, &Snapshot{
-			AmiID:    r.AmiID,
-			Name:     r.Name,
+			AmiID:    rec.AmiID,
+			Name:     rec.Name,
 			State:    state,
 			BoxAwsID: boxAwsID,
 		})
@@ -192,12 +179,8 @@ func ListSnapshots(userID string) ([]*Snapshot, error) {
 }
 
 // GetSnapshot returns a snapshot by amiID owned by userID, syncing state from AWS.
-func GetSnapshot(amiID, userID string) (*Snapshot, error) {
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) GetSnapshot(amiID, userID string) (*Snapshot, error) {
+	db := r.DB()
 
 	record, err := db.GetSnapshotByAmiIDAndUserID(amiID, userID)
 	if err == sql.ErrNoRows {
@@ -207,17 +190,16 @@ func GetSnapshot(amiID, userID string) (*Snapshot, error) {
 		return nil, err
 	}
 
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2()
 	if err != nil {
 		return nil, err
 	}
 
 	// check snapshot state from AWS
-	ec2Client := ec2.NewFromConfig(client.Config())
+	ctx := r.Context()
 	resp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 		Owners:   []string{"self"},
-		ImageIds: []string{amiID},// detail snapshot by amiID
+		ImageIds: []string{amiID}, // detail snapshot by amiID
 	})
 	if err != nil {
 		return nil, awsclient.WrapError("describe images", err)
@@ -259,14 +241,10 @@ func GetSnapshot(amiID, userID string) (*Snapshot, error) {
 
 // DeleteSnapshot removes a snapshot AMI and its backing EBS snapshots from AWS,
 // then deletes the local DB record. Mirrors Lighthouse Ec2Service.deleteSnapshot.
-func DeleteSnapshot(amiID, userID string) error {
-	db, err := localDb.Open()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) DeleteSnapshot(amiID, userID string) error {
+	db := r.DB()
 
-	_, err = db.GetSnapshotByAmiIDAndUserID(amiID, userID) // check if snapshot exists for user
+	_, err := db.GetSnapshotByAmiIDAndUserID(amiID, userID) // check if snapshot exists for user
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("snapshot not found: %s", amiID)
 	}
@@ -274,13 +252,12 @@ func DeleteSnapshot(amiID, userID string) error {
 		return err
 	}
 
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2()
 	if err != nil {
 		return err
 	}
 
-	ec2Client := ec2.NewFromConfig(client.Config())
+	ctx := r.Context()
 	resp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 		Owners:   []string{"self"},
 		ImageIds: []string{amiID},

@@ -58,7 +58,7 @@ func ParseTemplateNewArgs(args []string) (name, startupScript string, err error)
 	}
 
 	if len(args) > 1 {
-		startupScript = strings.Join(args[1:], " ")// join the args with a space
+		startupScript = strings.Join(args[1:], " ") // join the args with a space
 		startupScript = strings.TrimSpace(startupScript)
 	}
 	return name, startupScript, nil
@@ -97,7 +97,9 @@ func TemplateNew(args []string) {
 
 	var created service.Template
 	if mode == "local" {
-		tmpl, err := service.CreateTemplate(name, startupScript, service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		tmpl, err := rt.CreateTemplate(name, startupScript, service.LocalUserID)
 		if err != nil {
 			api.FailBox("template new", err)
 		}
@@ -180,7 +182,9 @@ func TemplateDelete(args []string) {
 		os.Exit(1)
 	}
 
-	if err := service.DeleteTemplate(id, service.LocalUserID); err != nil {
+	rt := mustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	if err := rt.DeleteTemplate(id, service.LocalUserID); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			fmt.Fprintf(os.Stderr, "template %s not found\n", id)
 		} else {

@@ -12,7 +12,6 @@ import (
 
 	"devbox-cli/scripts"
 	"devbox-cli/service"
-	"devbox-cli/service/localDb"
 )
 
 const idleStopUsage = "usage: devbox idle-stop <id> [in <minutes> | show | update <minutes> | delete]"
@@ -76,12 +75,9 @@ func Idle(args []string) {
 		os.Exit(1)
 	}
 
-	db, err := localDb.Open()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	defer db.Close()
+	rt := mustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	db := rt.DB()
 
 	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(id, service.LocalUserID)
 	if err == sql.ErrNoRows {
@@ -93,7 +89,7 @@ func Idle(args []string) {
 		os.Exit(1)
 	}
 
-	sshStatus, err := service.GetSshStatus(id, service.LocalUserID)
+	sshStatus, err := rt.GetSshStatus(id, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -251,12 +247,9 @@ func deleteIdleStop(args []string) {
 		os.Exit(1)
 	}
 
-	db, err := localDb.Open()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	defer db.Close()
+	rt := mustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	db := rt.DB()
 
 	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(id, service.LocalUserID)
 	if err == sql.ErrNoRows {
@@ -272,7 +265,7 @@ func deleteIdleStop(args []string) {
 		os.Exit(1)
 	}
 
-	sshStatus, err := service.GetSshStatus(id, service.LocalUserID)
+	sshStatus, err := rt.GetSshStatus(id, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -396,12 +389,9 @@ func updateIdleStop(args []string) {
 		os.Exit(1)
 	}
 
-	db, err := localDb.Open()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	defer db.Close()
+	rt := mustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	db := rt.DB()
 
 	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(id, service.LocalUserID)
 	if err == sql.ErrNoRows {
@@ -417,7 +407,7 @@ func updateIdleStop(args []string) {
 		os.Exit(1)
 	}
 
-	sshStatus, err := service.GetSshStatus(id, service.LocalUserID)
+	sshStatus, err := rt.GetSshStatus(id, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -522,12 +512,9 @@ func showIdleStop(args []string) {
 		os.Exit(1)
 	}
 
-	db, err := localDb.Open()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	defer db.Close()
+	rt := mustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	db := rt.DB()
 
 	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(id, service.LocalUserID)
 	if err == sql.ErrNoRows {

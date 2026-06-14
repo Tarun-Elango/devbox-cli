@@ -121,7 +121,9 @@ func SSH(args []string) {
 
 	var status SshStatusResponse
 	if mode == "local" {
-		sshStatus, err := service.GetSshStatus(id, service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		sshStatus, err := rt.GetSshStatus(id, service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 			os.Exit(1)

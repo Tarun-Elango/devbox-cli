@@ -45,7 +45,9 @@ func Forward(args []string) {
 
 	var result service.PortForwardResponse
 	if mode == "local" {
-		resp, err := service.ForwardPort(id, port, service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		resp, err := rt.ForwardPort(id, port, service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
 			os.Exit(1)
@@ -110,7 +112,6 @@ func Forward(args []string) {
 		fmt.Fprintln(os.Stderr, "forward: ssh binary not found in PATH")
 		os.Exit(1)
 	}
-
 
 	// we also check if user-data script is completed
 	identity := defaultKeyPath()

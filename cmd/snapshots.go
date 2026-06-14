@@ -66,7 +66,9 @@ func snapshotsList() {
 
 	var items []snapshotItem
 	if mode == "local" {
-		snaps, err := service.ListSnapshots(service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		snaps, err := rt.ListSnapshots(service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
 			os.Exit(1)
@@ -122,7 +124,9 @@ func snapshotsShow(amiID string) {
 		os.Exit(1)
 	}
 
-	snap, err := service.GetSnapshot(amiID, service.LocalUserID)
+	rt := mustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	snap, err := rt.GetSnapshot(amiID, service.LocalUserID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			fmt.Fprintf(os.Stderr, "snapshot %s not found\n", amiID)
@@ -143,7 +147,9 @@ func snapshotsDelete(amiID string) {
 	}
 
 	if mode == "local" {
-		if err := service.DeleteSnapshot(amiID, service.LocalUserID); err != nil {
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		if err := rt.DeleteSnapshot(amiID, service.LocalUserID); err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				fmt.Fprintf(os.Stderr, "snapshot %s not found\n", amiID)
 			} else {
