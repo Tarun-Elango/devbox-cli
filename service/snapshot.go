@@ -59,7 +59,7 @@ func CreateSnapshot(boxID, name, userID string) (*Snapshot, error) {
 		NoReboot:   aws.Bool(true),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create image: %w", err)
+		return nil, awsclient.WrapError("create image", err)
 	}
 
 	imageID := aws.ToString(createResp.ImageId)
@@ -118,7 +118,7 @@ func ListSnapshots(userID string) ([]*Snapshot, error) {
 		ImageIds: amiIDs,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("describe images: %w", err)
+		return nil, awsclient.WrapError("describe images", err)
 	}
 
 	stateByAmiID := make(map[string]string, len(resp.Images))
@@ -220,7 +220,7 @@ func GetSnapshot(amiID, userID string) (*Snapshot, error) {
 		ImageIds: []string{amiID},// detail snapshot by amiID
 	})
 	if err != nil {
-		return nil, fmt.Errorf("describe images: %w", err)
+		return nil, awsclient.WrapError("describe images", err)
 	}
 
 	if len(resp.Images) == 0 {
@@ -286,7 +286,7 @@ func DeleteSnapshot(amiID, userID string) error {
 		ImageIds: []string{amiID},
 	})
 	if err != nil {
-		return fmt.Errorf("describe images: %w", err)
+		return awsclient.WrapError("describe images", err)
 	}
 
 	if len(resp.Images) > 0 { // if snapshot exists in AWS
@@ -295,7 +295,7 @@ func DeleteSnapshot(amiID, userID string) error {
 			ImageId: aws.String(amiID),
 		})
 		if err != nil {
-			return fmt.Errorf("deregister image: %w", err)
+			return awsclient.WrapError("deregister image", err)
 		}
 
 		for _, bdm := range image.BlockDeviceMappings {
@@ -304,7 +304,7 @@ func DeleteSnapshot(amiID, userID string) error {
 					SnapshotId: bdm.Ebs.SnapshotId,
 				})
 				if err != nil {
-					return fmt.Errorf("delete ebs snapshot %s: %w", aws.ToString(bdm.Ebs.SnapshotId), err)
+					return awsclient.WrapError(fmt.Sprintf("delete ebs snapshot %s", aws.ToString(bdm.Ebs.SnapshotId)), err)
 				}
 			}
 		}
