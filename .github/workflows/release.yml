@@ -27,45 +27,13 @@ jobs:
       - name: Build binary (latest build)
         run: go build -o devbox -ldflags "-X main.ServerURL=${{ secrets.SERVER_URL }}" .
 
-      - name: Get latest release (if exists)
-        id: latest
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set +e
-          latest_tag=$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name' 2>/dev/null)
-          status=$?
-          set -e
-          if [ $status -ne 0 ] || [ "$latest_tag" = "null" ] || [ -z "$latest_tag" ]; then
-            latest_tag=""
-          fi
-          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
-
-      - name: Delete latest release (if exists)
-        if: steps.latest.outputs.latest_tag != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LATEST_TAG: ${{ steps.latest.outputs.latest_tag }}
-        run: |
-          echo "Attempting delete for: $LATEST_TAG"
-          release_id=$(gh api repos/${{ github.repository }}/releases/tags/"$LATEST_TAG" --jq '.id' 2>/dev/null || echo "")
-          if [ -n "$release_id" ]; then
-            gh api -X DELETE repos/${{ github.repository }}/releases/"$release_id" || true
-            git tag -d "$LATEST_TAG" || true
-            auth_header=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64)
-            git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push origin ":refs/tags/$LATEST_TAG" || true
-          else
-            echo "No release found for tag $LATEST_TAG — skipping delete"
-          fi
-
       - name: Create new release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git tag -f latest
-          auth_header=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64)
-          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push origin "refs/tags/latest" --force
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
           gh release create latest devbox \
+            --target "${{ github.sha }}" \
             --title "Latest build" \
             --notes "Auto-generated build from main" \
             --latest
