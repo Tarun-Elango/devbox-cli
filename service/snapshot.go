@@ -24,10 +24,7 @@ type Snapshot struct {
 func (r *Runtime) CreateSnapshot(boxID, name, userID string) (*Snapshot, error) {
 	db := r.DB()
 
-	box, err := db.GetInstanceByAwsInstanceIDAndUserID(boxID, userID) // check if box exists
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("box not found: %s", boxID)
-	}
+	box, err := requireOwnedInstance(db, boxID, userID)
 	if err != nil {
 		return nil, err
 	}

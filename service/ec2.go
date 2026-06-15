@@ -42,6 +42,18 @@ type Instance struct {
 	PrivateIPAddress string
 }
 
+// if user does not have it then we will see no rows
+func requireOwnedInstance(db *localDb.DB, awsID, userID string) (*localDb.InstanceRecord, error) {
+	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(awsID, userID)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("box not found: %s", awsID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return inst, nil
+}
+
 // ListInstances returns instances for userID, using AWS as the source of truth.
 func (r *Runtime) ListInstances(userID string) ([]*Instance, error) {
 	db := r.DB()
@@ -396,11 +408,7 @@ func appendReadyMarker(sb *strings.Builder) {
 func (r *Runtime) GetInstance(instanceId, userID string) (*Instance, error) {
 	db := r.DB()
 
-	_, err := db.GetInstanceByAwsInstanceIDAndUserID(instanceId, userID) // get instance from local db
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("box not found: %s", instanceId)
-	}
-	if err != nil {
+	if _, err := requireOwnedInstance(db, instanceId, userID); err != nil {
 		return nil, err
 	}
 
@@ -463,11 +471,7 @@ func (r *Runtime) syncInstanceFromAWSByID(instanceID string) error {
 func (r *Runtime) DeleteInstance(instanceID, userID string) error {
 	db := r.DB()
 
-	_, err := db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("box not found: %s", instanceID)
-	}
-	if err != nil {
+	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
 		return err
 	}
 
@@ -498,11 +502,7 @@ func (r *Runtime) DeleteInstance(instanceID, userID string) error {
 func (r *Runtime) StopInstance(instanceID, userID string) error {
 	db := r.DB()
 
-	_, err := db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("box not found: %s", instanceID)
-	}
-	if err != nil {
+	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
 		return err
 	}
 
@@ -527,11 +527,7 @@ func (r *Runtime) StopInstance(instanceID, userID string) error {
 func (r *Runtime) StartInstance(instanceID, userID string) error {
 	db := r.DB()
 
-	_, err := db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("box not found: %s", instanceID)
-	}
-	if err != nil {
+	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
 		return err
 	}
 
@@ -562,11 +558,7 @@ type SshStatus struct {
 func (r *Runtime) GetSshStatus(instanceID, userID string) (*SshStatus, error) {
 	db := r.DB()
 
-	_, err := db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("box not found: %s", instanceID)
-	}
-	if err != nil {
+	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
 		return nil, err
 	}
 
