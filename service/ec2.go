@@ -562,16 +562,16 @@ func (r *Runtime) GetSshStatus(instanceID, userID string) (*SshStatus, error) {
 		return nil, err
 	}
 
-	return r.checkSshStatusFromAWS(instanceID), nil
+	return r.checkSshStatusFromAWS(instanceID) // has both SshStatus and error
 }
 
 // check if the two checks are ok, instance and system status
-func (r *Runtime) checkSshStatusFromAWS(instanceID string) *SshStatus {
+func (r *Runtime) checkSshStatusFromAWS(instanceID string) (*SshStatus, error) {
 	notReady := &SshStatus{Ready: false}
 
 	ec2Client, err := r.EC2() // create the ec2 client from the aws config
 	if err != nil {
-		return notReady
+		return nil, err
 	}
 
 	ctx := r.Context()
@@ -580,25 +580,25 @@ func (r *Runtime) checkSshStatusFromAWS(instanceID string) *SshStatus {
 		IncludeAllInstances: aws.Bool(true),
 	})
 	if err != nil {
-		return notReady
+		return nil, awsclient.WrapError("describe instance status", err)
 	}
 	if len(resp.InstanceStatuses) == 0 {
-		return notReady
+		return notReady, nil
 	}
 
 	st := resp.InstanceStatuses[0]
 	instanceOk := st.InstanceStatus != nil && st.InstanceStatus.Status == types.SummaryStatusOk
 	systemOk := st.SystemStatus != nil && st.SystemStatus.Status == types.SummaryStatusOk
 	if !instanceOk || !systemOk {
-		return notReady
+		return notReady, nil
 	}
 
 	inst, err := r.getInstanceFromAWS(instanceID)
 	if err != nil {
-		return notReady
+		return nil, err
 	}
 
-	return &SshStatus{Ready: true, Instance: inst}
+	return &SshStatus{Ready: true, Instance: inst}, nil
 }
 
 // PortForwardResponse mirrors Lighthouse PortForwardResponse for POST /v1/boxes/{id}/ports.
