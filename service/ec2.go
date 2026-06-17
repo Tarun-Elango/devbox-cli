@@ -300,9 +300,15 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 		string(launched.InstanceType),
 	); err != nil {
 		// if the instance cannot be added to the database, terminate it
-		_, _ = ec2Client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{
+		_, termErr := ec2Client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{
 			InstanceIds: []string{awsInstanceID},
 		})
+		if termErr != nil {
+			return nil, fmt.Errorf(
+				"failed to save box %s to local database and automatic cleanup also failed; instance %s may still be running in AWS and should be terminated manually in the EC2 console: db: %w, terminate: %v",
+				name, awsInstanceID, err, termErr,
+			)
+		}
 		return nil, err
 	}
 
