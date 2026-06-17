@@ -157,6 +157,31 @@ func (db *DB) SetInstanceIdleStopMinutes(awsInstanceID string, minutes *int) err
 	return nil
 }
 
+// NeedsAWSSync reports whether cached fields differ from the latest AWS values.
+// Mirrors the field updates performed by SyncInstanceFromAWS.
+func (r InstanceRecord) NeedsAWSSync(status, ipAddress, instanceType, name string) bool {
+	if r.Status != status {
+		return true
+	}
+	if nullStringValue(r.IPAddress) != ipAddress {
+		return true
+	}
+	if nullStringValue(r.InstanceType) != instanceType {
+		return true
+	}
+	if name != "" && r.Name != name {
+		return true
+	}
+	return false
+}
+
+func nullStringValue(n sql.NullString) string {
+	if !n.Valid {
+		return ""
+	}
+	return n.String
+}
+
 // SyncInstanceFromAWS updates cached fields from the latest AWS state.
 // basically update the instance by aws instance id
 func (db *DB) SyncInstanceFromAWS(awsInstanceID, status, ipAddress, instanceType, name string) error {

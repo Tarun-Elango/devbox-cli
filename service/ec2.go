@@ -102,11 +102,11 @@ func (r *Runtime) ListInstances(userID string) ([]*Instance, error) {
 		return nil, awsclient.WrapError("describe instances", err)
 	}
 
+	// aws instance id -> instance object
 	found := make(map[string]types.Instance)
-	// map of aws instance id to instance details
 	for _, reservation := range resp.Reservations {
 		for _, inst := range reservation.Instances {
-			found[aws.ToString(inst.InstanceId)] = inst
+			found[aws.ToString(inst.InstanceId)] = inst // map of aws instance id to instance object
 		}
 	}
 	// delete instances from database that are not in aws
@@ -118,23 +118,33 @@ func (r *Runtime) ListInstances(userID string) ([]*Instance, error) {
 		}
 	}
 
-	// sync instances from aws to database
-	// TODO: only sync when there is difference between local and aws
+	// instanceID -> cached DB record
+	recordByInstanceID := make(map[string]localDb.InstanceRecord, len(records))
+	for _, record := range records {
+		recordByInstanceID[record.AwsInstanceID] = record
+	}
+
 	instances := make([]*Instance, 0, len(found))
+
 	for _, inst := range found {
 		dto := instanceFromAWS(inst)
 		ip := dto.IPAddress
 		if ip == "" {
 			ip = dto.PrivateIPAddress
 		}
-		if err := db.SyncInstanceFromAWS(
-			dto.ID,
-			dto.Status,
-			ip,
-			dto.InstanceType,
-			dto.Name,
-		); err != nil {
-			return nil, err
+		record := recordByInstanceID[dto.ID]
+
+		// for each instance, if any of the fields are different, sync the instance from aws
+		if record.NeedsAWSSync(dto.Status, ip, dto.InstanceType, dto.Name) {
+			if err := db.SyncInstanceFromAWS(
+				dto.ID,
+				dto.Status,
+				ip,
+				dto.InstanceType,
+				dto.Name,
+			); err != nil {
+				return nil, err
+			}
 		}
 		instances = append(instances, dto)
 	}
