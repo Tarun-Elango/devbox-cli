@@ -107,12 +107,9 @@ func Idle(args []string) {
 		fmt.Fprintf(os.Stderr, "error: box is %s, not running\n", box.Status)
 		os.Exit(1)
 	}
-	host := box.IPAddress
-	if host == "" {
-		host = box.PrivateIPAddress
-	}
-	if host == "" {
-		fmt.Fprintln(os.Stderr, "error: box has no IP address (is it running?)")
+	host, err := box.SSHHost()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -283,12 +280,9 @@ func deleteIdleStop(args []string) {
 		fmt.Fprintf(os.Stderr, "error: box is %s, not running\n", box.Status)
 		os.Exit(1)
 	}
-	host := box.IPAddress
-	if host == "" {
-		host = box.PrivateIPAddress
-	}
-	if host == "" {
-		fmt.Fprintln(os.Stderr, "error: box has no IP address (is it running?)")
+	host, err := box.SSHHost()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -425,12 +419,9 @@ func updateIdleStop(args []string) {
 		fmt.Fprintf(os.Stderr, "error: box is %s, not running\n", box.Status)
 		os.Exit(1)
 	}
-	host := box.IPAddress
-	if host == "" {
-		host = box.PrivateIPAddress
-	}
-	if host == "" {
-		fmt.Fprintln(os.Stderr, "error: box has no IP address (is it running?)")
+	host, err := box.SSHHost()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 

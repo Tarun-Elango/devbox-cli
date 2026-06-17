@@ -129,31 +129,16 @@ func (r *Runtime) ListSnapshots(userID string) ([]*Snapshot, error) {
 		}
 	}
 
-	records, err = db.ListSnapshotsByUserID(userID)
+	recordsWithBox, err := db.ListSnapshotsByUserIDWithBoxAwsID(userID)
 	if err != nil {
 		return nil, err
 	}
-	if len(records) == 0 {
+	if len(recordsWithBox) == 0 {
 		return nil, nil
 	}
 
-	boxAwsIDByBoxID := make(map[string]string)
-	for _, rec := range records {
-		if !rec.BoxID.Valid || rec.BoxID.String == "" {
-			continue
-		}
-		if _, ok := boxAwsIDByBoxID[rec.BoxID.String]; ok {
-			continue
-		}
-		box, err := db.GetInstanceByID(rec.BoxID.String)
-		if err != nil {
-			continue
-		}
-		boxAwsIDByBoxID[rec.BoxID.String] = box.AwsInstanceID
-	}
-
-	snapshots := make([]*Snapshot, 0, len(records))
-	for _, rec := range records {
+	snapshots := make([]*Snapshot, 0, len(recordsWithBox))
+	for _, rec := range recordsWithBox {
 		state := "unknown"
 		if awsState, ok := stateByAmiID[rec.AmiID]; ok {
 			state = awsState
@@ -161,8 +146,8 @@ func (r *Runtime) ListSnapshots(userID string) ([]*Snapshot, error) {
 			state = rec.State.String
 		}
 		boxAwsID := ""
-		if rec.BoxID.Valid {
-			boxAwsID = boxAwsIDByBoxID[rec.BoxID.String]
+		if rec.BoxAwsID.Valid {
+			boxAwsID = rec.BoxAwsID.String
 		}
 		snapshots = append(snapshots, &Snapshot{
 			AmiID:    rec.AmiID,

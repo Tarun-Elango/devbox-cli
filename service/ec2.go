@@ -42,6 +42,18 @@ type Instance struct {
 	PrivateIPAddress string
 }
 
+// SSHHost returns the public IP if set, otherwise the private IP.
+func (i *Instance) SSHHost() (string, error) {
+	host := i.IPAddress
+	if host == "" {
+		host = i.PrivateIPAddress
+	}
+	if host == "" {
+		return "", fmt.Errorf("box has no IP address (is it running?)")
+	}
+	return host, nil
+}
+
 // if user does not have it then we will see no rows
 func requireOwnedInstance(db *localDb.DB, awsID, userID string) (*localDb.InstanceRecord, error) {
 	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(awsID, userID)
@@ -632,12 +644,9 @@ func (r *Runtime) ForwardPort(instanceID, port, userID string) (*PortForwardResp
 		return nil, fmt.Errorf("box is %s, not running", box.Status)
 	}
 
-	host := box.IPAddress
-	if host == "" {
-		host = box.PrivateIPAddress
-	}
-	if host == "" {
-		return nil, fmt.Errorf("no IP address available for instance: %s", instanceID)
+	host, err := box.SSHHost()
+	if err != nil {
+		return nil, err
 	}
 
 	return &PortForwardResponse{
