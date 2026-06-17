@@ -42,13 +42,33 @@ type Instance struct {
 	PrivateIPAddress string
 }
 
-// ListInstances returns instances for userID, using AWS as the source of truth.
-func ListInstances(userID string) ([]*Instance, error) {
-	db, err := localDb.Open()
+// SSHHost returns the public IP if set, otherwise the private IP.
+func (i *Instance) SSHHost() (string, error) {
+	host := i.IPAddress
+	if host == "" {
+		host = i.PrivateIPAddress
+	}
+	if host == "" {
+		return "", fmt.Errorf("box has no IP address (is it running?)")
+	}
+	return host, nil
+}
+
+// if user does not have it then we will see no rows
+func requireOwnedInstance(db *localDb.DB, awsID, userID string) (*localDb.InstanceRecord, error) {
+	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(awsID, userID)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("box not found: %s", awsID)
+	}
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = db.Close() }()
+	return inst, nil
+}
+
+// ListInstances returns instances for userID, using AWS as the source of truth.
+func (r *Runtime) ListInstances(userID string) ([]*Instance, error) {
+	db := r.DB()
 
 	records, err := db.ListInstancesByUserID(userID)
 	if err != nil {
@@ -59,17 +79,16 @@ func ListInstances(userID string) ([]*Instance, error) {
 	}
 
 	awsIDs := make([]string, len(records))
-	for i, r := range records {
-		awsIDs[i] = r.AwsInstanceID
+	for i, record := range records {
+		awsIDs[i] = record.AwsInstanceID
 	}
 
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2()
 	if err != nil {
 		return nil, err
 	}
 
-	ec2Client := ec2.NewFromConfig(client.Config())
+	ctx := r.Context()
 	resp, err := ec2Client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
 		Filters: []types.Filter{
 			{
@@ -82,12 +101,12 @@ func ListInstances(userID string) ([]*Instance, error) {
 	if err != nil {
 		return nil, awsclient.WrapError("describe instances", err)
 	}
-
+	//part 1 - delete instances from database that are not in aws
+	// aws instance id -> instance object from aws response
 	found := make(map[string]types.Instance)
-	// map of aws instance id to instance details
 	for _, reservation := range resp.Reservations {
 		for _, inst := range reservation.Instances {
-			found[aws.ToString(inst.InstanceId)] = inst
+			found[aws.ToString(inst.InstanceId)] = inst // map of aws instance id to instance object
 		}
 	}
 	// delete instances from database that are not in aws
@@ -99,23 +118,36 @@ func ListInstances(userID string) ([]*Instance, error) {
 		}
 	}
 
-	// sync instances from aws to database
-	// TODO: only sync when there is difference between local and aws
+	// part 2 - compare aws response with local db ( dont care if we look at deleted instances)
+	// cause we only consider found/instances in aws response
+	// instanceID -> cached DB record from records/localDb from records/localDb
+	recordByInstanceID := make(map[string]localDb.InstanceRecord, len(records))
+	for _, record := range records {
+		recordByInstanceID[record.AwsInstanceID] = record
+	}
+
 	instances := make([]*Instance, 0, len(found))
+
+	// loop through the instances in aws response ( only use records for local db values)
 	for _, inst := range found {
 		dto := instanceFromAWS(inst)
 		ip := dto.IPAddress
 		if ip == "" {
 			ip = dto.PrivateIPAddress
 		}
-		if err := db.SyncInstanceFromAWS(
-			dto.ID,
-			dto.Status,
-			ip,
-			dto.InstanceType,
-			dto.Name,
-		); err != nil {
-			return nil, err
+		record := recordByInstanceID[dto.ID] // record has the corresponding record from local db
+
+		// for each instance, if any of the fields are different, sync the instance from aws
+		if record.NeedsAWSSync(dto.Status, ip, dto.InstanceType, dto.Name) {
+			if err := db.SyncInstanceFromAWS( // input is new values from aws response
+				dto.ID,
+				dto.Status,
+				ip,
+				dto.InstanceType,
+				dto.Name,
+			); err != nil {
+				return nil, err
+			}
 		}
 		instances = append(instances, dto)
 	}
@@ -145,11 +177,11 @@ func instanceFromAWS(inst types.Instance) *Instance {
 
 // CreateInstance creates a new box locally.
 // Mirrors Lighthouse POST /v2/boxes: launchInstancev2(name, publicKey, snapshotAmiId, userId).
-func CreateInstance(name, publicKey, snapshotAmiID, userID string) (*Instance, error) {
-	return createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, nil)
+func (r *Runtime) CreateInstance(name, publicKey, snapshotAmiID, userID string) (*Instance, error) {
+	return r.createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, nil)
 }
 
-func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID string, startupScripts []string) (*Instance, error) {
+func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID string, startupScripts []string) (*Instance, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("box name is required")
@@ -159,16 +191,11 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 	fromSnapshot := snapshotAmiID != ""
 	effectiveAmiID := defaultAmiID
 
-	ctx := context.Background()
+	ctx := r.Context()
+	db := r.DB()
 
 	if fromSnapshot {
-		db, err := localDb.Open()
-		if err != nil {
-			return nil, err
-		}
-		defer func() { _ = db.Close() }()
-
-		_, err = db.GetSnapshotByAmiIDAndUserID(snapshotAmiID, userID)
+		_, err := db.GetSnapshotByAmiIDAndUserID(snapshotAmiID, userID)
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("snapshot not found: %s", snapshotAmiID)
 		}
@@ -176,11 +203,10 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 			return nil, err
 		}
 
-		client, err := awsclient.NewClient(ctx)
+		ec2Client, err := r.EC2()
 		if err != nil {
 			return nil, err
 		}
-		ec2Client := ec2.NewFromConfig(client.Config())
 		resp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 			Owners:   []string{"self"},
 			ImageIds: []string{snapshotAmiID},
@@ -203,11 +229,10 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 		return nil, err
 	}
 
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2()
 	if err != nil {
 		return nil, err
 	}
-	ec2Client := ec2.NewFromConfig(client.Config())
 
 	effectiveSgID := defaultSecurityGroupID
 	if effectiveSgID == "" {
@@ -266,12 +291,6 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 	launched := resp.Instances[0]
 	awsInstanceID := aws.ToString(launched.InstanceId)
 
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
-
 	if err := db.InsertInstance(
 		uuid.New().String(),
 		awsInstanceID,
@@ -280,6 +299,16 @@ func createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID str
 		string(launched.State.Name),
 		string(launched.InstanceType),
 	); err != nil {
+		// if the instance cannot be added to the database, terminate it
+		_, termErr := ec2Client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{
+			InstanceIds: []string{awsInstanceID},
+		})
+		if termErr != nil {
+			return nil, fmt.Errorf(
+				"failed to save box %s to local database and automatic cleanup also failed; instance %s may still be running in AWS and should be terminated manually in the EC2 console: db: %w, terminate: %v",
+				name, awsInstanceID, err, termErr,
+			)
+		}
 		return nil, err
 	}
 
@@ -407,32 +436,23 @@ func appendReadyMarker(sb *strings.Builder) {
 
 // GetInstance returns live instance details from AWS for a box owned by userID.
 // Mirrors Lighthouse GET /v2/boxes/{id}: ec2Service.getInstance(id, userId).
-func GetInstance(instanceId, userID string) (*Instance, error) {
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) GetInstance(instanceId, userID string) (*Instance, error) {
+	db := r.DB()
 
-	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceId, userID) // get instance from local db
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("box not found: %s", instanceId)
-	}
-	if err != nil {
+	if _, err := requireOwnedInstance(db, instanceId, userID); err != nil {
 		return nil, err
 	}
 
-	return getInstanceFromAWS(instanceId)
+	return r.getInstanceFromAWS(instanceId)
 }
 
-func getInstanceFromAWS(instanceId string) (*Instance, error) {
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+func (r *Runtime) getInstanceFromAWS(instanceId string) (*Instance, error) {
+	ec2Client, err := r.EC2()
 	if err != nil {
 		return nil, err
 	}
 
-	ec2Client := ec2.NewFromConfig(client.Config())
+	ctx := r.Context()
 	resp, err := ec2Client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceId},
 	})
@@ -451,6 +471,27 @@ func getInstanceFromAWS(instanceId string) (*Instance, error) {
 	return nil, fmt.Errorf("instance not found in AWS: %s", instanceId)
 }
 
+// get the instance from aws and sync it to the local db
+func (r *Runtime) syncInstanceFromAWSByID(instanceID string) error {
+	inst, err := r.getInstanceFromAWS(instanceID)
+	if err != nil {
+		return err
+	}
+
+	ip := inst.IPAddress
+	if ip == "" {
+		ip = inst.PrivateIPAddress
+	}
+
+	return r.DB().SyncInstanceFromAWS(
+		inst.ID,
+		inst.Status,
+		ip,
+		inst.InstanceType,
+		inst.Name,
+	)
+}
+
 // // used to update an instance, like name, type
 // func updateInstance(instanceId string, userId string, name string, status string) (*Instance, error) {
 // 	return nil, fmt.Errorf("not implemented")
@@ -458,132 +499,83 @@ func getInstanceFromAWS(instanceId string) (*Instance, error) {
 
 // DeleteInstance terminates a box owned by userID and removes it from the local DB.
 // Mirrors Lighthouse DELETE /v1/boxes/{id}: ec2Service.terminateInstance(id, userId).
-func DeleteInstance(instanceID, userID string) (*ActionResult, error) {
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) DeleteInstance(instanceID, userID string) error {
+	db := r.DB()
 
-	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("box not found: %s", instanceID)
-	}
-	if err != nil {
-		return nil, err
+	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
+		return err
 	}
 
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	ec2Client := ec2.NewFromConfig(client.Config())
+	// Terminate in AWS first so we never drop the local record while the instance
+	// is still running (avoids orphan EC2). Local DB is removed only after terminate succeeds.
+	ctx := r.Context()
 	_, err = ec2Client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{
 		InstanceIds: []string{instanceID},
 	})
 	if err != nil {
-		return &ActionResult{
-			Success: false,
-			Message: fmt.Sprintf("Failed to terminate instance %s: %v", instanceID, err),
-		}, nil
+		return awsclient.WrapError("terminate instance", err)
 	}
 
 	if err := db.DeleteInstanceByAwsInstanceID(instanceID); err != nil {
-		return nil, err
+		return fmt.Errorf("instance terminated in AWS but failed to remove local record: %w", err)
 	}
 
-	return &ActionResult{
-		Success: true,
-		Message: fmt.Sprintf("Instance %s terminated successfully.", instanceID),
-	}, nil
-}
-
-// ActionResult mirrors lighthouse ActionResult for stop/start/delete responses.
-type ActionResult struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+	return nil
 }
 
 // StopInstance stops a running box owned by userID.
 // Mirrors Lighthouse POST /v1/boxes/{id}/stop: ec2Service.stopInstance(id, userId).
-func StopInstance(instanceID, userID string) (*ActionResult, error) {
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) StopInstance(instanceID, userID string) error {
+	db := r.DB()
 
-	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("box not found: %s", instanceID)
-	}
-	if err != nil {
-		return nil, err
+	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
+		return err
 	}
 
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	ec2Client := ec2.NewFromConfig(client.Config())
+	ctx := r.Context()
 	_, err = ec2Client.StopInstances(ctx, &ec2.StopInstancesInput{
 		InstanceIds: []string{instanceID},
 	})
 	if err != nil {
-		return &ActionResult{
-			Success: false,
-			Message: fmt.Sprintf("Failed to stop instance %s: %v", instanceID, err),
-		}, nil
+		return awsclient.WrapError("stop instance", err)
 	}
 
-	return &ActionResult{
-		Success: true,
-		Message: fmt.Sprintf("Instance %s stopped successfully.", instanceID),
-	}, nil
+	return r.syncInstanceFromAWSByID(instanceID)
 }
 
 // StartInstance starts a stopped box owned by userID.
 // Mirrors Lighthouse POST /v1/boxes/{id}/start: ec2Service.startInstance(id, userId).
-func StartInstance(instanceID, userID string) (*ActionResult, error) {
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) StartInstance(instanceID, userID string) error {
+	db := r.DB()
 
-	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("box not found: %s", instanceID)
-	}
-	if err != nil {
-		return nil, err
+	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
+		return err
 	}
 
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	ec2Client := ec2.NewFromConfig(client.Config())
+	ctx := r.Context()
 	_, err = ec2Client.StartInstances(ctx, &ec2.StartInstancesInput{
 		InstanceIds: []string{instanceID},
 	})
 	if err != nil {
-		return &ActionResult{
-			Success: false,
-			Message: fmt.Sprintf("Failed to start instance %s: %v", instanceID, err),
-		}, nil
+		return awsclient.WrapError("start instance", err)
 	}
 
-	return &ActionResult{
-		Success: true,
-		Message: fmt.Sprintf("Instance %s started successfully.", instanceID),
-	}, nil
+	return r.syncInstanceFromAWSByID(instanceID)
 }
 
 // SshStatus mirrors lighthouse SshStatusResponse for local mode.
@@ -594,59 +586,50 @@ type SshStatus struct {
 
 // GetSshStatus checks EC2 instance/system status before SSH.
 // Mirrors Lighthouse GET /v2/boxes/{id}/ssh-status: ec2Service.getSshStatus(id, userId).
-func GetSshStatus(instanceID, userID string) (*SshStatus, error) {
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) GetSshStatus(instanceID, userID string) (*SshStatus, error) {
+	db := r.DB()
 
-	_, err = db.GetInstanceByAwsInstanceIDAndUserID(instanceID, userID)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("box not found: %s", instanceID)
-	}
-	if err != nil {
+	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
 		return nil, err
 	}
 
-	return checkSshStatusFromAWS(instanceID), nil
+	return r.checkSshStatusFromAWS(instanceID) // has both SshStatus and error
 }
 
 // check if the two checks are ok, instance and system status
-func checkSshStatusFromAWS(instanceID string) *SshStatus {
+func (r *Runtime) checkSshStatusFromAWS(instanceID string) (*SshStatus, error) {
 	notReady := &SshStatus{Ready: false}
 
-	ctx := context.Background()
-	client, err := awsclient.NewClient(ctx)
+	ec2Client, err := r.EC2() // create the ec2 client from the aws config
 	if err != nil {
-		return notReady
+		return nil, err
 	}
 
-	ec2Client := ec2.NewFromConfig(client.Config())
+	ctx := r.Context()
 	resp, err := ec2Client.DescribeInstanceStatus(ctx, &ec2.DescribeInstanceStatusInput{
 		InstanceIds:         []string{instanceID},
 		IncludeAllInstances: aws.Bool(true),
 	})
 	if err != nil {
-		return notReady
+		return nil, awsclient.WrapError("describe instance status", err)
 	}
 	if len(resp.InstanceStatuses) == 0 {
-		return notReady
+		return notReady, nil
 	}
 
 	st := resp.InstanceStatuses[0]
 	instanceOk := st.InstanceStatus != nil && st.InstanceStatus.Status == types.SummaryStatusOk
 	systemOk := st.SystemStatus != nil && st.SystemStatus.Status == types.SummaryStatusOk
 	if !instanceOk || !systemOk {
-		return notReady
+		return notReady, nil
 	}
 
-	inst, err := getInstanceFromAWS(instanceID)
+	inst, err := r.getInstanceFromAWS(instanceID)
 	if err != nil {
-		return notReady
+		return nil, err
 	}
 
-	return &SshStatus{Ready: true, Instance: inst}
+	return &SshStatus{Ready: true, Instance: inst}, nil
 }
 
 // PortForwardResponse mirrors Lighthouse PortForwardResponse for POST /v1/boxes/{id}/ports.
@@ -658,13 +641,13 @@ type PortForwardResponse struct {
 
 // ForwardPort returns SSH connection details for port forwarding.
 // Mirrors Lighthouse POST /v1/boxes/{id}/ports: BoxesController.forwardPort.
-func ForwardPort(instanceID, port, userID string) (*PortForwardResponse, error) {
+func (r *Runtime) ForwardPort(instanceID, port, userID string) (*PortForwardResponse, error) {
 	port = strings.TrimSpace(port)
 	if port == "" {
 		return nil, fmt.Errorf("missing required field: port")
 	}
 
-	sshStatus, err := GetSshStatus(instanceID, userID)
+	sshStatus, err := r.GetSshStatus(instanceID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -680,12 +663,9 @@ func ForwardPort(instanceID, port, userID string) (*PortForwardResponse, error) 
 		return nil, fmt.Errorf("box is %s, not running", box.Status)
 	}
 
-	host := box.IPAddress
-	if host == "" {
-		host = box.PrivateIPAddress
-	}
-	if host == "" {
-		return nil, fmt.Errorf("no IP address available for instance: %s", instanceID)
+	host, err := box.SSHHost()
+	if err != nil {
+		return nil, err
 	}
 
 	return &PortForwardResponse{

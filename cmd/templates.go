@@ -24,7 +24,9 @@ func Templates(args []string) {
 	var templates []*service.Template
 	if mode == "local" {
 		fmt.Println("Listing local templates")
-		templates, err = service.ListTemplates(service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		templates, err = rt.ListTemplates(service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -79,7 +81,8 @@ func formatTemplateScript(s string) string {
 	}
 	return s
 }
-// notes: check valid template id, name cannot start with --, 
+
+// notes: check valid template id, name cannot start with --,
 // -- from should be valid string and should have a snapshot ami id
 
 // this is to create a new box with templates
@@ -116,7 +119,7 @@ func CreateTemplate(args []string) {
 				fmt.Fprintf(os.Stderr, "error: %v\n", unknownCreateFlagError(args[i]))
 				os.Exit(1)
 			}
-			arg := strings.TrimSpace(args[i]) 
+			arg := strings.TrimSpace(args[i])
 			if arg == "" {
 				fmt.Fprintln(os.Stderr, "error: template name is required")
 				os.Exit(1)
@@ -174,7 +177,9 @@ func CreateTemplate(args []string) {
 
 	var b Box
 	if mode == "local" {
-		inst, err := service.CreateBoxFromTemplates(name, templateRefs, pubKey, fromSnapshot, service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		inst, err := rt.CreateBoxFromTemplates(name, templateRefs, pubKey, fromSnapshot, service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)

@@ -29,12 +29,12 @@ func readPublicKey() (string, error) {
 
 // Box represents a devbox instance as returned by the API.
 type Box struct {
-	ID               string `json:"instanceId"`
-	Name             string `json:"name"`
-	Status           string `json:"state"`
-	InstanceType     string `json:"instanceType"`
-	PublicIP         string `json:"publicIpAddress"`
-	PrivateIP        string `json:"privateIpAddress"`
+	ID           string `json:"instanceId"`
+	Name         string `json:"name"`
+	Status       string `json:"state"`
+	InstanceType string `json:"instanceType"`
+	PublicIP     string `json:"publicIpAddress"`
+	PrivateIP    string `json:"privateIpAddress"`
 }
 
 func instancesToBoxes(instances []*service.Instance) []Box {
@@ -68,7 +68,9 @@ func Ls() {
 	var boxes []Box
 	if mode == "local" {
 		fmt.Println("Listing local boxes")
-		instances, err := service.ListInstances(service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		instances, err := rt.ListInstances(service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -126,7 +128,9 @@ func Status(args []string) {
 
 	var b Box
 	if mode == "local" {
-		inst, err := service.GetInstance(id, service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		inst, err := rt.GetInstance(id, service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -201,7 +205,9 @@ func Create(args []string) {
 
 	var b Box
 	if mode == "local" {
-		inst, err := service.CreateInstance(name, pubKey, fromSnapshot, service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		inst, err := rt.CreateInstance(name, pubKey, fromSnapshot, service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -266,13 +272,10 @@ func Stop(args []string) {
 	}
 
 	if mode == "local" {
-		result, err := service.StopInstance(id, service.LocalUserID)
-		if err != nil {
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		if err := rt.StopInstance(id, service.LocalUserID); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-		if !result.Success {
-			fmt.Fprintf(os.Stderr, "error: %s\n", result.Message)
 			os.Exit(1)
 		}
 	} else {
@@ -316,13 +319,10 @@ func Start(args []string) {
 	}
 
 	if mode == "local" {
-		result, err := service.StartInstance(id, service.LocalUserID)
-		if err != nil {
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		if err := rt.StartInstance(id, service.LocalUserID); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-		if !result.Success {
-			fmt.Fprintf(os.Stderr, "error: %s\n", result.Message)
 			os.Exit(1)
 		}
 	} else {
@@ -374,13 +374,10 @@ func Delete(args []string) {
 	}
 
 	if mode == "local" {
-		result, err := service.DeleteInstance(id, service.LocalUserID)
-		if err != nil {
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		if err := rt.DeleteInstance(id, service.LocalUserID); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-		if !result.Success {
-			fmt.Fprintf(os.Stderr, "error: %s\n", result.Message)
 			os.Exit(1)
 		}
 	} else {

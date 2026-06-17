@@ -16,6 +16,12 @@ type SnapshotRecord struct {
 	CreatedAt string
 }
 
+// SnapshotWithBoxAwsID is a snapshot row joined with the source box's AWS instance id.
+type SnapshotWithBoxAwsID struct {
+	SnapshotRecord
+	BoxAwsID sql.NullString
+}
+
 // InsertSnapshot creates a new snapshot row owned by userID.
 func (db *DB) InsertSnapshot(id, amiID, name, userID, boxID, state string) error {
 	_, err := db.conn.Exec(`
@@ -145,6 +151,42 @@ func (db *DB) ListSnapshotsByUserID(userID string) ([]SnapshotRecord, error) {
 			&r.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan snapshot: %w", err)
+		}
+		records = append(records, r)
+	}
+	return records, rows.Err()
+}
+
+// ListSnapshotsByUserIDWithBoxAwsID returns snapshots for userID with aws_instance_id joined from instances.
+func (db *DB) ListSnapshotsByUserIDWithBoxAwsID(userID string) ([]SnapshotWithBoxAwsID, error) {
+	rows, err := db.conn.Query(`
+		SELECT s.id, s.ami_id, s.name, s.user_id, s.box_id, s.state, s.created_at, i.aws_instance_id
+		FROM snapshots s
+		LEFT JOIN instances i ON s.box_id = i.id AND i.user_id = s.user_id
+		WHERE s.user_id = ?
+		ORDER BY s.created_at`,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list snapshots with box aws id: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	// convert the rows to the custom struct
+	var records []SnapshotWithBoxAwsID
+	for rows.Next() {
+		var r SnapshotWithBoxAwsID
+		if err := rows.Scan(
+			&r.ID,
+			&r.AmiID,
+			&r.Name,
+			&r.UserID,
+			&r.BoxID,
+			&r.State,
+			&r.CreatedAt,
+			&r.BoxAwsID,
+		); err != nil {
+			return nil, fmt.Errorf("scan snapshot with box aws id: %w", err)
 		}
 		records = append(records, r)
 	}

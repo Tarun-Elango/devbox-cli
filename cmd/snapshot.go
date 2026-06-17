@@ -33,7 +33,9 @@ func Snapshot(args []string) {
 
 	var result service.Snapshot
 	if mode == "local" {
-		snap, err := service.CreateSnapshot(id, name, service.LocalUserID)
+		rt := mustOpenRuntime()
+		defer func() { _ = rt.Close() }()
+		snap, err := rt.CreateSnapshot(id, name, service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
 			os.Exit(1)

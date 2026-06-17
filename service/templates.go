@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-
-	localDb "devbox-cli/service/localDb"
 )
 
 // Template mirrors Lighthouse TemplateDto (id, name, description, startupScript).
@@ -20,12 +18,8 @@ type Template struct {
 
 // ListTemplates returns templates for userID from the local database.
 // User-owned templates use name as id, matching Lighthouse TemplateDto behavior.
-func ListTemplates(userID string) ([]*Template, error) {
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+func (r *Runtime) ListTemplates(userID string) ([]*Template, error) {
+	db := r.DB()
 
 	records, err := db.ListTemplatesByUserID(userID)
 	if err != nil {
@@ -37,12 +31,12 @@ func ListTemplates(userID string) ([]*Template, error) {
 
 	templates := make([]*Template, 0, len(records))
 	// loop through records and append to templates
-	for _, r := range records {
+	for _, rec := range records {
 		templates = append(templates, &Template{
-			ID:            r.Name,
-			Name:          r.Name,
-			Description:   nullStringValue(r.Description),
-			StartupScript: normalizeStartupScript(nullStringValue(r.StartupScript)),
+			ID:            rec.Name,
+			Name:          rec.Name,
+			Description:   nullStringValue(rec.Description),
+			StartupScript: normalizeStartupScript(nullStringValue(rec.StartupScript)),
 		})
 	}
 	return templates, nil
@@ -78,19 +72,14 @@ func normalizeStartupScript(script string) string {
 // CreateTemplate creates a user-owned startup template in the local database.
 // The startup script is stored for later injection into EC2 user data at box launch.
 // Mirrors Lighthouse template creation (POST /v1/boxes/templates).
-func CreateTemplate(name, startupScript, userID string) (*Template, error) {
+func (r *Runtime) CreateTemplate(name, startupScript, userID string) (*Template, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("template name is required")
 	}
 
 	normalizedScript := normalizeStartupScript(startupScript)
-
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+	db := r.DB()
 
 	taken, err := db.TemplateNameTaken(userID, name) // check if the template name is already taken
 	if err != nil {
@@ -113,19 +102,15 @@ func CreateTemplate(name, startupScript, userID string) (*Template, error) {
 
 // DeleteTemplate removes a user-owned template from the local database.
 // templateID is the template name (user-facing id in local mode).
-func DeleteTemplate(templateID, userID string) error {
+func (r *Runtime) DeleteTemplate(templateID, userID string) error {
 	templateID = strings.TrimSpace(templateID)
 	if templateID == "" {
 		return fmt.Errorf("template id is required")
 	}
 
-	db, err := localDb.Open()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = db.Close() }()
+	db := r.DB()
 
-	_, err = db.GetTemplateByNameAndUserID(templateID, userID) // check if the template exists
+	_, err := db.GetTemplateByNameAndUserID(templateID, userID) // check if the template exists
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("template not found: %s", templateID)
 	}
@@ -137,16 +122,12 @@ func DeleteTemplate(templateID, userID string) error {
 }
 
 // CreateBoxFromTemplates creates a new box applying the given templates' startup scripts.
-func CreateBoxFromTemplates(name string, templateIDs []string, publicKey, fromSnapshot, userID string) (*Instance, error) {
+func (r *Runtime) CreateBoxFromTemplates(name string, templateIDs []string, publicKey, fromSnapshot, userID string) (*Instance, error) {
 	if len(templateIDs) == 0 {
 		return nil, fmt.Errorf("template not found")
 	}
 
-	db, err := localDb.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = db.Close() }()
+	db := r.DB()
 
 	startupScripts := make([]string, 0, len(templateIDs))
 
@@ -171,5 +152,5 @@ func CreateBoxFromTemplates(name string, templateIDs []string, publicKey, fromSn
 		}
 	}
 
-	return createInstanceWithStartupScripts(name, publicKey, fromSnapshot, userID, startupScripts)
+	return r.createInstanceWithStartupScripts(name, publicKey, fromSnapshot, userID, startupScripts)
 }
