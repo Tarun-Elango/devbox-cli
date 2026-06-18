@@ -625,7 +625,8 @@ type SshStatus struct {
 	Instance *Instance
 }
 
-// GetSshStatus checks EC2 instance/system status before SSH.
+// GetSshStatus returns instance details for SSH. Readiness is determined by the
+// user-data probe in cmd, not EC2 instance/system status checks.
 // Mirrors Lighthouse GET /v2/boxes/{id}/ssh-status: ec2Service.getSshStatus(id, userId).
 func (r *Runtime) GetSshStatus(instanceID, userID string) (*SshStatus, error) {
 	db := r.DB()
@@ -634,36 +635,35 @@ func (r *Runtime) GetSshStatus(instanceID, userID string) (*SshStatus, error) {
 		return nil, err
 	}
 
-	return r.checkSshStatusFromAWS(instanceID) // has both SshStatus and error
+	return r.checkSshStatusFromAWS(instanceID)
 }
 
-// check if the two checks are ok, instance and system status
 func (r *Runtime) checkSshStatusFromAWS(instanceID string) (*SshStatus, error) {
-	notReady := &SshStatus{Ready: false}
+	// notReady := &SshStatus{Ready: false}
 
-	ec2Client, err := r.EC2() // create the ec2 client from the aws config
-	if err != nil {
-		return nil, err
-	}
+	// ec2Client, err := r.EC2() // create the ec2 client from the aws config
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	ctx := r.Context()
-	resp, err := ec2Client.DescribeInstanceStatus(ctx, &ec2.DescribeInstanceStatusInput{
-		InstanceIds:         []string{instanceID},
-		IncludeAllInstances: aws.Bool(true),
-	})
-	if err != nil {
-		return nil, awsclient.WrapError("describe instance status", err)
-	}
-	if len(resp.InstanceStatuses) == 0 {
-		return notReady, nil
-	}
+	// ctx := r.Context()
+	// resp, err := ec2Client.DescribeInstanceStatus(ctx, &ec2.DescribeInstanceStatusInput{
+	// 	InstanceIds:         []string{instanceID},
+	// 	IncludeAllInstances: aws.Bool(true),
+	// })
+	// if err != nil {
+	// 	return nil, awsclient.WrapError("describe instance status", err)
+	// }
+	// if len(resp.InstanceStatuses) == 0 {
+	// 	return notReady, nil
+	// }
 
-	st := resp.InstanceStatuses[0]
-	instanceOk := st.InstanceStatus != nil && st.InstanceStatus.Status == types.SummaryStatusOk
-	systemOk := st.SystemStatus != nil && st.SystemStatus.Status == types.SummaryStatusOk
-	if !instanceOk || !systemOk {
-		return notReady, nil
-	}
+	// st := resp.InstanceStatuses[0]
+	// instanceOk := st.InstanceStatus != nil && st.InstanceStatus.Status == types.SummaryStatusOk
+	// systemOk := st.SystemStatus != nil && st.SystemStatus.Status == types.SummaryStatusOk
+	// if !instanceOk || !systemOk {
+	// 	return notReady, nil
+	// }
 
 	inst, err := r.getInstanceFromAWS(instanceID)
 	if err != nil {

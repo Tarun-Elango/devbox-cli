@@ -6,16 +6,19 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"devbox-cli/internal/api"
 	"devbox-cli/service"
 )
 
 const (
-	devboxReadyPath    = "/var/lib/devbox/ready"
-	devboxReadyMessage = "the user data script is completed"
+	devboxReadyPath         = "/var/lib/devbox/ready"
+	devboxReadyMessage      = "the user data script is completed"
+	devboxReadyPollInterval = 5 * time.Second
 )
 
 var execCommand = exec.Command
@@ -54,18 +57,24 @@ func sshBaseArgs(identity, portArg string) []string {
 	return argv
 }
 
-// ssh ec2-user@ip 'test "$(cat /var/lib/devbox/ready 2>/dev/null)" = "the user data script is completed"'; echo "exit code: $?"
 // checkDevboxReady runs one SSH probe for the user-data ready marker.
+// Returns (true, nil) when ready, (false, nil) when SSH works but provisioning
+// is incomplete, and (false, err) when SSH is not reachable yet.
 func checkDevboxReady(sshBin, identity, user, host, portArg string) (bool, error) {
 	target := fmt.Sprintf("%s@%s", user, host)
 	probe := fmt.Sprintf(`test "$(cat %s 2>/dev/null)" = %q`, devboxReadyPath, devboxReadyMessage)
-	argv := append([]string{sshBin}, sshBaseArgs(identity, portArg)...)
-	argv = append(argv,
+	argv := []string{sshBin,
+		"-p", portArg,
+		"-o", "ConnectTimeout=5",
+		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "BatchMode=yes",
 		"-o", "LogLevel=ERROR",
-		target,
-		probe,
-	)
+	}
+	if identity != "" {
+		argv = append([]string{sshBin, "-i", identity}, argv[1:]...)
+	}
+	argv = append(argv, target, probe)
+
 	err := execCommand(argv[0], argv[1:]...).Run()
 	if err == nil {
 		return true, nil
@@ -77,6 +86,35 @@ func checkDevboxReady(sshBin, identity, user, host, portArg string) (bool, error
 	}
 
 	return false, err
+}
+
+// waitForDevboxReady polls until the user-data ready marker is present or the user cancels.
+func waitForDevboxReady(sshBin, identity, user, host, portArg string) error {
+	sigCh := make(chan os.Signal, 1)   // channel to receive signals
+	signal.Notify(sigCh, os.Interrupt) // notify when interrupt signal is received
+	defer signal.Stop(sigCh)           // stop listening for signals
+
+	for {
+		ready, err := checkDevboxReady(sshBin, identity, user, host, portArg)
+		if ready {
+			return nil
+		}
+
+		var msg string
+		if err != nil {
+			msg = "waiting for SSH — Ctrl+C to cancel, you don't have to wait..."
+		} else {
+			msg = "waiting for provisioning to finish — Ctrl+C to cancel, you don't have to wait..."
+		}
+		fmt.Fprintf(os.Stderr, "ssh: %s\n", msg)
+
+		select {
+		case <-time.After(devboxReadyPollInterval):
+		case <-sigCh: // if interrupt signal is received, cancel the operation
+			fmt.Fprintln(os.Stderr)
+			return fmt.Errorf("cancelled")
+		}
+	}
 }
 
 // SSH checks EC2 health and the devbox ready marker, then execs ssh.
@@ -188,11 +226,8 @@ func SSH(args []string) {
 	target := fmt.Sprintf("%s@%s", *user, b.PublicIP)
 	portArg := fmt.Sprintf("%d", *port)
 
-	ready, err := checkDevboxReady(sshBin, *identity, *user, b.PublicIP, portArg)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ssh: readiness probe failed (%v); attempting SSH anyway\n", err)
-	} else if !ready {
-		fmt.Fprintln(os.Stderr, "ssh: devbox is not ready yet — try again in a minute")
+	if err := waitForDevboxReady(sshBin, *identity, *user, b.PublicIP, portArg); err != nil {
+		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 		os.Exit(1)
 	}
 
