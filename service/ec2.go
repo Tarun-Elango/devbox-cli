@@ -593,6 +593,14 @@ func (r *Runtime) StartInstance(instanceID, userID string) error {
 		return err
 	}
 
+	instance, err := r.getInstanceFromAWS(instanceID)
+	if err != nil {
+		return err
+	}
+	if instance.Status != "stopped" {
+		return fmt.Errorf("box is %s, not stopped, or still stopping. ", instance.Status)
+	}
+
 	ec2Client, err := r.EC2()
 	if err != nil {
 		return err
