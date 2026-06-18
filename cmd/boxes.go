@@ -248,14 +248,17 @@ func Create(args []string) {
 	fmt.Printf("  SSH config: devbox-%s added to ~/.ssh/config\n", b.Name)
 	if b.PublicIP != "" {
 		fmt.Printf("  Public IP: %s\n", b.PublicIP)
-		fmt.Printf("\n  Connect:   devbox ssh %s\n", b.ID)
-		fmt.Printf("             ssh devbox-%s  (or VS Code Remote-SSH → devbox-%s)\n", b.Name, b.Name)
 	} else {
-		fmt.Printf("\n  Provisioning — check status: devbox status %s\n", b.ID)
-		fmt.Printf("  Check SSH readiness: devbox ssh %s (may fail until initialization finishes)\n", b.ID)
-		fmt.Printf("  When SSH is ready: ssh devbox-%s or VS Code Remote-SSH → devbox-%s\n", b.Name, b.Name)
-		fmt.Printf("  Note: ssh devbox-%s works once reachable, but wait until devbox ssh %s succeeds — you may miss template setup if you connect too early\n", b.Name, b.ID)
+		fmt.Printf("\nThe box is still provisioning.\n")
 	}
+
+	fmt.Printf("\nRecommended next steps:\n")
+	fmt.Printf("  1. Check box status: devbox status %s\n", b.ID)
+	fmt.Printf("  2. Wait for SSH and template setup: devbox ssh %s\n", b.ID)
+	fmt.Printf("     Use this command to check SSH/template readiness and connect once the box is ready.\n")
+	fmt.Printf("  3. After devbox ssh %s succeeds, you can also connect outside this CLI with:\n", b.ID)
+	fmt.Printf("     ssh devbox-%s\n", b.Name)
+	fmt.Printf("     VS Code Remote-SSH -> devbox-%s\n", b.Name)
 }
 
 // Stop stops a running box.

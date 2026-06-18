@@ -102,9 +102,9 @@ func waitForDevboxReady(sshBin, identity, user, host, portArg string) error {
 
 		var msg string
 		if err != nil {
-			msg = "waiting for SSH — Ctrl+C to cancel, you don't have to wait..."
+			msg = "waiting for SSH to become reachable, might take a moment. Press Ctrl+C to stop waiting."
 		} else {
-			msg = "waiting for provisioning to finish — Ctrl+C to cancel, you don't have to wait..."
+			msg = "waiting for templates to be installed, might take a moment. Press Ctrl+C to stop waiting."
 		}
 		fmt.Fprintf(os.Stderr, "ssh: %s\n", msg)
 
