@@ -121,7 +121,7 @@ func Forward(args []string) {
 	identity := defaultKeyPath()
 	ready, err := checkDevboxReady(sshBin, identity, result.User, result.Host, "22")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "forward: readiness probe failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "forward: SSH is not reachable yet (%v) — the box may still be starting, try again in a moment\n", err)
 		os.Exit(1)
 	}
 	if !ready {
