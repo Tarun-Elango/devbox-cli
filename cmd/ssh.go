@@ -23,18 +23,50 @@ const (
 
 var execCommand = exec.Command
 
-// defaultKeyPath returns the path to the user's default SSH private key,
-// trying id_ed25519 then id_rsa under ~/.ssh. Returns "" if none found.
-func defaultKeyPath() string {
+// helper: ed25519KeyPaths returns paths to ~/.ssh/id_ed25519 and ~/.ssh/id_ed25519.pub.
+func ed25519KeyPaths() (privateKey, publicKey string, err error) {
 	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", "", fmt.Errorf("could not determine home directory: %w", err)
+	}
+	sshDir := filepath.Join(home, ".ssh")
+	return filepath.Join(sshDir, "id_ed25519"), filepath.Join(sshDir, "id_ed25519.pub"), nil
+}
+
+// helper: ensureEd25519Key runs ssh-keygen to create ~/.ssh/id_ed25519 when the user confirms.
+func ensureEd25519Key() error {
+	priv, _, err := ed25519KeyPaths()
+	if err != nil {
+		return err
+	}
+
+	sshKeygen, err := exec.LookPath("ssh-keygen") // look for ssh-keygen binary in PATH
+	if err != nil {
+		return fmt.Errorf("ssh-keygen not found in PATH")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(priv), 0o700); err != nil { // create the ~/.ssh directory if it doesn't exist
+		return fmt.Errorf("create ~/.ssh: %w", err)
+	}
+
+	cmd := exec.Command(sshKeygen, "-t", "ed25519", "-f", priv) // create the ed25519 key pair
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("ssh-keygen failed: %w", err)
+	}
+	return nil
+}
+
+// defaultKeyPath returns ~/.ssh/id_ed25519 if it exists, otherwise "".
+func defaultKeyPath() string {
+	priv, _, err := ed25519KeyPaths()
 	if err != nil {
 		return ""
 	}
-	for _, name := range []string{"id_ed25519", "id_rsa"} {
-		p := filepath.Join(home, ".ssh", name)
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
+	if _, err := os.Stat(priv); err == nil {
+		return priv
 	}
 	return ""
 }

@@ -3,28 +3,43 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"devbox-cli/internal/api"
 	"devbox-cli/service"
 )
 
-// readPublicKey returns the contents of the user's default SSH public key,
-// trying id_ed25519.pub then id_rsa.pub under ~/.ssh.
+// readPublicKey returns the contents of ~/.ssh/id_ed25519.pub, prompting to
+// create the key pair with ssh-keygen when it is missing.
 func readPublicKey() (string, error) {
-	home, err := os.UserHomeDir()
+	_, pub, err := ed25519KeyPaths() // get the path to the public key
 	if err != nil {
-		return "", fmt.Errorf("could not determine home directory: %w", err)
+		return "", err
 	}
-	for _, name := range []string{"id_ed25519.pub", "id_rsa.pub"} {
-		p := filepath.Join(home, ".ssh", name)
-		data, err := os.ReadFile(p)
-		if err == nil {
-			return strings.TrimSpace(string(data)), nil
-		}
+
+	if data, err := os.ReadFile(pub); err == nil {
+		return strings.TrimSpace(string(data)), nil // if exists, return the public key
 	}
-	return "", fmt.Errorf("no public key found in ~/.ssh (tried id_ed25519.pub, id_rsa.pub)")
+
+	fmt.Printf("No SSH public key found at %s. Create one now? [y/N] ", pub)
+	var answer string
+	_, _ = fmt.Scanln(&answer)
+	if answer != "y" && answer != "Y" {
+		return "", fmt.Errorf("no public key at %s", pub)
+	}
+
+	if err := ensureEd25519Key(); err != nil { // create the key pair if it is missing
+		return "", err
+	}
+
+	// if successful created, print success message
+	fmt.Printf("SSH public key created in you ~/.ssh directory.")
+
+	data, err := os.ReadFile(pub) // read the public key file
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", pub, err)
+	}
+	return strings.TrimSpace(string(data)), nil // return the public key
 }
 
 // Box represents a devbox instance as returned by the API.
