@@ -131,16 +131,6 @@ usage method: devbox command
 | `idle-stop <id> update <minutes>` | Update the idle stop for a box |
 | `idle-stop <id> delete` | Delete the idle stop for a box |
 
-
-**Config** is stored in the default config directory (`~/.config/devbox/` on Linux/macOS). `login` saves the auth token there; all other commands read it automatically.
-
-**Test mode** — prefix any command with `-test` to invoke the handler without making real API calls:
-
-```bash
-./devbox -test create mybox   # prints: [test] create: done
-./devbox -test ssh abc123     # prints: [test] ssh: done
-```
-
 ## Notes on local config (`~/.devbox`)
 
 Credentials and tokens are stored in `~/.devbox/config.json` (mode 0600).

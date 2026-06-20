@@ -33,7 +33,7 @@ func readPublicKey() (string, error) {
 	}
 
 	// if successful created, print success message
-	fmt.Printf("SSH public key created in you ~/.ssh directory.")
+	fmt.Printf("SSH public key created in your ~/.ssh directory.")
 
 	data, err := os.ReadFile(pub) // read the public key file
 	if err != nil {
