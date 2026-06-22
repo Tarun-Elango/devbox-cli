@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"devbox-cli/cmd"
+	"devbox-cli/internal/backup"
 )
 
 func usage() {
@@ -42,6 +43,7 @@ Commands:
 }
 
 func main() {
+	backup.MaybeDaily()
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(1)
