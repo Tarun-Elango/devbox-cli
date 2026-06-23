@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"devbox-cli/internal/config"
 )
@@ -56,6 +57,7 @@ func SaveAWSCredentials(secret, accessKey, region string) error {
 	cfg.AwsSecret = secret
 	cfg.AwsAccessKey = accessKey
 	cfg.AwsRegion = region
+	cfg.AwsCredsUpdatedAt = time.Now()
 	cfg.Mode = "local"
 	if err := config.Save(cfg); err != nil {
 		return err

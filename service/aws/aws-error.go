@@ -108,3 +108,28 @@ func hasErrorCode(err error, codes ...string) bool {
 	}
 	return false
 }
+
+// ShortMessage returns a concise, user-facing explanation for common AWS errors.
+func ShortMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	switch {
+	case IsAuthError(err):
+		return "invalid or expired credentials — run: devbox setup"
+	case IsPermissionError(err):
+		return "credentials valid but lack permission — check IAM policy"
+	case IsThrottlingError(err):
+		return "rate limited — retry in a moment"
+	case IsQuotaError(err):
+		return "AWS account limit reached"
+	case IsRegionError(err):
+		return "resource not available in this region — check: devbox setup"
+	default:
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) && apiErr.ErrorMessage() != "" { // check err as apiErr and if the error message is not empty
+			return apiErr.ErrorMessage() // return the error message from the api error
+		}
+		return err.Error()
+	}
+}

@@ -1,9 +1,7 @@
-name: Build and Publish Latest Release
+name: Build and Publish Release
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,12 +15,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
         with:
-          persist-credentials: false
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5
         with:
-          go-version: '1.24'
+          go-version: '1.26'
 
       - name: Build release binaries
         run: |
@@ -30,22 +28,38 @@ jobs:
           for os in linux darwin; do
             for arch in amd64 arm64; do
               GOOS="$os" GOARCH="$arch" go build \
-                -o "dist/devbox-$os-$arch" \
-                -ldflags "-X main.ServerURL=${{ secrets.SERVER_URL }}" .
+                -o "dist/devbox-$os-$arch" .
             done
           done
 
-      - name: Create new release
+      - name: Create and push tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(tr -d '[:space:]' < internal/version/VERSION)
+          TAG="v${VERSION}"
+
+          git fetch --tags origin
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists. Bump internal/version/VERSION first."
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "devbox ${TAG}"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${TAG}"
+
+      - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
-          gh release create latest \
+          VERSION=$(tr -d '[:space:]' < internal/version/VERSION)
+          gh release create "v${VERSION}" \
             dist/devbox-linux-amd64 \
             dist/devbox-linux-arm64 \
             dist/devbox-darwin-amd64 \
             dist/devbox-darwin-arm64 \
-            --target "${{ github.sha }}" \
-            --title "Latest build" \
-            --notes "Auto-generated Linux and macOS builds for amd64 and arm64 from main" \
+            --title "devbox v${VERSION}" \
+            --notes "Linux and macOS builds for amd64 and arm64." \
             --latest

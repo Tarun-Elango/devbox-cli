@@ -12,7 +12,10 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `Usage: devbox <command> [args]
 
 Commands:
+  version             Show the devbox CLI version
+
   setup               Configure/Change AWS credentials and region - stored in ~/.devbox/config.json
+  health              Check config, AWS credentials, region, and database
 
   create <name>       Create a new box
   ls                  List all boxes
@@ -63,10 +66,14 @@ func main() {
 	}
 
 	switch command {
+	case "version":
+		cmd.Version(args)
 	case "mode":
 		cmd.Mode(args)
 	case "setup":
 		cmd.Setup(args)
+	case "health":
+		cmd.Health(args)
 	case "login":
 		cmd.Login(args)
 	case "signup":

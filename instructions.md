@@ -80,3 +80,28 @@ devbox <command> [args]
 devbox -test create mybox   # prints: [test] create: done
 devbox -test ssh abc123     # prints: [test] ssh: done
 ```
+
+## Release a new version
+
+Releases are **not** created on every merge to `main`. Publish when you're ready:
+
+1. **Bump the version** in `internal/version/VERSION` (e.g. `0.1.0` → `0.1.1`).
+
+2. **Commit and merge** that change to `main` (on its own or as part of your release PR).
+
+3. **Run the release workflow** on GitHub:
+
+   - Go to **Actions** → **Build and Publish Release**
+   - Click **Run workflow**
+   - Branch: `main` (default)
+   - Click **Run workflow**
+
+   The workflow reads `internal/version/VERSION`, creates tag `v0.1.1` on that commit, builds Linux/macOS binaries (amd64 and arm64), and publishes the GitHub release.
+
+4. **Verify** the release under **Releases**, or after installing that build:
+
+   ```bash
+   devbox version
+   ```
+
+> **Note:** Merging to `main` without running the workflow does nothing to existing releases. Each release needs a new version in `internal/version/VERSION` — if tag `v0.1.1` already exists, the workflow fails until you bump the file.

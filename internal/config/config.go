@@ -101,10 +101,11 @@ type Config struct {
 	RefreshToken string    `json:"refresh_token"`
 	TokenExpiry  time.Time `json:"token_expiry"`
 	ServerURL    string    `json:"serverUrl"`
-	AwsSecret    string    `json:"awsSecret"`
-	AwsAccessKey string    `json:"awsAccessKey"`
-	AwsRegion    string    `json:"awsRegion"`
-	Mode         string    `json:"mode"`
+	AwsSecret         string    `json:"awsSecret"`
+	AwsAccessKey      string    `json:"awsAccessKey"`
+	AwsRegion         string    `json:"awsRegion"`
+	AwsCredsUpdatedAt time.Time `json:"aws_creds_updated_at"`
+	Mode              string    `json:"mode"`
 }
 
 // IsTokenExpired reports whether the access token is expired or will expire
@@ -116,8 +117,8 @@ func (c *Config) IsTokenExpired() bool {
 	return time.Now().After(c.TokenExpiry.Add(-30 * time.Second))
 }
 
-// configPath returns the absolute path to the config file.
-func configPath() (string, error) {
+// ConfigPath returns the absolute path to ~/.devbox/config.json.
+func ConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve home dir: %w", err)
@@ -129,7 +130,7 @@ func configPath() (string, error) {
 // If the file does not exist an empty Config with the default server URL is returned.
 func Load() (*Config, error) {
 	backup.RestoreConfigIfNeeded()
-	path, err := configPath()
+	path, err := ConfigPath()
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +156,7 @@ func Load() (*Config, error) {
 // Save writes cfg to ~/.devbox/config.json, creating the directory if needed.
 func Save(cfg *Config) error {
 	backup.BeforeConfigSave("local") // we dont care about cloud
-	path, err := configPath()
+	path, err := ConfigPath()
 	if err != nil {
 		return err
 	}
