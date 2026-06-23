@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+// helper functions for validating ids and flags
+
 var snapshotAmiIDPattern = regexp.MustCompile(`^ami-[0-9a-f]{8,17}$`)
 var ec2InstanceIDPattern = regexp.MustCompile(`^i-[0-9a-f]{8,17}$`)
 

@@ -1,3 +1,5 @@
 .env.local
 application.properties
 todo.txt
+
+/plan

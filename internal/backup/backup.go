@@ -1,27 +1,33 @@
 package backup
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 const (
-	devboxDir       = ".devbox"
-	backupDirName   = ".devbox-backup"
-	configFile      = "config.json"
-	dbFile          = "devbox.db"
-	backupInterval  = 24 * time.Hour
-	timestampLayout = "20060102-150405"
+	devboxDir         = ".devbox"
+	backupDirName     = ".devbox-backup"
+	configFile        = "config.json"
+	dbFile            = "devbox.db"
+	backupInterval    = 24 * time.Hour
+	timestampLayout   = "20060102-150405"
+	timestampLayoutNS = "20060102-150405.000000000"
 )
 
 var backupMu sync.Mutex
 
 // MaybeDaily creates a backup if at least 24 hours have passed since the last one.
-// Best-effort: errors are ignored; backup runs in the background.
+// Best-effort: errors are ignored; backup blocks so short-lived CLI commands do not exit mid-backup.
 func MaybeDaily() {
 	if !isLocalMode() {
 		return
@@ -33,11 +39,12 @@ func MaybeDaily() {
 	if last, ok := latestBackupTime(dir); ok && time.Since(last) < backupInterval {
 		return
 	}
-	runAsync(dir)
+	runLocked(dir)
 }
 
-// BeforeConfigSave creates a backup before persisting config changes in local mode.
-// Best-effort: errors are ignored; backup runs in the background.
+// BeforeConfigSave copies the current config and db before persisting changes in local mode.
+// Blocks until the backup finishes so the snapshot is the previous version, not a race.
+// Best-effort: errors are ignored.
 func BeforeConfigSave(mode string) {
 	if mode != "" && mode != "local" {
 		return
@@ -46,15 +53,13 @@ func BeforeConfigSave(mode string) {
 	if err != nil {
 		return
 	}
-	runAsync(dir)
+	runLocked(dir)
 }
 
-func runAsync(dir string) {
-	go func() {
-		backupMu.Lock()
-		defer backupMu.Unlock()
-		_ = create(dir)
-	}()
+func runLocked(dir string) {
+	backupMu.Lock()
+	defer backupMu.Unlock()
+	_ = create(dir)
 }
 
 func isLocalMode() bool {
@@ -108,7 +113,7 @@ func latestBackupTime(dir string) (time.Time, bool) {
 		if !e.IsDir() {
 			continue
 		}
-		t, err := time.Parse(timestampLayout, e.Name())
+		t, err := parseBackupDirTime(e.Name())
 		if err != nil {
 			continue
 		}
@@ -118,6 +123,14 @@ func latestBackupTime(dir string) (time.Time, bool) {
 		}
 	}
 	return latest, found
+}
+
+// name to actual timestamp time.Time
+func parseBackupDirTime(name string) (time.Time, error) {
+	if t, err := time.Parse(timestampLayoutNS, name); err == nil {
+		return t, nil
+	}
+	return time.Parse(timestampLayout, name)
 }
 
 func create(backupRoot string) error {
@@ -132,7 +145,7 @@ func create(backupRoot string) error {
 		return nil
 	}
 
-	dest := filepath.Join(backupRoot, time.Now().Format(timestampLayout))
+	dest := filepath.Join(backupRoot, time.Now().UTC().Format(timestampLayoutNS))
 	if err := os.MkdirAll(dest, 0700); err != nil {
 		return err
 	}
@@ -143,7 +156,7 @@ func create(backupRoot string) error {
 		}
 	}
 	if dbExists {
-		if err := copyFile(dbPath, filepath.Join(dest, dbFile)); err != nil {
+		if err := vacuumDB(dbPath, filepath.Join(dest, dbFile)); err != nil {
 			return err
 		}
 	}
@@ -178,6 +191,27 @@ func removeOldBackupsExcept(dir, keep string) error {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+func vacuumDB(srcPath, dstPath string) error {
+	// open the source database
+	conn, err := sql.Open("sqlite", srcPath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = conn.Close() }()
+	conn.SetMaxOpenConns(1)
+
+	// get the absolute path to the destination database
+	absDst, err := filepath.Abs(dstPath)
+	if err != nil {
+		return err
+	}
+	// escape the destination path for the SQL command
+	escaped := strings.ReplaceAll(absDst, "'", "''")
+	// execute the VACUUM command
+	_, err = conn.Exec(fmt.Sprintf("VACUUM INTO '%s'", escaped))
+	return err
 }
 
 func copyFile(src, dst string) error {

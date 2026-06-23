@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	_ "modernc.org/sqlite"
+
+	"devbox-cli/internal/backup"
 )
 
 const (
@@ -30,6 +32,7 @@ func DBPath() (string, error) {
 
 // Open connects to ~/.devbox/devbox.db, creating the directory and schema if needed.
 func Open() (*DB, error) {
+	backup.RestoreDBIfNeeded()
 	path, err := DBPath()
 	if err != nil {
 		return nil, err

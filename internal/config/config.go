@@ -128,6 +128,7 @@ func configPath() (string, error) {
 // Load reads Config from ~/.devbox/config.json.
 // If the file does not exist an empty Config with the default server URL is returned.
 func Load() (*Config, error) {
+	backup.RestoreConfigIfNeeded()
 	path, err := configPath()
 	if err != nil {
 		return nil, err
@@ -171,7 +172,27 @@ func Save(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("marshal config: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0600); err != nil { // only the owner can read/write
+	tmpFile, err := os.CreateTemp(configDir, configFile+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("create temp config: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	if _, err := tmpFile.Write(data); err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("write config: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("close temp config: %w", err)
+	}
+	if err := os.Chmod(tmpPath, 0600); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("chmod temp config: %w", err)
+	}
+	// rename ( remove the .tmp ), if it fails, remove the tmp file
+	if err := os.Rename(tmpPath, path); err != nil {
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("write config: %w", err)
 	}
 	return nil

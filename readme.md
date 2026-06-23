@@ -8,6 +8,7 @@ Manage remote dev boxes from the CLI — provision, connect, or destroy them.
 - [Install (system-wide) using github repo](#install-system-wide-using-github-repo)
 - [Common commands](#common-commands)
 - [Local config](#notes-on-local-config-devbox)
+- [AWS setup](#aws-setup)
 
 ## Download and Install (from GitHub release)
 
@@ -136,3 +137,80 @@ usage method: devbox command
 Credentials and tokens are stored in `~/.devbox/config.json` (mode 0600).
 **Do not sync this folder** — not via dotfiles, iCloud, Dropbox, or Git.
 Use a dedicated low-privilege IAM user for AWS keys.
+
+---
+
+## AWS setup
+
+Create a dedicated IAM user with only the EC2 permissions devbox needs: create boxes, view them, and delete them.
+
+### 1. Create an IAM user
+
+1. Open the IAM console → **Users** → **Create user**.
+2. Enter a name (for example `devbox-cli`) and click **Next**.
+
+### 2. Attach a minimal EC2 policy
+
+1. Choose **Attach policies directly** → **Create policy** → **JSON**.
+2. Paste the policy below, then save it (for example as `devbox-ec2-minimal`).
+3. Back on the user-creation screen, refresh the policy list, select `devbox-ec2-minimal`, and finish creating the user.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DevboxEC2Create",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances",
+        "ec2:CreateTags",
+        "ec2:CreateImage",
+        "ec2:CreateSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:StartInstances"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DevboxEC2View",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeImages",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DevboxEC2Delete",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:TerminateInstances",
+        "ec2:StopInstances",
+        "ec2:DeregisterImage",
+        "ec2:DeleteSnapshot"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+This covers `create`, `ls`, `status`, `delete`, `start`, `stop`, and snapshot commands — nothing broader than required.
+
+### 3. Create access keys
+
+1. Open the user → **Security credentials** → **Access keys** → **Create access key**.
+2. Choose **Command Line Interface (CLI)** and confirm.
+3. Copy the **Access key ID** and **Secret access key** (the secret is shown only once).
+
+### 4. Save credentials in devbox
+
+```bash
+devbox setup
+```
+
+Enter the access key, secret, and your preferred AWS region when prompted.
