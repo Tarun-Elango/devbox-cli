@@ -19,7 +19,6 @@ import (
 
 // EC2 defaults — mirrors Lighthouse application.properties.
 const (
-	defaultInstanceType    = "t4g.small"
 	defaultAmiID           = "ami-096f34d377a72cea5" // amazon linux 2023 ami
 	defaultStorageSizeGB   = 16
 	defaultSecurityGroupID = "" // we dont have one, so we will default to creating in the code
@@ -188,14 +187,22 @@ func instanceFromAWS(inst types.Instance) *Instance {
 
 // CreateInstance creates a new box locally.
 // Mirrors Lighthouse POST /v2/boxes: launchInstancev2(name, publicKey, snapshotAmiId, userId).
-func (r *Runtime) CreateInstance(name, publicKey, snapshotAmiID, userID string) (*Instance, error) {
-	return r.createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, nil)
+func (r *Runtime) CreateInstance(name, publicKey, snapshotAmiID, userID, instanceType string) (*Instance, error) {
+	return r.createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, instanceType, nil)
 }
 
-func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID string, startupScripts []string) (*Instance, error) {
+func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, instanceType string, startupScripts []string) (*Instance, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("box name is required")
+	}
+
+	instanceType = strings.TrimSpace(instanceType)
+	if instanceType == "" {
+		instanceType = DefaultInstanceType
+	}
+	if err := ValidateInstanceType(instanceType); err != nil {
+		return nil, err
 	}
 
 	snapshotAmiID = strings.TrimSpace(snapshotAmiID) // snapshotAmiId will only have the id
@@ -255,7 +262,7 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 
 	input := &ec2.RunInstancesInput{
 		ImageId:      aws.String(effectiveAmiID),
-		InstanceType: types.InstanceType(defaultInstanceType),
+		InstanceType: types.InstanceType(instanceType),
 		MinCount:     aws.Int32(1),
 		MaxCount:     aws.Int32(1),
 		TagSpecifications: []types.TagSpecification{

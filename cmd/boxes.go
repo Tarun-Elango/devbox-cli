@@ -212,6 +212,20 @@ func Create(args []string) {
 		pubKey = pk
 	}
 
+	instanceType := service.DefaultInstanceType
+	if mode == "local" {
+		selected, err := selectInstanceType(service.AllInstanceTypes())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error selecting instance type: %v\n", err)
+			os.Exit(1)
+		}
+		if err := service.ValidateInstanceType(selected); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		instanceType = selected
+	}
+
 	if fromSnapshot != "" {
 		fmt.Printf("Creating box %q from snapshot AMI %s...\n", name, fromSnapshot)
 	} else {
@@ -222,7 +236,7 @@ func Create(args []string) {
 	if mode == "local" {
 		rt := mustOpenRuntime()
 		defer func() { _ = rt.Close() }()
-		inst, err := rt.CreateInstance(name, pubKey, fromSnapshot, service.LocalUserID)
+		inst, err := rt.CreateInstance(name, pubKey, fromSnapshot, service.LocalUserID, instanceType)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -260,6 +274,9 @@ func Create(args []string) {
 	fmt.Printf("  ID:        %s\n", b.ID)
 	fmt.Printf("  Name:      %s\n", b.Name)
 	fmt.Printf("  Status:    %s\n", b.Status)
+	if b.InstanceType != "" {
+		fmt.Printf("  Type:      %s\n", b.InstanceType)
+	}
 	fmt.Printf("  SSH config: devbox-%s added to ~/.ssh/config\n", b.Name)
 	if b.PublicIP != "" {
 		fmt.Printf("  Public IP: %s\n", b.PublicIP)
