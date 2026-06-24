@@ -1,11 +1,12 @@
 package backup
 
 import (
-	"database/sql"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"time"
+
+	"devbox-cli/internal/sqliteutil"
 )
 
 // RestoreConfigIfNeeded copies config.json from the latest backup when the live
@@ -57,12 +58,11 @@ func isDBValid(path string) bool {
 	if !fileExists(path) {
 		return false
 	}
-	conn, err := sql.Open("sqlite", path)
+	conn, err := sqliteutil.Open(path)
 	if err != nil {
 		return false
 	}
 	defer func() { _ = conn.Close() }()
-	conn.SetMaxOpenConns(1)
 	var result string
 
 	// we do a PRAGMA quick_check to check if the database is valid

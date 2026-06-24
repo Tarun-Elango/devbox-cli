@@ -1,7 +1,6 @@
 package backup
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"devbox-cli/internal/sqliteutil"
 )
 
 const (
@@ -156,7 +155,7 @@ func create(backupRoot string) error {
 		}
 	}
 	if dbExists {
-		if err := vacuumDB(dbPath, filepath.Join(dest, dbFile)); err != nil {
+		if err := backupDB(dbPath, filepath.Join(dest, dbFile)); err != nil {
 			return err
 		}
 	}
@@ -193,25 +192,81 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
+// backupDB prefers VACUUM INTO for a consistent snapshot; falls back to a hot
+// file copy when another process holds the database open.
+func backupDB(srcPath, dstPath string) error {
+	err := sqliteutil.WithRetry(func() error {
+		return vacuumDB(srcPath, dstPath)
+	})
+	if err == nil {
+		return nil
+	}
+	if !sqliteutil.IsBusy(err) {
+		return err
+	}
+
+	// could not vacuum, so we need to copy the database file
+	return hotCopyDB(srcPath, dstPath)
+}
+
 func vacuumDB(srcPath, dstPath string) error {
-	// open the source database
-	conn, err := sql.Open("sqlite", srcPath)
+	conn, err := sqliteutil.Open(srcPath)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = conn.Close() }()
-	conn.SetMaxOpenConns(1)
 
-	// get the absolute path to the destination database
 	absDst, err := filepath.Abs(dstPath)
 	if err != nil {
 		return err
 	}
-	// escape the destination path for the SQL command
 	escaped := strings.ReplaceAll(absDst, "'", "''")
-	// execute the VACUUM command
 	_, err = conn.Exec(fmt.Sprintf("VACUUM INTO '%s'", escaped))
 	return err
+}
+
+/*
+When checkpoint succeeds (“good”):
+WAL contents are merged into the main .db and the WAL is truncated. Then only the main database file is copied to dstPath.
+
+When checkpoint fails because the DB is busy (“not good” in the busy sense):
+It falls back to copyDBFiles: the main .db plus any -wal and -shm files that exist, so the backup stays consistent even though the WAL wasn’t fully merged.
+*/
+func hotCopyDB(srcPath, dstPath string) error {
+	conn, err := sqliteutil.Open(srcPath) // open the database connection
+	if err != nil {
+		return err
+	}
+	defer func() { _ = conn.Close() }()
+
+	checkpointErr := sqliteutil.WithRetry(func() error {
+		// checkpoint the database
+		_, err := conn.Exec("PRAGMA wal_checkpoint(TRUNCATE)") // truncate the WAL file
+		return err
+	})
+	if checkpointErr != nil && !sqliteutil.IsBusy(checkpointErr) { // if the checkpoint failed and is not a busy error, return the error
+		return checkpointErr
+	}
+	if checkpointErr == nil { // if the checkpoint succeeded, copy the database file
+		return copyFile(srcPath, dstPath)
+	}
+	return copyDBFiles(srcPath, dstPath) // if the checkpoint failed, copy the database file
+}
+
+func copyDBFiles(srcPath, dstPath string) error {
+	if err := copyFile(srcPath, dstPath); err != nil {
+		return err
+	}
+	for _, suffix := range []string{"-wal", "-shm"} {
+		sidecar := srcPath + suffix
+		if !fileExists(sidecar) {
+			continue
+		}
+		if err := copyFile(sidecar, dstPath+suffix); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func copyFile(src, dst string) error {

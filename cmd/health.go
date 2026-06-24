@@ -1,15 +1,12 @@
 package cmd
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	_ "modernc.org/sqlite"
 
 	"devbox-cli/internal/config"
 	awsclient "devbox-cli/service/aws"
@@ -62,11 +59,13 @@ func Health(args []string) {
 		check("aws creds", "not configured", "run: devbox setup")
 		check("aws updated", "n/a", "")
 	} else {
-		client, err := awsclient.NewClient(context.Background())
+		ctx := CommandContext()
+		client, err := awsclient.NewClient(ctx)
 		if err != nil {
 			check("aws creds", "error", err.Error())
 		} else {
-			out, err := sts.NewFromConfig(client.Config()).GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
+			// pass ctx, so there is a timeout for the aws call
+			out, err := sts.NewFromConfig(client.Config()).GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 			if err != nil {
 				check("aws creds", "invalid", awsclient.ShortMessage(err))
 			} else {
@@ -81,25 +80,13 @@ func Health(args []string) {
 		}
 	}
 
-	dbPath, err := localDb.DBPath()
+	db, err := localDb.Open()
 	if err != nil {
-		check("database", "error", err.Error())
-	} else if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		check("database", "missing", dbPath)
-	} else if err != nil {
-		check("database", "error", err.Error())
+		check("database", "unavailable", err.Error())
 	} else {
-		conn, err := sql.Open("sqlite", dbPath)
-		if err != nil {
-			check("database", "unavailable", err.Error())
-		} else {
-			defer func() { _ = conn.Close() }()
-			if err := conn.Ping(); err != nil {
-				check("database", "unavailable", err.Error())
-			} else {
-				check("database", "ok", dbPath)
-			}
-		}
+		defer func() { _ = db.Close() }()
+		dbPath, _ := localDb.DBPath()
+		check("database", "ok", dbPath)
 	}
 
 	if failed {

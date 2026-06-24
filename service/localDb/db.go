@@ -6,9 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "modernc.org/sqlite"
-
 	"devbox-cli/internal/backup"
+	"devbox-cli/internal/sqliteutil"
 )
 
 const (
@@ -42,18 +41,12 @@ func Open() (*DB, error) {
 		return nil, fmt.Errorf("create db dir: %w", err)
 	}
 
-	conn, err := sql.Open("sqlite", path)
+	conn, err := sqliteutil.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
-	conn.SetMaxOpenConns(1)
 
 	db := &DB{conn: conn}
-
-	if _, err := conn.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		_ = conn.Close()
-		return nil, fmt.Errorf("enable foreign keys: %w", err)
-	}
 
 	if err := db.migrate(); err != nil { // got to make sure all the migrations are run
 		_ = conn.Close()

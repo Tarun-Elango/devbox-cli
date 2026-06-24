@@ -5,6 +5,8 @@ package aws
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -12,6 +14,8 @@ import (
 
 	appconfig "devbox-cli/internal/config"
 )
+
+const awsRequestTimeout = 60 * time.Second
 
 // aws key and secret are in .devbox/config.json
 // we need to load the config and create a client
@@ -46,6 +50,8 @@ func NewClient(ctx context.Context) (*Client, error) {
 			"",
 		)),
 		awsconfig.WithRegion(appCfg.AwsRegion),
+		awsconfig.WithRetryMode(aws.RetryModeAdaptive),
+		awsconfig.WithHTTPClient(&http.Client{Timeout: awsRequestTimeout}),
 	}
 	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
