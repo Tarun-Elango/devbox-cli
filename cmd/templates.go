@@ -183,16 +183,18 @@ func CreateTemplate(args []string) {
 		}
 		instanceType = selected
 
-		selectedVolume, err := selectVolumeSizeGB()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error selecting volume size: %v\n", err)
-			os.Exit(1)
+		if fromSnapshot == "" {
+			selectedVolume, err := selectVolumeSizeGB()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error selecting volume size: %v\n", err)
+				os.Exit(1)
+			}
+			if err := service.ValidateVolumeSizeGB(selectedVolume); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				os.Exit(1)
+			}
+			volumeSizeGB = selectedVolume
 		}
-		if err := service.ValidateVolumeSizeGB(selectedVolume); err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-		volumeSizeGB = selectedVolume
 	}
 
 	if fromSnapshot != "" {
