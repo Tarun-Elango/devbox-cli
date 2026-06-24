@@ -122,7 +122,7 @@ func (r *Runtime) DeleteTemplate(templateID, userID string) error {
 }
 
 // CreateBoxFromTemplates creates a new box applying the given templates' startup scripts.
-func (r *Runtime) CreateBoxFromTemplates(name string, templateIDs []string, publicKey, fromSnapshot, userID string) (*Instance, error) {
+func (r *Runtime) CreateBoxFromTemplates(name string, templateIDs []string, publicKey, fromSnapshot, userID, instanceType string, volumeSizeGB int) (*Instance, error) {
 	if len(templateIDs) == 0 {
 		return nil, fmt.Errorf("template not found")
 	}
@@ -152,5 +152,5 @@ func (r *Runtime) CreateBoxFromTemplates(name string, templateIDs []string, publ
 		}
 	}
 
-	return r.createInstanceWithStartupScripts(name, publicKey, fromSnapshot, userID, startupScripts)
+	return r.createInstanceWithStartupScripts(name, publicKey, fromSnapshot, userID, instanceType, volumeSizeGB, startupScripts)
 }

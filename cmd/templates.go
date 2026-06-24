@@ -163,23 +163,51 @@ func CreateTemplate(args []string) {
 		pubKey = pk
 	}
 
-	if fromSnapshot != "" {
-		fmt.Printf("Creating box %q from templates %s (snapshot %s)...\n", name, strings.Join(templateRefs, ", "), fromSnapshot)
-	} else {
-		fmt.Printf("Creating box %q from templates %s...\n", name, strings.Join(templateRefs, ", "))
-	}
-
 	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
+	instanceType := service.DefaultInstanceType
+	volumeSizeGB := service.DefaultVolumeSizeGB
+	if mode == "local" {
+		selected, err := selectInstanceType(service.AllInstanceTypes())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error selecting instance type: %v\n", err)
+			os.Exit(1)
+		}
+		if err := service.ValidateInstanceType(selected); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		instanceType = selected
+
+		if fromSnapshot == "" {
+			selectedVolume, err := selectVolumeSizeGB()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error selecting volume size: %v\n", err)
+				os.Exit(1)
+			}
+			if err := service.ValidateVolumeSizeGB(selectedVolume); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				os.Exit(1)
+			}
+			volumeSizeGB = selectedVolume
+		}
+	}
+
+	if fromSnapshot != "" {
+		fmt.Printf("Creating box %q from templates %s (snapshot %s)...\n", name, strings.Join(templateRefs, ", "), fromSnapshot)
+	} else {
+		fmt.Printf("Creating box %q from templates %s...\n", name, strings.Join(templateRefs, ", "))
+	}
+
 	var b Box
 	if mode == "local" {
 		rt := mustOpenRuntime()
 		defer func() { _ = rt.Close() }()
-		inst, err := rt.CreateBoxFromTemplates(name, templateRefs, pubKey, fromSnapshot, service.LocalUserID)
+		inst, err := rt.CreateBoxFromTemplates(name, templateRefs, pubKey, fromSnapshot, service.LocalUserID, instanceType, volumeSizeGB)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -216,6 +244,12 @@ func CreateTemplate(args []string) {
 	fmt.Printf("  ID:        %s\n", b.ID)
 	fmt.Printf("  Name:      %s\n", b.Name)
 	fmt.Printf("  Status:    %s\n", b.Status)
+	if b.InstanceType != "" {
+		fmt.Printf("  Type:      %s\n", b.InstanceType)
+	}
+	if mode == "local" && fromSnapshot == "" {
+		fmt.Printf("  Storage:   %d GB\n", volumeSizeGB)
+	}
 	if b.PublicIP != "" {
 		fmt.Printf("  Public IP: %s\n", b.PublicIP)
 		fmt.Printf("\n  Connect:   devbox ssh %s\n", b.ID)
