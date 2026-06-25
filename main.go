@@ -20,6 +20,7 @@ Commands:
   create <name>       Create a new box
   ls                  List all boxes
   status <id|name>         Show details for a box
+  rename <id|name> <new-name> Rename a box
   stop <id|name>           Stop a running box
   start <id|name>          Start a stopped box
   delete <id|name>         Delete a box
@@ -87,6 +88,8 @@ func main() {
 		cmd.Ls()
 	case "status":
 		cmd.Status(args)
+	case "rename":
+		cmd.Rename(args)
 	case "stop":
 		cmd.Stop(args)
 	case "start":

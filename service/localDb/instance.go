@@ -193,9 +193,7 @@ func (db *DB) InsertInstance(id, awsInstanceID, name, userID, status, instanceTy
 	return nil
 }
 
-// ValidateInstanceNameAvailable verifies that name can be used as command identity
-// for a new box owned by userID.
-func (db *DB) ValidateInstanceNameAvailable(name, userID string) error {
+func validateInstanceName(name string) error {
 	name = strings.TrimSpace(name) // trim the name
 	if name == "" {
 		return fmt.Errorf("box name is required")
@@ -204,6 +202,16 @@ func (db *DB) ValidateInstanceNameAvailable(name, userID string) error {
 	if ec2InstanceIDPattern.MatchString(name) {
 		return fmt.Errorf("box name cannot look like an EC2 instance id: %s", name)
 	}
+	return nil
+}
+
+// ValidateInstanceNameAvailable verifies that name can be used as command identity
+// for a new box owned by userID.
+func (db *DB) ValidateInstanceNameAvailable(name, userID string) error {
+	name = strings.TrimSpace(name)
+	if err := validateInstanceName(name); err != nil {
+		return err
+	}
 
 	_, err := db.GetInstanceByNameAndUserID(name, userID)
 	if err == nil {
@@ -211,6 +219,57 @@ func (db *DB) ValidateInstanceNameAvailable(name, userID string) error {
 	}
 	if err != sql.ErrNoRows {
 		return err
+	}
+	return nil
+}
+
+// ValidateInstanceNameAvailableForRename verifies that name can be used for an
+// existing box. The current box may keep its own name.
+func (db *DB) ValidateInstanceNameAvailableForRename(name, userID, currentAwsInstanceID string) error {
+	name = strings.TrimSpace(name)
+	if err := validateInstanceName(name); err != nil {
+		return err
+	}
+
+	record, err := db.GetInstanceByNameAndUserID(name, userID)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if record.AwsInstanceID == currentAwsInstanceID {
+		return nil
+	}
+	return fmt.Errorf("box name already exists: %s", name)
+}
+
+// UpdateInstanceName updates a local instance name after AWS accepts the Name tag.
+func (db *DB) UpdateInstanceName(awsInstanceID, userID, name string) error {
+	name = strings.TrimSpace(name)
+	if err := validateInstanceName(name); err != nil {
+		return err
+	}
+
+	result, err := db.conn.Exec(`
+		UPDATE instances
+		SET name = ?,
+		    updated_at = datetime('now')
+		WHERE aws_instance_id = ? AND user_id = ?`,
+		name, awsInstanceID, userID,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: instances.user_id, instances.name") {
+			return fmt.Errorf("box name already exists: %s", name)
+		}
+		return fmt.Errorf("update instance name for %s: %w", awsInstanceID, err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("update instance name for %s: %w", awsInstanceID, err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("instance not found: %s", awsInstanceID)
 	}
 	return nil
 }

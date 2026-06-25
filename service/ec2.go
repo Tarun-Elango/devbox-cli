@@ -531,10 +531,67 @@ func (r *Runtime) syncInstanceFromAWSByID(instanceID string) (*Instance, error) 
 	return inst, nil
 }
 
-// // used to update an instance, like name, type
-// func updateInstance(instanceId string, userId string, name string, status string) (*Instance, error) {
-// 	return nil, fmt.Errorf("not implemented")
-// }
+// RenameInstance updates a local box name. AWS is updated first so the Name tag
+// remains the source of truth; DB and SSH config are best-effort follow-ups.
+func (r *Runtime) RenameInstance(instanceID, userID, newName string) (*Instance, error) {
+	newName = strings.TrimSpace(newName)
+	db := r.DB()
+
+	record, err := requireOwnedInstance(db, instanceID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if err := db.ValidateInstanceNameAvailableForRename(newName, userID, instanceID); err != nil {
+		return nil, err
+	}
+
+	ec2Client, err := r.EC2()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := r.Context()
+	if err := updateInstanceNameTag(ctx, ec2Client, instanceID, newName); err != nil {
+		return nil, err
+	}
+
+	if err := db.UpdateInstanceName(instanceID, userID, newName); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: AWS name tag updated but failed to update local database; run devbox ls to resync: %v\n", err)
+	}
+	if err := RenameHost(record.Name, newName); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: box renamed but failed to update SSH config after retries: %v\n", err)
+	}
+
+	renamed := &Instance{
+		ID:     instanceID,
+		Name:   newName,
+		Status: record.Status,
+	}
+	if record.InstanceType.Valid {
+		renamed.InstanceType = record.InstanceType.String
+	}
+	if record.IPAddress.Valid {
+		renamed.IPAddress = record.IPAddress.String
+	}
+	return renamed, nil
+}
+
+type ec2CreateTagsAPI interface {
+	CreateTags(context.Context, *ec2.CreateTagsInput, ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error)
+}
+
+func updateInstanceNameTag(ctx context.Context, ec2Client ec2CreateTagsAPI, instanceID, newName string) error {
+	_, err := ec2Client.CreateTags(ctx, &ec2.CreateTagsInput{
+		Resources: []string{instanceID},
+		Tags: []types.Tag{
+			{Key: aws.String("Name"), Value: aws.String(newName)},
+		},
+	})
+	if err != nil {
+		return awsclient.WrapError("update instance name tag", err)
+	}
+	return nil
+}
 
 // DeleteInstance terminates a box owned by userID and removes it from the local DB.
 // Mirrors Lighthouse DELETE /v1/boxes/{id}: ec2Service.terminateInstance(id, userId).
