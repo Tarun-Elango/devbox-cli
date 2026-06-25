@@ -93,6 +93,34 @@ func TestInsertInstanceRejectsEC2InstanceIDShapedName(t *testing.T) {
 	}
 }
 
+func TestInsertInstanceTrimsNameBeforePersisting(t *testing.T) {
+	db := newTestDB(t)
+
+	if err := db.InsertInstance("box-1", "i-1234567890abcdef0", " alpha ", LocalUserID, "running", "t3.micro"); err != nil {
+		t.Fatalf("insert instance: %v", err)
+	}
+
+	got, err := db.GetInstanceByNameAndUserID("alpha", LocalUserID)
+	if err != nil {
+		t.Fatalf("get trimmed instance name: %v", err)
+	}
+	if got.Name != "alpha" {
+		t.Fatalf("stored name %q, want %q", got.Name, "alpha")
+	}
+}
+
+func TestInsertInstanceRejectsBlankNameAfterTrim(t *testing.T) {
+	db := newTestDB(t)
+
+	err := db.InsertInstance("box-1", "i-1234567890abcdef0", " \t\n ", LocalUserID, "running", "t3.micro")
+	if err == nil {
+		t.Fatal("expected blank name error")
+	}
+	if !strings.Contains(err.Error(), "box name is required") {
+		t.Fatalf("unexpected blank name error: %v", err)
+	}
+}
+
 func TestInsertInstanceDuplicateNameError(t *testing.T) {
 	db := newTestDB(t)
 

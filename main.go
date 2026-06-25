@@ -23,7 +23,8 @@ Commands:
   stop <id|name>           Stop a running box
   start <id|name>          Start a stopped box
   delete <id|name>         Delete a box
-  ssh <id|name>            Open an SSH session to a box
+  ssh [-i key] <id|name>     Open an SSH session to a box
+                             -i  Path to SSH private key (default: ~/.ssh/id_ed25519)
   forward <id|name> <port> Forward a port from a box
 
   snapshot <id|name> [name]  Create a snapshot of a box
@@ -68,8 +69,8 @@ func main() {
 	switch command {
 	case "version":
 		cmd.Version(args)
-	case "mode":
-		cmd.Mode(args)
+	// case "mode":
+	// 	cmd.Mode(args)
 	case "setup":
 		cmd.Setup(args)
 	case "health":

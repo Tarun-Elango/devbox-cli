@@ -171,6 +171,8 @@ func (db *DB) DeleteInstanceByAwsInstanceID(awsInstanceID string) error {
 
 // InsertInstance creates a new instance row owned by userID.
 func (db *DB) InsertInstance(id, awsInstanceID, name, userID, status, instanceType string) error {
+	name = strings.TrimSpace(name) // trim the name
+
 	// before inserting, check if the name is available, in case there is conflict/race condition
 	if err := db.ValidateInstanceNameAvailable(name, userID); err != nil {
 		return err
@@ -194,6 +196,11 @@ func (db *DB) InsertInstance(id, awsInstanceID, name, userID, status, instanceTy
 // ValidateInstanceNameAvailable verifies that name can be used as command identity
 // for a new box owned by userID.
 func (db *DB) ValidateInstanceNameAvailable(name, userID string) error {
+	name = strings.TrimSpace(name) // trim the name
+	if name == "" {
+		return fmt.Errorf("box name is required")
+	}
+
 	if ec2InstanceIDPattern.MatchString(name) {
 		return fmt.Errorf("box name cannot look like an EC2 instance id: %s", name)
 	}
