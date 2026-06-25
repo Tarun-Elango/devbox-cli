@@ -160,7 +160,7 @@ func SSH(args []string) {
 	port := fs.Int("p", 22, "SSH port")
 	identity := fs.String("i", defaultKeyPath(), "path to SSH private key") // ssh picks the ssh private key for creating the connection
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox ssh -v -i [-u user] [-p port] [-i identity] <id> [-- ssh-args...]")
+		fmt.Fprintln(os.Stderr, "usage: devbox ssh -v -i [-u user] [-p port] [-i identity] <id|name> [-- ssh-args...]")
 		fs.PrintDefaults()
 	}
 
@@ -181,7 +181,7 @@ func SSH(args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
-	id := fs.Arg(0)
+	ref := fs.Arg(0)
 
 	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
@@ -190,9 +190,17 @@ func SSH(args []string) {
 	}
 
 	var status SshStatusResponse
+	targetLabel := ref
 	if mode == "local" {
 		rt := mustOpenRuntime()
-		sshStatus, err := rt.GetSshStatus(id, service.LocalUserID)
+		target, err := resolveBoxTarget(mode, rt, ref)
+		if err != nil {
+			_ = rt.Close()
+			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
+			os.Exit(1)
+		}
+		targetLabel = fmt.Sprintf("%s (%s)", target.Name, target.ID)
+		sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
 		closeErr := rt.Close()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
@@ -209,13 +217,20 @@ func SSH(args []string) {
 			status.Instance = &box
 		}
 	} else {
+		target, err := resolveBoxTarget(mode, nil, ref)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
+			os.Exit(1)
+		}
+		ref = target.ID
+		targetLabel = target.ID
 		client, err := api.NewDefault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
 
-		resp, err := client.Get("/v2/boxes/" + id + "/ssh-status")
+		resp, err := client.Get("/v2/boxes/" + ref + "/ssh-status")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 			os.Exit(1)
@@ -263,7 +278,7 @@ func SSH(args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stderr, "Connecting to %s (box %s)...\n", target, id)
+	fmt.Fprintf(os.Stderr, "Connecting to %s (box %s)...\n", target, targetLabel)
 
 	argv := append([]string{sshBin}, sshBaseArgs(*identity, portArg)...) // create ssh command
 	argv = append(argv, target)

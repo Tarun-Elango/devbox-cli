@@ -1,20 +1,25 @@
 package localDb
+
 // database operations for instances table
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
+	"strings"
 )
+
+var ec2InstanceIDPattern = regexp.MustCompile(`(?i)^i-[0-9a-f]{8}([0-9a-f]{9})?$`)
 
 // InstanceRecord is a row from the instances table.
 type InstanceRecord struct {
-	ID               string
-	AwsInstanceID    string
-	Name             string
-	UserID           string
-	IPAddress        sql.NullString
-	Status           string
-	InstanceType     sql.NullString
-	IdleStopMinutes  sql.NullInt64 // NULL = off
+	ID              string
+	AwsInstanceID   string
+	Name            string
+	UserID          string
+	IPAddress       sql.NullString
+	Status          string
+	InstanceType    sql.NullString
+	IdleStopMinutes sql.NullInt64 // NULL = off
 }
 
 // ListInstancesByUserID returns all instances owned by userID.
@@ -100,6 +105,60 @@ func (db *DB) GetInstanceByAwsInstanceIDAndUserID(awsInstanceID, userID string) 
 	return &r, nil
 }
 
+// GetInstanceByNameAndUserID returns the instance row for name owned by userID,
+// or sql.ErrNoRows if not found.
+func (db *DB) GetInstanceByNameAndUserID(name, userID string) (*InstanceRecord, error) {
+	var r InstanceRecord
+	err := db.conn.QueryRow(`
+		SELECT id, aws_instance_id, name, user_id, ip_address, status, instance_type, idle_stop_minutes
+		FROM instances
+		WHERE name = ? AND user_id = ?`,
+		name, userID,
+	).Scan(
+		&r.ID,
+		&r.AwsInstanceID,
+		&r.Name,
+		&r.UserID,
+		&r.IPAddress,
+		&r.Status,
+		&r.InstanceType,
+		&r.IdleStopMinutes,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+// ResolveInstanceByNameOrAwsInstanceID resolves a user-provided box reference.
+// The reference may be either an AWS instance id or a unique box name.
+func (db *DB) ResolveInstanceByNameOrAwsInstanceID(ref, userID string) (*InstanceRecord, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return nil, fmt.Errorf("box id or name is required")
+	}
+
+	// Instance IDs are authoritative so existing ID-based commands keep working
+	// even if another box has the same value as its name.
+	byID, idErr := db.GetInstanceByAwsInstanceIDAndUserID(ref, userID)
+	if idErr == nil {
+		return byID, nil
+	}
+	if idErr != sql.ErrNoRows {
+		return nil, idErr
+	}
+
+	byName, nameErr := db.GetInstanceByNameAndUserID(ref, userID)
+	if nameErr == nil {
+		return byName, nil
+	}
+	if nameErr != sql.ErrNoRows {
+		return nil, nameErr
+	}
+
+	return nil, fmt.Errorf("box not found: %s", ref)
+}
+
 // DeleteInstanceByAwsInstanceID removes an instance row by its AWS instance id.
 // Referencing snapshots keep their row with box_id cleared (ON DELETE SET NULL).
 func (db *DB) DeleteInstanceByAwsInstanceID(awsInstanceID string) error {
@@ -112,13 +171,39 @@ func (db *DB) DeleteInstanceByAwsInstanceID(awsInstanceID string) error {
 
 // InsertInstance creates a new instance row owned by userID.
 func (db *DB) InsertInstance(id, awsInstanceID, name, userID, status, instanceType string) error {
+	// before inserting, check if the name is available, in case there is conflict/race condition
+	if err := db.ValidateInstanceNameAvailable(name, userID); err != nil {
+		return err
+	}
+
 	_, err := db.conn.Exec(`
 		INSERT INTO instances (id, aws_instance_id, name, user_id, status, instance_type)
 		VALUES (?, ?, ?, ?, ?, ?)`,
 		id, awsInstanceID, name, userID, status, instanceType,
 	)
 	if err != nil {
+		// if the error is because the name already exists, return a specific error
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: instances.user_id, instances.name") {
+			return fmt.Errorf("box name already exists: %s", name)
+		}
 		return fmt.Errorf("insert instance: %w", err)
+	}
+	return nil
+}
+
+// ValidateInstanceNameAvailable verifies that name can be used as command identity
+// for a new box owned by userID.
+func (db *DB) ValidateInstanceNameAvailable(name, userID string) error {
+	if ec2InstanceIDPattern.MatchString(name) {
+		return fmt.Errorf("box name cannot look like an EC2 instance id: %s", name)
+	}
+
+	_, err := db.GetInstanceByNameAndUserID(name, userID)
+	if err == nil {
+		return fmt.Errorf("box name already exists: %s", name)
+	}
+	if err != sql.ErrNoRows {
+		return err
 	}
 	return nil
 }

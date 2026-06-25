@@ -24,17 +24,17 @@ func findFreePort() (int, error) {
 // Forward asks the server for connection details, then establishes an SSH
 // local port-forward so that localhost:<localPort> proxies to the box's
 // <remotePort>.  Blocks until the user presses Ctrl-C.
-// Usage: devbox forward <id> <port>
+// Usage: devbox forward <id|name> <port>
 func Forward(args []string) {
 	if TestMode {
 		fmt.Println("[test] forward: done")
 		return
 	}
 	if len(args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: devbox forward <id> <port>")
+		fmt.Fprintln(os.Stderr, "usage: devbox forward <id|name> <port>")
 		os.Exit(1)
 	}
-	id := args[0]
+	ref := args[0]
 	port := args[1]
 
 	mode, err := service.EnsureLocalModeAndGetCurrMode()
@@ -46,7 +46,13 @@ func Forward(args []string) {
 	var result service.PortForwardResponse
 	if mode == "local" {
 		rt := mustOpenRuntime()
-		resp, err := rt.ForwardPort(id, port, service.LocalUserID)
+		target, err := resolveBoxTarget(mode, rt, ref)
+		if err != nil {
+			_ = rt.Close()
+			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+			os.Exit(1)
+		}
+		resp, err := rt.ForwardPort(target.ID, port, service.LocalUserID)
 		closeErr := rt.Close()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
@@ -58,13 +64,18 @@ func Forward(args []string) {
 		}
 		result = *resp
 	} else {
+		target, err := resolveBoxTarget(mode, nil, ref)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+			os.Exit(1)
+		}
 		client, err := api.NewDefault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
 
-		statusResp, err := client.Get("/v2/boxes/" + id + "/ssh-status")
+		statusResp, err := client.Get("/v2/boxes/" + target.ID + "/ssh-status")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
 			os.Exit(1)
@@ -96,7 +107,7 @@ func Forward(args []string) {
 		}
 
 		body := map[string]string{"port": port}
-		resp, err := client.Post("/v1/boxes/"+id+"/ports", body)
+		resp, err := client.Post("/v1/boxes/"+target.ID+"/ports", body)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
 			os.Exit(1)

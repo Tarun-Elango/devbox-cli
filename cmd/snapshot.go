@@ -9,18 +9,18 @@ import (
 )
 
 // Snapshot creates an AMI snapshot of the given box.
-// Usage: devbox snapshot <id> [name]
+// Usage: devbox snapshot <id|name> [name]
 func Snapshot(args []string) {
 	if TestMode {
 		fmt.Println("[test] snapshot: done")
 		return
 	}
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: devbox snapshot <id> [name]")
+		fmt.Fprintln(os.Stderr, "usage: devbox snapshot <id|name> [name]")
 		os.Exit(1)
 	}
-	id := args[0]
-	name := "snapshot-" + id
+	ref := args[0]
+	name := "snapshot-" + ref
 	if len(args) >= 2 {
 		name = args[1]
 	}
@@ -35,13 +35,23 @@ func Snapshot(args []string) {
 	if mode == "local" {
 		rt := mustOpenRuntime()
 		defer func() { _ = rt.Close() }()
-		snap, err := rt.CreateSnapshot(id, name, service.LocalUserID)
+		target, err := resolveBoxTarget(mode, rt, ref)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
+			os.Exit(1)
+		}
+		snap, err := rt.CreateSnapshot(target.ID, name, service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
 			os.Exit(1)
 		}
 		result = *snap
 	} else {
+		target, err := resolveBoxTarget(mode, nil, ref)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
+			os.Exit(1)
+		}
 		client, err := api.NewDefault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -49,7 +59,7 @@ func Snapshot(args []string) {
 		}
 
 		body := map[string]string{"name": name}
-		resp, err := client.Post("/v1/boxes/"+id+"/snapshots", body)
+		resp, err := client.Post("/v1/boxes/"+target.ID+"/snapshots", body)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
 			os.Exit(1)

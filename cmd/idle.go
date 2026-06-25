@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -14,7 +13,7 @@ import (
 	"devbox-cli/service"
 )
 
-const idleStopUsage = "usage: devbox idle-stop <id> [in <minutes> | show | update <minutes> | delete]"
+const idleStopUsage = "usage: devbox idle-stop <id|name> [in <minutes> | show | update <minutes> | delete]"
 
 func IdleRouter(args []string) {
 	if len(args) < 2 {
@@ -22,9 +21,9 @@ func IdleRouter(args []string) {
 		os.Exit(1)
 	}
 
-	id := args[0] // will be the aws instance id
-	if id == "" {
-		fmt.Fprintln(os.Stderr, "error: id is required")
+	ref := args[0] // box id or name
+	if ref == "" {
+		fmt.Fprintln(os.Stderr, "error: box id or name is required")
 		os.Exit(1)
 	}
 	switch args[1] {
@@ -51,13 +50,13 @@ func Idle(args []string) {
 	}
 
 	if len(args) != 3 {
-		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id> in <minutes>")
+		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> in <minutes>")
 		os.Exit(1)
 	}
 
-	id := args[0] // aws instance id
-	if id == "" {
-		fmt.Fprintln(os.Stderr, "error: id is required")
+	ref := args[0] // box id or name
+	if ref == "" {
+		fmt.Fprintln(os.Stderr, "error: box id or name is required")
 		os.Exit(1)
 	}
 	if args[1] != "in" {
@@ -77,19 +76,20 @@ func Idle(args []string) {
 
 	rt := mustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	db := rt.DB()
-
-	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(id, service.LocalUserID)
-	if err == sql.ErrNoRows {
-		fmt.Fprintf(os.Stderr, "error: box not found: %s\n", id)
+	target, err := resolveBoxTarget("local", rt, ref)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+	db := rt.DB()
+
+	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(target.ID, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	sshStatus, err := rt.GetSshStatus(id, service.LocalUserID)
+	sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -230,13 +230,13 @@ func deleteIdleStop(args []string) {
 	}
 
 	if len(args) != 2 {
-		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id> delete")
+		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> delete")
 		os.Exit(1)
 	}
 
-	id := args[0]
-	if id == "" {
-		fmt.Fprintln(os.Stderr, "error: id is required")
+	ref := args[0]
+	if ref == "" {
+		fmt.Fprintln(os.Stderr, "error: box id or name is required")
 		os.Exit(1)
 	}
 	if args[1] != "delete" {
@@ -246,13 +246,14 @@ func deleteIdleStop(args []string) {
 
 	rt := mustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	db := rt.DB()
-
-	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(id, service.LocalUserID)
-	if err == sql.ErrNoRows {
-		fmt.Fprintf(os.Stderr, "error: box not found: %s\n", id)
+	target, err := resolveBoxTarget("local", rt, ref)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+	db := rt.DB()
+
+	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(target.ID, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -262,7 +263,7 @@ func deleteIdleStop(args []string) {
 		os.Exit(1)
 	}
 
-	sshStatus, err := rt.GetSshStatus(id, service.LocalUserID)
+	sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -359,13 +360,13 @@ func updateIdleStop(args []string) {
 	}
 
 	if len(args) != 3 {
-		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id> update <minutes>")
+		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> update <minutes>")
 		os.Exit(1)
 	}
 
-	id := args[0]
-	if id == "" {
-		fmt.Fprintln(os.Stderr, "error: id is required")
+	ref := args[0]
+	if ref == "" {
+		fmt.Fprintln(os.Stderr, "error: box id or name is required")
 		os.Exit(1)
 	}
 	if args[1] != "update" {
@@ -385,23 +386,24 @@ func updateIdleStop(args []string) {
 
 	rt := mustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	db := rt.DB()
-
-	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(id, service.LocalUserID)
-	if err == sql.ErrNoRows {
-		fmt.Fprintf(os.Stderr, "error: box not found: %s\n", id)
+	target, err := resolveBoxTarget("local", rt, ref)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+	db := rt.DB()
+
+	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(target.ID, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 	if !inst.IdleStopMinutes.Valid {
-		fmt.Fprintln(os.Stderr, "error: idle-stop is not set — use 'devbox idle-stop <id> in <minutes>' first")
+		fmt.Fprintln(os.Stderr, "error: idle-stop is not set — use 'devbox idle-stop <id|name> in <minutes>' first")
 		os.Exit(1)
 	}
 
-	sshStatus, err := rt.GetSshStatus(id, service.LocalUserID)
+	sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -489,29 +491,26 @@ func showIdleStop(args []string) {
 	}
 
 	if len(args) != 2 {
-		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id> show")
+		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> show")
 		os.Exit(1)
 	}
 
-	id := args[0]
+	ref := args[0]
 	if args[1] != "show" {
 		fmt.Fprintln(os.Stderr, "error: expected 'show' as second argument")
-		os.Exit(1)
-	}
-	if err := validateEc2InstanceID(id); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
 	rt := mustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	db := rt.DB()
-
-	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(id, service.LocalUserID)
-	if err == sql.ErrNoRows {
-		fmt.Fprintf(os.Stderr, "error: box not found: %s\n", id)
+	target, err := resolveBoxTarget("local", rt, ref)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+	db := rt.DB()
+
+	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(target.ID, service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
