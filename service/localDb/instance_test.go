@@ -152,3 +152,54 @@ func TestValidateInstanceNameAvailableRejectsDuplicateName(t *testing.T) {
 		t.Fatalf("unexpected duplicate name error: %v", err)
 	}
 }
+
+func TestValidateInstanceNameAvailableForRenameAllowsCurrentBoxName(t *testing.T) {
+	db := newTestDB(t)
+
+	if err := db.InsertInstance("box-1", "i-1234567890abcdef0", "alpha", LocalUserID, "running", "t3.micro"); err != nil {
+		t.Fatalf("insert instance: %v", err)
+	}
+
+	if err := db.ValidateInstanceNameAvailableForRename("alpha", LocalUserID, "i-1234567890abcdef0"); err != nil {
+		t.Fatalf("validate current name for rename: %v", err)
+	}
+}
+
+func TestValidateInstanceNameAvailableForRenameRejectsAnotherBoxName(t *testing.T) {
+	db := newTestDB(t)
+
+	if err := db.InsertInstance("box-1", "i-1234567890abcdef0", "alpha", LocalUserID, "running", "t3.micro"); err != nil {
+		t.Fatalf("insert first instance: %v", err)
+	}
+	if err := db.InsertInstance("box-2", "i-abcdef01234567890", "beta", LocalUserID, "running", "t3.micro"); err != nil {
+		t.Fatalf("insert second instance: %v", err)
+	}
+
+	err := db.ValidateInstanceNameAvailableForRename("beta", LocalUserID, "i-1234567890abcdef0")
+	if err == nil {
+		t.Fatal("expected duplicate name error")
+	}
+	if !strings.Contains(err.Error(), "box name already exists: beta") {
+		t.Fatalf("unexpected duplicate name error: %v", err)
+	}
+}
+
+func TestUpdateInstanceNamePersistsTrimmedName(t *testing.T) {
+	db := newTestDB(t)
+
+	if err := db.InsertInstance("box-1", "i-1234567890abcdef0", "alpha", LocalUserID, "running", "t3.micro"); err != nil {
+		t.Fatalf("insert instance: %v", err)
+	}
+
+	if err := db.UpdateInstanceName("i-1234567890abcdef0", LocalUserID, " beta "); err != nil {
+		t.Fatalf("update instance name: %v", err)
+	}
+
+	got, err := db.GetInstanceByAwsInstanceIDAndUserID("i-1234567890abcdef0", LocalUserID)
+	if err != nil {
+		t.Fatalf("get renamed instance: %v", err)
+	}
+	if got.Name != "beta" {
+		t.Fatalf("stored name %q, want %q", got.Name, "beta")
+	}
+}

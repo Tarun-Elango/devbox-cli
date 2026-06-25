@@ -189,6 +189,45 @@ func Status(args []string) {
 	fmt.Printf("Type:       %s\n", b.InstanceType)
 }
 
+// Rename updates a local box name in AWS, the local DB, and SSH config.
+func Rename(args []string) {
+	if TestMode {
+		fmt.Println("[test] rename: done")
+		return
+	}
+	if len(args) < 2 {
+		fmt.Fprintln(os.Stderr, "usage: devbox rename <id|name> <new-name>")
+		os.Exit(1)
+	}
+	ref := args[0]
+	newName := strings.TrimSpace(args[1])
+
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	if mode != "local" {
+		fmt.Fprintln(os.Stderr, "error: rename is only supported in local mode")
+		os.Exit(1)
+	}
+
+	rt := mustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	target, err := resolveBoxTarget(mode, rt, ref)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	renamed, err := rt.RenameInstance(target.ID, service.LocalUserID, newName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("Box %s (%s) renamed to %s.\n", target.Name, target.ID, renamed.Name)
+	fmt.Printf("SSH config: devbox-%s updated to devbox-%s\n", target.Name, renamed.Name)
+}
+
 // Create creates a new box with an optional name and returns as soon as EC2 accepts the launch.
 // Pass --from <snapshot_ami_id> to restore from a previously saved snapshot.
 func Create(args []string) {

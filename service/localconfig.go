@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const sshConfigUpdateAttempts = 3
+
 func sshConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -40,6 +42,32 @@ func writeSSHConfig(content string) error {
 		return err
 	}
 	return os.WriteFile(path, []byte(content), 0600) // write the ssh config file
+}
+
+func updateSSHConfig(update func(content string) (string, error)) error {
+	content, err := readSSHConfig()
+	if err != nil {
+		return err
+	}
+	updated, err := update(content)
+	if err != nil {
+		return err
+	}
+	if updated == content {
+		return nil
+	}
+	return writeSSHConfig(updated)
+}
+
+func updateSSHConfigWithRetry(update func(content string) (string, error)) error {
+	var err error
+	for attempt := 0; attempt < sshConfigUpdateAttempts; attempt++ {
+		err = updateSSHConfig(update)
+		if err == nil {
+			return nil
+		}
+	}
+	return err
 }
 
 type hostBlock struct {
@@ -136,18 +164,16 @@ func AddHost(name, ipAddress string) error {
 		return err
 	}
 	host := devboxHostName(name)
-	content, err := readSSHConfig()
-	if err != nil {
-		return err
-	}
-	if _, found := findBlockByHost(content, host); found { // check if the host already exists
-		return fmt.Errorf("host %q already exists", host)
-	}
-	if content != "" && !strings.HasSuffix(content, "\n") { // if empty or not a new line, add a new line
-		content += "\n"
-	}
-	content += formatHostBlock(host, ipAddress)
-	return writeSSHConfig(content)
+	return updateSSHConfig(func(content string) (string, error) {
+		if _, found := findBlockByHost(content, host); found { // check if the host already exists
+			return "", fmt.Errorf("host %q already exists", host)
+		}
+		if content != "" && !strings.HasSuffix(content, "\n") { // if empty or not a new line, add a new line
+			content += "\n"
+		}
+		content += formatHostBlock(host, ipAddress)
+		return content, nil
+	})
 }
 
 // update ip address in .ssh/config (name, ip address), for the given host with name, update the ip address
@@ -159,35 +185,77 @@ func UpdateHost(name, ipAddress string) error {
 		return err
 	}
 	host := devboxHostName(name)
-	content, err := readSSHConfig() // get content of ssh config file
-	if err != nil {
+	return updateSSHConfig(func(content string) (string, error) {
+		block, found := findBlockByHost(content, host)
+		if !found {
+			return "", fmt.Errorf("host %q does not exist", host)
+		}
+
+		lines := strings.Split(content, "\n")      // the entire ssh config file as a list of lines
+		blockLines := lines[block.start:block.end] // get the lines in the block
+
+		hostnameUpdated := false
+		for i, line := range blockLines {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(strings.ToLower(trimmed), "hostname ") {
+				indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))] // get the indent of the line
+				blockLines[i] = indent + "HostName " + ipAddress              // update the block line i with the new ip address
+				hostnameUpdated = true
+				break
+			}
+		}
+		if !hostnameUpdated {
+			insert := []string{"    HostName " + ipAddress}
+			blockLines = append(blockLines[:1], append(insert, blockLines[1:]...)...)
+		}
+
+		newLines := append(lines[:block.start], append(blockLines, lines[block.end:]...)...) //[ everything before the host block ] + [ the updated block ] + [ everything after the host block ]
+		return strings.Join(newLines, "\n"), nil
+	})
+}
+
+// RenameHost rewrites an existing devbox host alias while preserving its SSH options.
+func RenameHost(oldName, newName string) error {
+	if err := validateSSHBoxName(oldName); err != nil {
 		return err
 	}
-	block, found := findBlockByHost(content, host)
-	if !found {
-		return fmt.Errorf("host %q does not exist", host)
+	if err := validateSSHBoxName(newName); err != nil {
+		return err
+	}
+	oldHost := devboxHostName(oldName)
+	newHost := devboxHostName(newName)
+	if oldHost == newHost {
+		return nil
 	}
 
-	lines := strings.Split(content, "\n")      // the entire ssh config file as a list of lines
-	blockLines := lines[block.start:block.end] // get the lines in the block
-
-	hostnameUpdated := false
-	for i, line := range blockLines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(strings.ToLower(trimmed), "hostname ") {
-			indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))] // get the indent of the line
-			blockLines[i] = indent + "HostName " + ipAddress              // update the block line i with the new ip address
-			hostnameUpdated = true
-			break
+	return updateSSHConfigWithRetry(func(content string) (string, error) {
+		block, found := findBlockByHost(content, oldHost)
+		if !found {
+			return "", fmt.Errorf("host %q does not exist", oldHost)
 		}
-	}
-	if !hostnameUpdated {
-		insert := []string{"    HostName " + ipAddress}
-		blockLines = append(blockLines[:1], append(insert, blockLines[1:]...)...)
-	}
+		if _, found := findBlockByHost(content, newHost); found {
+			return "", fmt.Errorf("host %q already exists", newHost)
+		}
 
-	newLines := append(lines[:block.start], append(blockLines, lines[block.end:]...)...) //[ everything before the host block ] + [ the updated block ] + [ everything after the host block ]
-	return writeSSHConfig(strings.Join(newLines, "\n"))
+		lines := strings.Split(content, "\n")
+		blockLines := lines[block.start:block.end]
+		if len(blockLines) == 0 {
+			return "", fmt.Errorf("host %q block is empty", oldHost)
+		}
+
+		hosts := append([]string(nil), block.hosts...)
+		for i, host := range hosts {
+			if host == oldHost {
+				hosts[i] = newHost
+				break
+			}
+		}
+		indent := blockLines[0][:len(blockLines[0])-len(strings.TrimLeft(blockLines[0], " \t"))]
+		blockLines[0] = indent + "Host " + strings.Join(hosts, " ")
+
+		newLines := append(lines[:block.start], append(blockLines, lines[block.end:]...)...)
+		return strings.Join(newLines, "\n"), nil
+	})
 }
 
 // syncSSHHostIP updates the HostName for an existing entry, or adds one if missing.
@@ -207,16 +275,14 @@ func syncSSHHostIP(name, ipAddress string) error {
 // delete host (name)
 func DeleteHost(name string) error {
 	host := devboxHostName(name)
-	content, err := readSSHConfig()
-	if err != nil {
-		return err
-	}
-	block, found := findBlockByHost(content, host)
-	if !found {
-		return nil // if the host does not exist, do nothing
-	}
+	return updateSSHConfig(func(content string) (string, error) {
+		block, found := findBlockByHost(content, host)
+		if !found {
+			return content, nil // if the host does not exist, do nothing
+		}
 
-	lines := strings.Split(content, "\n")                         // the entire ssh config file as a list of lines
-	newLines := append(lines[:block.start], lines[block.end:]...) // [ everything before the host block ] + [ everything after the host block ]
-	return writeSSHConfig(strings.Join(newLines, "\n"))
+		lines := strings.Split(content, "\n")                         // the entire ssh config file as a list of lines
+		newLines := append(lines[:block.start], lines[block.end:]...) // [ everything before the host block ] + [ everything after the host block ]
+		return strings.Join(newLines, "\n"), nil
+	})
 }
