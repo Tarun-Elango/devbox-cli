@@ -551,14 +551,8 @@ func (r *Runtime) RenameInstance(instanceID, userID, newName string) (*Instance,
 	}
 
 	ctx := r.Context()
-	_, err = ec2Client.CreateTags(ctx, &ec2.CreateTagsInput{
-		Resources: []string{instanceID},
-		Tags: []types.Tag{
-			{Key: aws.String("Name"), Value: aws.String(newName)},
-		},
-	})
-	if err != nil {
-		return nil, awsclient.WrapError("update instance name tag", err)
+	if err := updateInstanceNameTag(ctx, ec2Client, instanceID, newName); err != nil {
+		return nil, err
 	}
 
 	if err := db.UpdateInstanceName(instanceID, userID, newName); err != nil {
@@ -580,6 +574,23 @@ func (r *Runtime) RenameInstance(instanceID, userID, newName string) (*Instance,
 		renamed.IPAddress = record.IPAddress.String
 	}
 	return renamed, nil
+}
+
+type ec2CreateTagsAPI interface {
+	CreateTags(context.Context, *ec2.CreateTagsInput, ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error)
+}
+
+func updateInstanceNameTag(ctx context.Context, ec2Client ec2CreateTagsAPI, instanceID, newName string) error {
+	_, err := ec2Client.CreateTags(ctx, &ec2.CreateTagsInput{
+		Resources: []string{instanceID},
+		Tags: []types.Tag{
+			{Key: aws.String("Name"), Value: aws.String(newName)},
+		},
+	})
+	if err != nil {
+		return awsclient.WrapError("update instance name tag", err)
+	}
+	return nil
 }
 
 // DeleteInstance terminates a box owned by userID and removes it from the local DB.
