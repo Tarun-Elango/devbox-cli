@@ -4,23 +4,43 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"devbox-cli/service"
 )
 
 // helper functions for validating ids and flags
 
 var snapshotAmiIDPattern = regexp.MustCompile(`^ami-[0-9a-f]{8,17}$`)
-var ec2InstanceIDPattern = regexp.MustCompile(`^i-[0-9a-f]{8,17}$`)
 
-// validateEc2InstanceID validates that the given ID is a valid EC2 instance ID.
-func validateEc2InstanceID(id string) error {
-	id = strings.TrimSpace(id)
-	if id == "" {
-		return fmt.Errorf("id is required")
+type resolvedBoxTarget struct {
+	Input string
+	ID    string
+	Name  string
+}
+
+// input: box id or name
+// output: box id
+// helps resolve a box target from a box id or name
+func resolveBoxTarget(mode string, rt *service.Runtime, ref string) (*resolvedBoxTarget, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return nil, fmt.Errorf("box id or name is required")
 	}
-	if !ec2InstanceIDPattern.MatchString(strings.ToLower(id)) {
-		return fmt.Errorf("invalid instance ID %q (expected format: i-xxxxxxxx)", id)
+
+	if rt == nil {
+		return nil, fmt.Errorf("internal error: runtime is required in local mode")
 	}
-	return nil
+
+	record, err := rt.DB().ResolveInstanceByNameOrAwsInstanceID(ref, service.LocalUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resolvedBoxTarget{
+		Input: ref,
+		ID:    record.AwsInstanceID,
+		Name:  record.Name,
+	}, nil
 }
 
 // validateSnapshotAmiID validates that the given ID is a valid snapshot AMI ID.

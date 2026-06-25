@@ -19,14 +19,15 @@ Commands:
 
   create <name>       Create a new box
   ls                  List all boxes
-  status <id>         Show details for a box
-  stop <id>           Stop a running box
-  start <id>          Start a stopped box
-  delete <id>         Delete a box
-  ssh <id>            Open an SSH session to a box
-  forward <id> <port> Forward a port from a box
+  status <id|name>         Show details for a box
+  stop <id|name>           Stop a running box
+  start <id|name>          Start a stopped box
+  delete <id|name>         Delete a box
+  ssh [-i key] <id|name>     Open an SSH session to a box
+                             -i  Path to SSH private key (default: ~/.ssh/id_ed25519)
+  forward <id|name> <port> Forward a port from a box
 
-  snapshot <id> [name]       Create a snapshot of a box
+  snapshot <id|name> [name]  Create a snapshot of a box
   snapshots                  List all your snapshots
   snapshots ls <amiId>       Show details for a specific snapshot
   snapshots delete <amiId>   Delete a snapshot
@@ -38,10 +39,10 @@ Commands:
   create --template <template> [<template>...] <name> Create a new box from one or more templates
   create --template <template> [<template>...] <name> --from <snapshot_ami_id> Create from templates and restore from a snapshot
 
-  idle-stop <id> in <minutes> 			Stop the box after <minutes> minutes of inactivity
-  idle-stop <id> show 					Show the idle stop for a box
-  idle-stop <id> update <minutes> 		Update the idle stop for a box
-  idle-stop <id> delete 				Delete the idle stop for a box
+  idle-stop <id|name> in <minutes> 			Stop the box after <minutes> minutes of inactivity
+  idle-stop <id|name> show 					Show the idle stop for a box
+  idle-stop <id|name> update <minutes> 		Update the idle stop for a box
+  idle-stop <id|name> delete 				Delete the idle stop for a box
   `)
 }
 
@@ -68,8 +69,8 @@ func main() {
 	switch command {
 	case "version":
 		cmd.Version(args)
-	case "mode":
-		cmd.Mode(args)
+	// case "mode":
+	// 	cmd.Mode(args)
 	case "setup":
 		cmd.Setup(args)
 	case "health":

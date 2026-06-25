@@ -20,7 +20,7 @@ import (
 // EC2 defaults — mirrors Lighthouse application.properties.
 const (
 	defaultAmiID           = "ami-096f34d377a72cea5" // amazon linux 2023 ami
-	defaultSecurityGroupID = "" // we dont have one, so we will default to creating in the code
+	defaultSecurityGroupID = ""                      // we dont have one, so we will default to creating in the code
 	defaultSubnetID        = ""
 
 	isolatedSecurityGroupName = "devbox-isolated"
@@ -217,6 +217,10 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 
 	ctx := r.Context()
 	db := r.DB()
+	// check if the name is available, if not, return an error
+	if err := db.ValidateInstanceNameAvailable(name, userID); err != nil {
+		return nil, err
+	}
 
 	if fromSnapshot {
 		_, err := db.GetSnapshotByAmiIDAndUserID(snapshotAmiID, userID)

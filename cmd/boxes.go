@@ -130,10 +130,10 @@ func Status(args []string) {
 		return
 	}
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: devbox status <id>")
+		fmt.Fprintln(os.Stderr, "usage: devbox status <id|name>")
 		os.Exit(1)
 	}
-	id := args[0]
+	ref := args[0]
 
 	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
@@ -145,20 +145,30 @@ func Status(args []string) {
 	if mode == "local" {
 		rt := mustOpenRuntime()
 		defer func() { _ = rt.Close() }()
-		inst, err := rt.GetInstance(id, service.LocalUserID)
+		target, err := resolveBoxTarget(mode, rt, ref)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		inst, err := rt.GetInstance(target.ID, service.LocalUserID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
 		b = instancesToBoxes([]*service.Instance{inst})[0] // from the returned instance, create a Box struct used below
 	} else {
+		target, err := resolveBoxTarget(mode, nil, ref)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
 		client, err := api.NewDefault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
 
-		resp, err := client.Get("/v1/boxes/" + id)
+		resp, err := client.Get("/v1/boxes/" + target.ID)
 		if err != nil {
 			api.FailBox("status", err)
 		}
@@ -317,10 +327,10 @@ func Stop(args []string) {
 		return
 	}
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: devbox stop <id>")
+		fmt.Fprintln(os.Stderr, "usage: devbox stop <id|name>")
 		os.Exit(1)
 	}
-	id := args[0]
+	ref := args[0]
 
 	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
@@ -331,18 +341,29 @@ func Stop(args []string) {
 	if mode == "local" {
 		rt := mustOpenRuntime()
 		defer func() { _ = rt.Close() }()
-		if err := rt.StopInstance(id, service.LocalUserID); err != nil {
+		target, err := resolveBoxTarget(mode, rt, ref)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
+		if err := rt.StopInstance(target.ID, service.LocalUserID); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Box %s (%s) stopped.\n", target.Name, target.ID)
 	} else {
+		target, err := resolveBoxTarget(mode, nil, ref)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
 		client, err := api.NewDefault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
 
-		resp, err := client.Post("/v1/boxes/"+id+"/stop", nil)
+		resp, err := client.Post("/v1/boxes/"+target.ID+"/stop", nil)
 		if err != nil {
 			api.FailBox("stop", err)
 		}
@@ -352,9 +373,8 @@ func Stop(args []string) {
 		if err := resp.Body.Close(); err != nil {
 			api.FailBox("stop", err)
 		}
+		fmt.Printf("Box %s stopped.\n", target.ID)
 	}
-
-	fmt.Printf("Box %s stopped.\n", id)
 }
 
 // Start starts a stopped box.
@@ -364,10 +384,10 @@ func Start(args []string) {
 		return
 	}
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: devbox start <id>")
+		fmt.Fprintln(os.Stderr, "usage: devbox start <id|name>")
 		os.Exit(1)
 	}
-	id := args[0]
+	ref := args[0]
 
 	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
@@ -378,18 +398,29 @@ func Start(args []string) {
 	if mode == "local" {
 		rt := mustOpenRuntime()
 		defer func() { _ = rt.Close() }()
-		if err := rt.StartInstance(id, service.LocalUserID); err != nil {
+		target, err := resolveBoxTarget(mode, rt, ref)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
+		if err := rt.StartInstance(target.ID, service.LocalUserID); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Box %s (%s) started.\n", target.Name, target.ID)
 	} else {
+		target, err := resolveBoxTarget(mode, nil, ref)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
 		client, err := api.NewDefault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
 
-		resp, err := client.Post("/v1/boxes/"+id+"/start", nil)
+		resp, err := client.Post("/v1/boxes/"+target.ID+"/start", nil)
 		if err != nil {
 			api.FailBox("start", err)
 		}
@@ -399,9 +430,8 @@ func Start(args []string) {
 		if err := resp.Body.Close(); err != nil {
 			api.FailBox("start", err)
 		}
+		fmt.Printf("Box %s started.\n", target.ID)
 	}
-
-	fmt.Printf("Box %s started.\n", id)
 }
 
 // Delete permanently deletes a box.
@@ -411,18 +441,10 @@ func Delete(args []string) {
 		return
 	}
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: devbox delete <id>")
+		fmt.Fprintln(os.Stderr, "usage: devbox delete <id|name>")
 		os.Exit(1)
 	}
-	id := args[0]
-
-	fmt.Printf("Are you sure you want to delete box %s? [y/N] ", id)
-	var answer string
-	_, _ = fmt.Scanln(&answer)
-	if answer != "y" {
-		fmt.Println("Aborted.")
-		return
-	}
+	ref := args[0]
 
 	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
@@ -433,18 +455,43 @@ func Delete(args []string) {
 	if mode == "local" {
 		rt := mustOpenRuntime()
 		defer func() { _ = rt.Close() }()
-		if err := rt.DeleteInstance(id, service.LocalUserID); err != nil {
+		target, err := resolveBoxTarget(mode, rt, ref)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
+		fmt.Printf("Are you sure you want to delete box %s (%s)? [y/N] ", target.Name, target.ID)
+		var answer string
+		_, _ = fmt.Scanln(&answer)
+		if answer != "y" {
+			fmt.Println("Aborted.")
+			return
+		}
+		if err := rt.DeleteInstance(target.ID, service.LocalUserID); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Box %s (%s) deleted.\n", target.Name, target.ID)
 	} else {
+		target, err := resolveBoxTarget(mode, nil, ref)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Are you sure you want to delete box %s? [y/N] ", target.ID)
+		var answer string
+		_, _ = fmt.Scanln(&answer)
+		if answer != "y" {
+			fmt.Println("Aborted.")
+			return
+		}
 		client, err := api.NewDefault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
 
-		resp, err := client.Delete("/v1/boxes/" + id)
+		resp, err := client.Delete("/v1/boxes/" + target.ID)
 		if err != nil {
 			api.FailBox("delete", err)
 		}
@@ -454,7 +501,6 @@ func Delete(args []string) {
 		if err := resp.Body.Close(); err != nil {
 			api.FailBox("delete", err)
 		}
+		fmt.Printf("Box %s deleted.\n", target.ID)
 	}
-
-	fmt.Printf("Box %s deleted.\n", id)
 }
