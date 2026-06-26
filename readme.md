@@ -12,7 +12,7 @@ Manage remote dev boxes from the CLI — provision, connect, or destroy them.
 
 ## Download and Install (from GitHub release)
 
-Every push to `main` publishes Linux and macOS binaries to the [`latest` release](https://github.com/Tarun-Elango/devboxssh-cli/releases/tag/latest). The snippet below prints your OS and CPU architecture so you can pick the matching release asset and install it as `devbox`:
+Every push to `main` publishes Linux and macOS binaries to the [`latest` release](https://github.com/Tarun-Elango/devbox-cli/releases/tag/latest). The snippet below prints your OS and CPU architecture so you can pick the matching release asset and install it as `devbox`:
 
 ```bash
 echo "Detected OS: $(uname -s), architecture: $(uname -m)"
@@ -21,7 +21,7 @@ echo "Detected OS: $(uname -s), architecture: $(uname -m)"
 # Linux arm64   -> devbox-linux-arm64
 # macOS x86_64  -> devbox-darwin-amd64
 # macOS arm64   -> devbox-darwin-arm64
-curl -fsSL "https://github.com/Tarun-Elango/devboxssh-cli/releases/download/latest/devbox-<linux-or-darwin>-<amd64-or-arm64>" -o /tmp/devbox
+curl -fsSL "https://github.com/Tarun-Elango/devbox-cli/releases/download/latest/devbox-<linux-or-darwin>-<amd64-or-arm64>" -o /tmp/devbox
 chmod +x /tmp/devbox
 sudo install -m 755 /tmp/devbox /usr/local/bin/devbox
 ```
@@ -43,7 +43,7 @@ echo "Detected OS: $(uname -s), architecture: $(uname -m)"
 # macOS x86_64  -> devbox-darwin-amd64
 # macOS arm64   -> devbox-darwin-arm64
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/Tarun-Elango/devboxssh-cli/releases/download/latest/devbox-<linux-or-darwin>-<amd64-or-arm64>" -o ~/.local/bin/devbox
+curl -fsSL "https://github.com/Tarun-Elango/devbox-cli/releases/download/latest/devbox-<linux-or-darwin>-<amd64-or-arm64>" -o ~/.local/bin/devbox
 chmod +x ~/.local/bin/devbox
 export PATH="$HOME/.local/bin:$PATH"
 ```
