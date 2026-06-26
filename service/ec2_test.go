@@ -62,3 +62,19 @@ func TestUpdateInstanceNameTagCreatesNameTag(t *testing.T) {
 		t.Fatalf("tag = %v, want Name=beta", client.input.Tags[0])
 	}
 }
+
+func TestRequireRebootableStatusRequiresRunning(t *testing.T) {
+	if err := requireRebootableStatus("running"); err != nil {
+		t.Fatalf("running status returned error: %v", err)
+	}
+
+	for _, status := range []string{"stopped", "stopping", "pending", "terminated"} {
+		err := requireRebootableStatus(status)
+		if err == nil {
+			t.Fatalf("status %q returned nil error", status)
+		}
+		if !strings.Contains(err.Error(), "not running") {
+			t.Fatalf("status %q error = %q, want not running", status, err.Error())
+		}
+	}
+}

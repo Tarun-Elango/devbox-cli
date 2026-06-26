@@ -8,16 +8,26 @@ import (
 )
 
 func selectInstanceType(types []service.InstanceType) (string, error) {
+	return selectInstanceTypeWithDefault(types, service.DefaultInstanceType)
+}
+
+func selectInstanceTypeWithDefault(types []service.InstanceType, defaultType string) (string, error) {
 	if !isTerminal(os.Stdin) {
-		return service.DefaultInstanceType, nil
+		return defaultType, nil
 	}
 
 	selected := service.DefaultInstanceTypeIndex()
+	for i, t := range types {
+		if t.ID == defaultType {
+			selected = i
+			break
+		}
+	}
 	const visible = 12
 
 	restore, err := enableRawMode()
 	if err != nil {
-		return service.DefaultInstanceType, nil
+		return defaultType, nil
 	}
 	defer restore()
 

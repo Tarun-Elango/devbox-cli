@@ -11,21 +11,25 @@ import (
 )
 
 func selectVolumeSizeGB() (int, error) {
+	return selectVolumeSizeGBWithDefault(service.DefaultVolumeSizeGB, service.MinVolumeSizeGB)
+}
+
+func selectVolumeSizeGBWithDefault(defaultSizeGB, minSizeGB int) (int, error) {
 	if !isTerminal(os.Stdin) {
-		return service.DefaultVolumeSizeGB, nil
+		return defaultSizeGB, nil
 	}
 
-	fmt.Printf("Volume size in GB [%d]: ", service.DefaultVolumeSizeGB)
+	fmt.Printf("Volume size in GB [%d]: ", defaultSizeGB)
 
 	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')
 	if err != nil {
-		return service.DefaultVolumeSizeGB, nil
+		return defaultSizeGB, nil
 	}
 
 	line = strings.TrimSpace(line)
 	if line == "" {
-		return service.DefaultVolumeSizeGB, nil
+		return defaultSizeGB, nil
 	}
 
 	size, err := strconv.Atoi(line)
@@ -34,6 +38,9 @@ func selectVolumeSizeGB() (int, error) {
 	}
 	if err := service.ValidateVolumeSizeGB(size); err != nil {
 		return 0, err
+	}
+	if size < minSizeGB {
+		return 0, fmt.Errorf("invalid volume size %d GB (must be at least current size %d GB)", size, minSizeGB)
 	}
 	return size, nil
 }

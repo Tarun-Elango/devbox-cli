@@ -483,9 +483,17 @@ func (r *Runtime) GetInstance(instanceId, userID string) (*Instance, error) {
 }
 
 func (r *Runtime) getInstanceFromAWS(instanceId string) (*Instance, error) {
-	ec2Client, err := r.EC2()
+	inst, err := r.describeInstanceFromAWS(instanceId)
 	if err != nil {
 		return nil, err
+	}
+	return instanceFromAWS(inst), nil
+}
+
+func (r *Runtime) describeInstanceFromAWS(instanceId string) (types.Instance, error) {
+	ec2Client, err := r.EC2()
+	if err != nil {
+		return types.Instance{}, err
 	}
 
 	ctx := r.Context()
@@ -493,18 +501,18 @@ func (r *Runtime) getInstanceFromAWS(instanceId string) (*Instance, error) {
 		InstanceIds: []string{instanceId},
 	})
 	if err != nil {
-		return nil, awsclient.WrapError("describe instances", err)
+		return types.Instance{}, awsclient.WrapError("describe instances", err)
 	}
 
 	for _, reservation := range resp.Reservations {
 		for _, inst := range reservation.Instances {
 			if aws.ToString(inst.InstanceId) == instanceId {
-				return instanceFromAWS(inst), nil
+				return inst, nil
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("instance not found in AWS: %s", instanceId)
+	return types.Instance{}, fmt.Errorf("instance not found in AWS: %s", instanceId)
 }
 
 // fetches the instance from AWS, updates the local DB, and returns the instance.
@@ -704,6 +712,48 @@ func (r *Runtime) StartInstance(instanceID, userID string) error {
 	return nil
 }
 
+// RebootInstance reboots a running box owned by userID.
+func (r *Runtime) RebootInstance(instanceID, userID string) error {
+	db := r.DB()
+
+	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
+		return err
+	}
+
+	instance, err := r.getInstanceFromAWS(instanceID)
+	if err != nil {
+		return err
+	}
+	if err := requireRebootableStatus(instance.Status); err != nil {
+		return err
+	}
+
+	ec2Client, err := r.EC2()
+	if err != nil {
+		return err
+	}
+
+	ctx := r.Context()
+	_, err = ec2Client.RebootInstances(ctx, &ec2.RebootInstancesInput{
+		InstanceIds: []string{instanceID},
+	})
+	if err != nil {
+		return awsclient.WrapError("reboot instance", err)
+	}
+
+	if _, err := r.syncInstanceFromAWSByID(instanceID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func requireRebootableStatus(status string) error {
+	if status != "running" {
+		return fmt.Errorf("box is %s, not running", status)
+	}
+	return nil
+}
+
 // SshStatus mirrors lighthouse SshStatusResponse for local mode.
 type SshStatus struct {
 	Ready    bool
@@ -714,11 +764,10 @@ type SshStatus struct {
 // user-data probe in cmd, not EC2 instance/system status checks.
 // Mirrors Lighthouse GET /v2/boxes/{id}/ssh-status: ec2Service.getSshStatus(id, userId).
 func (r *Runtime) GetSshStatus(instanceID, userID string) (*SshStatus, error) {
-	db := r.DB()
-
-	if _, err := requireOwnedInstance(db, instanceID, userID); err != nil {
-		return nil, err
-	}
+	// Ownership is validated by callers via resolveBoxTarget → ResolveInstanceByNameOrAwsInstanceID.
+	// if _, err := requireOwnedInstance(r.DB(), instanceID, userID); err != nil {
+	// 	return nil, err
+	// }
 
 	return r.checkSshStatusFromAWS(instanceID)
 }

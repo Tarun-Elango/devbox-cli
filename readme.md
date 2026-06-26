@@ -102,36 +102,72 @@ devbox ls
 
 ---
 
-## Common commands:
+## Common commands
 
-usage method: devbox command
+Run `devbox` with no arguments to print usage, or see the table below.
 
-| Command                                    | Notes (what it does)                                    |
-| ------------------------------------------ | ------------------------------------------------------- |
-| `setup`                                    | Configure/change AWS credentials and region (stored in `~/.devbox/config.json`) |
-| `create <name>`                            | Create a new box                                        |
-| `ls`                                       | List all boxes                                          |
-| `status <id>`                              | Show details for a box                                  |
-| `stop <id>`                                | Stop a running box                                      |
-| `start <id>`                               | Start a stopped box                                     |
-| `delete <id>`                              | Delete a box                                            |
-| `ssh <id>`                                 | Open an SSH session to a box                            |
-| `forward <id> <port>`                      | Forward a port from a box                               |
-| `snapshot <id> [name]`                     | Create a snapshot of a box                              |
-| `snapshots`                                | List all your snapshots                                 |
-| `snapshots ls <amiId>`                     | Show details for a specific snapshot                    |
-| `snapshots delete <amiId>`                 | Delete a snapshot                                       |
-| `create <name> [--from <snapshot_ami_id>]` | Create a new box (optionally restore from a snapshot)   |
-| `templates`                                | List available templates                                |
-| `template new <name> [command string]`     | Create a new template with a command to run on startup  |
-| `template delete <id>`                     | Delete a template                                       |
-| `template rename <id> <new-name>`        | Rename a template                                       |
+### Config and health
+
+| Command | Notes |
+| --- | --- |
+| `version` | Show the devbox CLI version |
+| `setup` | Configure/change AWS credentials and region (stored in `~/.devbox/config.json`) |
+| `clear-creds` | Clear saved AWS credentials from `~/.devbox/config.json` |
+| `health` | Check config, AWS credentials, region, and database |
+
+### Boxes
+
+| Command | Notes |
+| --- | --- |
+| `create <name>` | Create a new box |
+| `ls` | List all boxes |
+| `status <id|name>` | Show details for a box |
+| `rename <id|name> <new-name>` | Rename a box |
+| `resize|upgrade <id|name>` | Resize a stopped box instance type or root disk |
+| `stop <id|name>` | Stop a running box |
+| `start <id|name>` | Start a stopped box |
+| `restart|reboot <id|name>` | Reboot a running box |
+| `delete <id|name>` | Delete a box |
+
+### Connect and transfer
+
+| Command | Notes |
+| --- | --- |
+| `ssh [-i key] <id|name>` | Open an SSH session to a box (`-i` path to private key; default `~/.ssh/id_ed25519`) |
+| `cp [-i key] <source> <dest>` | Copy a file to or from a box (e.g. `devbox cp ./main.go mybox:/home/ec2-user/app/`) |
+| `sync [-i key] [--delete] <source> <dest>` | Sync files or directories to or from a box (`--delete` removes destination files missing from source) |
+| `exec [-i key] [-s] [-t] <id|name> -- <command>` | Run a one-off command on a running box (`-s` run through `sh`; `-t` allocate a TTY) |
+| `forward <id|name> <port>` | Forward a port from a box |
+
+### Snapshots
+
+| Command | Notes |
+| --- | --- |
+| `snapshot <id|name> [name]` | Create a snapshot of a box |
+| `snapshots` | List all your snapshots |
+| `snapshots ls <amiId>` | Show details for a specific snapshot |
+| `snapshots delete <amiId>` | Delete a snapshot |
+| `create <name> [--from <snapshot_ami_id>]` | Create a new box (optionally restore from a snapshot) |
+
+### Templates
+
+| Command | Notes |
+| --- | --- |
+| `templates` | List available templates |
+| `template new <name> [command string]` | Create a new template with a command to run on startup |
+| `template delete <id>` | Delete a template |
+| `template rename <id> <new-name>` | Rename a template |
 | `create --template <template> [<template>...] <name>` | Create a new box from one or more templates |
 | `create --template <template> [<template>...] <name> --from <snapshot_ami_id>` | Create from templates and restore from a snapshot |
-| `idle-stop <id> in <minutes>` | Stop the box after <minutes> minutes of inactivity |
-| `idle-stop <id> show` | Show the idle stop for a box |
-| `idle-stop <id> update <minutes>` | Update the idle stop for a box |
-| `idle-stop <id> delete` | Delete the idle stop for a box |
+
+### Idle stop
+
+| Command | Notes |
+| --- | --- |
+| `idle-stop <id|name> in <minutes>` | Stop the box after `<minutes>` minutes of inactivity |
+| `idle-stop <id|name> show` | Show the idle stop for a box |
+| `idle-stop <id|name> update <minutes>` | Update the idle stop for a box |
+| `idle-stop <id|name> delete` | Delete the idle stop for a box |
 
 ## Notes on local config (`~/.devbox`)
 

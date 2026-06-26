@@ -15,17 +15,33 @@ Commands:
   version             Show the devbox CLI version
 
   setup               Configure/Change AWS credentials and region - stored in ~/.devbox/config.json
+  clear-creds         Clear saved AWS credentials from ~/.devbox/config.json
   health              Check config, AWS credentials, region, and database
 
   create <name>       Create a new box
   ls                  List all boxes
   status <id|name>         Show details for a box
   rename <id|name> <new-name> Rename a box
+  resize|upgrade <id|name> Resize a stopped box instance type or root disk
   stop <id|name>           Stop a running box
   start <id|name>          Start a stopped box
+  restart|reboot <id|name> Reboot a running box
   delete <id|name>         Delete a box
   ssh [-i key] <id|name>     Open an SSH session to a box
                              -i  Path to SSH private key (default: ~/.ssh/id_ed25519)
+  cp [-i key] <source> <dest> Copy a file to or from a box
+                             Examples:
+                               devbox cp ./main.go mybox:/home/ec2-user/app/
+                               devbox cp mybox:/home/ec2-user/app/main.go ./
+  sync [-i key] [--delete] <source> <dest> Sync files or directories to or from a box
+                            --delete  Delete destination files missing from source
+                             Examples:
+                               devbox sync ./project mybox:/home/ec2-user/project
+                               devbox sync mybox:/home/ec2-user/project ./project
+  exec [-i key] [-s] [-t] <id|name> -- <command>
+                             Run a one-off command on a running box
+                             -s  Run command through sh on the box (for pipes, &&, cd, etc.)
+                             -t  Allocate a pseudo-TTY (for sudo / interactive commands)
   forward <id|name> <port> Forward a port from a box
 
   snapshot <id|name> [name]  Create a snapshot of a box
@@ -75,6 +91,8 @@ func main() {
 	// 	cmd.Mode(args)
 	case "setup":
 		cmd.Setup(args)
+	case "clear-creds":
+		cmd.ClearCreds(args)
 	case "health":
 		cmd.Health(args)
 	case "login":
@@ -91,14 +109,24 @@ func main() {
 		cmd.Status(args)
 	case "rename":
 		cmd.Rename(args)
+	case "resize", "upgrade":
+		cmd.Resize(args)
 	case "stop":
 		cmd.Stop(args)
 	case "start":
 		cmd.Start(args)
+	case "restart", "reboot":
+		cmd.Restart(args)
 	case "delete":
 		cmd.Delete(args)
 	case "ssh":
 		cmd.SSH(args)
+	case "cp":
+		cmd.CP(args)
+	case "sync":
+		cmd.Sync(args)
+	case "exec":
+		cmd.Exec(args)
 	case "forward":
 		cmd.Forward(args)
 	case "snapshot":
@@ -117,28 +145,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-/*
-# One-shot: stop tonight at 6pm UTC
-devbox schedule stop i-0abc123 --at 2026-05-27T18:00:00Z
-
-# One-shot: start tomorrow 9am in local TZ
-devbox schedule start i-0abc123 --at 2026-05-28T09:00:00-05:00
-
-# Recurring: stop weekdays at 6pm, start weekdays at 9am (two schedules)
-devbox schedule stop  i-0abc123 --cron "0 18 * * MON-FRI" --tz America/New_York
-devbox schedule start i-0abc123 --cron "0 9 * * MON-FRI"  --tz America/New_York
-
-
-┌──────── minute (0–59)
-│ ┌────── hour (0–23)
-│ │ ┌──── day of month (*)
-│ │ │ ┌── month (*)
-│ │ │ │ ┌ day of week (MON–SUN or 0–6)
-│ │ │ │ │
-0 18 * * *        → every day 18:00
-0 9  * * MON-FRI  → Mon–Fri 09:00
-
-
-  mode                Set the mode to cloud or local (default is local)
-*/

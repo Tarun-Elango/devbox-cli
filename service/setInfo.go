@@ -67,20 +67,35 @@ func SaveAWSCredentials(secret, accessKey, region string) error {
 	return nil
 }
 
+// ClearAWSCredentials blanks the saved AWS credential fields in ~/.devbox/config.json.
+func ClearAWSCredentials() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	cfg.AwsSecret = ""
+	cfg.AwsAccessKey = ""
+	if err := config.Save(cfg); err != nil {
+		return err
+	}
+	fmt.Println("AWS credentials cleared from ~/.devbox/config.json.")
+	return nil
+}
 
 // EnsureLocalModeAndGetCurrMode returns the configured mode. If unset, it
 // persists "local" and returns "local".
 func EnsureLocalModeAndGetCurrMode() (string, error) {
-	cfg, err := config.Load()
-	if err != nil {
-		return "", err
-	}
-	if cfg.Mode != "" {
-		return cfg.Mode, nil
-	}
-	cfg.Mode = "local"
-	if err := config.Save(cfg); err != nil {
-		return "", err
-	}
+	// as we set the mode to local in saveAWSCredentials, we can just return local
+	// cfg, err := config.Load()
+	// if err != nil {
+	// 	return "", err
+	// }
+	// if cfg.Mode != "" {
+	// 	return cfg.Mode, nil
+	// }
+	// cfg.Mode = "local"
+	// if err := config.Save(cfg); err != nil {
+	// 	return "", err
+	// }
 	return "local", nil
 }

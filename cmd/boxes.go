@@ -473,6 +473,42 @@ func Start(args []string) {
 	}
 }
 
+// Restart reboots a running box.
+func Restart(args []string) {
+	if TestMode {
+		fmt.Println("[test] restart: done")
+		return
+	}
+	if len(args) < 1 {
+		fmt.Fprintln(os.Stderr, "usage: devbox restart|reboot <id|name>")
+		os.Exit(1)
+	}
+	ref := args[0]
+
+	mode, err := service.EnsureLocalModeAndGetCurrMode()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	if mode != "local" {
+		fmt.Fprintln(os.Stderr, "error: restart is only supported in local mode")
+		os.Exit(1)
+	}
+
+	rt := mustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	target, err := resolveBoxTarget(mode, rt, ref)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	if err := rt.RebootInstance(target.ID, service.LocalUserID); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("Box %s (%s) rebooting.\n", target.Name, target.ID)
+}
+
 // Delete permanently deletes a box.
 func Delete(args []string) {
 	if TestMode {

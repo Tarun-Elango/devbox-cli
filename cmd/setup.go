@@ -39,7 +39,7 @@ func Setup(args []string) {
 		os.Exit(1)
 	}
 
-	regions := service.AllRegions()// get all regions
+	regions := service.AllRegions() // get all regions
 	region, err := selectRegion(regions)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error selecting region: %v\n", err)
@@ -48,6 +48,31 @@ func Setup(args []string) {
 
 	if err := service.SaveAWSCredentials(secret, accessKey, region); err != nil {
 		fmt.Fprintf(os.Stderr, "save config: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// ClearCreds prompts for confirmation, then removes saved AWS credentials.
+func ClearCreds(args []string) {
+	if TestMode {
+		fmt.Println("[test] clear-creds: done")
+		return
+	}
+	if len(args) != 0 {
+		fmt.Fprintln(os.Stderr, "usage: devbox clear-creds")
+		os.Exit(1)
+	}
+
+	fmt.Print("Are you sure you want to clear saved AWS credentials? [y/N] ")
+	var answer string
+	_, _ = fmt.Scanln(&answer)
+	if answer != "y" && answer != "Y" {
+		fmt.Println("Aborted.")
+		return
+	}
+
+	if err := service.ClearAWSCredentials(); err != nil {
+		fmt.Fprintf(os.Stderr, "clear credentials: %v\n", err)
 		os.Exit(1)
 	}
 }
