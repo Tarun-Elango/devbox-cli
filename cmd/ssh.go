@@ -181,31 +181,17 @@ func SSH(args []string) {
 		fmt.Println("[test] ssh: done")
 		return
 	}
-	fs := flag.NewFlagSet("ssh", flag.ExitOnError)
-	identity := fs.String("i", defaultKeyPath(), "path to SSH private key") // ssh picks the ssh private key for creating the connection
-	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox ssh [-i identity] <id|name> [-- ssh-args...]")
-		fs.PrintDefaults()
+	usage := func() {
+		fmt.Fprintln(os.Stderr, "usage: devbox ssh [-i key] <id|name>")
 	}
 
-	// Split args on "--" to allow passing raw flags to ssh.
-	var extra []string
-	for i, a := range args {
-		if a == "--" {
-			extra = args[i+1:]
-			args = args[:i]
-			break
-		}
-	}
-
-	if err := fs.Parse(args); err != nil {
+	parsed, err := parseSSHCommandArgs(args, defaultKeyPath())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
+		usage()
 		os.Exit(1)
 	}
-	if fs.NArg() != 1 {
-		fs.Usage()
-		os.Exit(1)
-	}
-	ref := fs.Arg(0)
+	ref := parsed.Ref
 
 	mode, err := service.EnsureLocalModeAndGetCurrMode()
 	if err != nil {
@@ -296,16 +282,16 @@ func SSH(args []string) {
 
 	target := fmt.Sprintf("%s@%s", defaultSSHUser, b.PublicIP)
 
-	if err := waitForDevboxReady(sshBin, *identity, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
+	if err := waitForDevboxReady(sshBin, parsed.Identity, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 		os.Exit(1)
 	}
 
 	fmt.Fprintf(os.Stderr, "Connecting to %s (box %s)...\n", target, targetLabel)
 
-	argv := append([]string{sshBin}, sshBaseArgs(*identity, defaultSSHPort)...) // create ssh command
+	argv := append([]string{sshBin}, sshBaseArgs(parsed.Identity, defaultSSHPort)...) // create ssh command
 	argv = append(argv, target)
-	argv = append(argv, extra...)
+	argv = append(argv, parsed.Extra...)
 
 	if err := syscall.Exec(sshBin, argv, os.Environ()); err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: exec failed: %v\n", err)

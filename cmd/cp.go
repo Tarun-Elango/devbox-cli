@@ -200,24 +200,21 @@ func CP(args []string) {
 	}
 
 	fs := flag.NewFlagSet("cp", flag.ExitOnError)
-	identity := fs.String("i", cpDefaultKeyPath(), "path to SSH private key")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox cp [-i identity] <source> <dest>")
+		fmt.Fprintln(os.Stderr, "usage: devbox cp [-i key] <source> <dest>")
 		fmt.Fprintln(os.Stderr, "examples:")
 		fmt.Fprintln(os.Stderr, "  devbox cp ./main.go mybox:/home/ec2-user/app/")
 		fmt.Fprintln(os.Stderr, "  devbox cp mybox:/home/ec2-user/app/main.go ./")
-		fs.PrintDefaults()
 	}
 
-	if err := fs.Parse(args); err != nil {
-		os.Exit(1)
-	}
-	if fs.NArg() != 2 {
+	parsed, err := parseCPCommandArgs(args, cpDefaultKeyPath())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cp: %v\n", err)
 		fs.Usage()
 		os.Exit(1)
 	}
 
-	transfer, err := parseCPTransfer(fs.Arg(0), fs.Arg(1)) //figure out upload vs download and set the transfer struct
+	transfer, err := parseCPTransfer(parsed.Source, parsed.Dest) //figure out upload vs download and set the transfer struct
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cp: %v\n", err)
 		os.Exit(1)
@@ -258,13 +255,13 @@ func CP(args []string) {
 	}
 
 	// check if the box is ready
-	if err := waitForDevboxReady(sshBin, *identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
+	if err := waitForDevboxReady(sshBin, parsed.Identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "cp: %v\n", err)
 		os.Exit(1)
 	}
 
 	// build the scp command
-	argv := buildSCPArgs(*identity, transfer, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort)
+	argv := buildSCPArgs(parsed.Identity, transfer, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort)
 	cmd := exec.Command(scpBin, argv...) // run the scp command
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

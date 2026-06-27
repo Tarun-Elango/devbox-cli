@@ -46,25 +46,21 @@ func Sync(args []string) {
 	}
 
 	fs := flag.NewFlagSet("sync", flag.ExitOnError)
-	identity := fs.String("i", cpDefaultKeyPath(), "path to SSH private key")
-	deleteExtra := fs.Bool("delete", false, "delete files in destination that are missing from source")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox sync [-i identity] [--delete] <source> <dest>")
+		fmt.Fprintln(os.Stderr, "usage: devbox sync [-i key] [--delete] <source> <dest>")
 		fmt.Fprintln(os.Stderr, "examples:")
 		fmt.Fprintln(os.Stderr, "  devbox sync ./project mybox:/home/ec2-user/project")
 		fmt.Fprintln(os.Stderr, "  devbox sync mybox:/home/ec2-user/project ./project")
-		fs.PrintDefaults()
 	}
 
-	if err := fs.Parse(args); err != nil {
-		os.Exit(1)
-	}
-	if fs.NArg() != 2 {
+	parsed, err := parseSyncCommandArgs(args, cpDefaultKeyPath())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "sync: %v\n", err)
 		fs.Usage()
 		os.Exit(1)
 	}
 
-	transfer, err := parseCPTransfer(fs.Arg(0), fs.Arg(1))
+	transfer, err := parseCPTransfer(parsed.Source, parsed.Dest)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "sync: %v\n", err)
 		os.Exit(1)
@@ -104,13 +100,13 @@ func Sync(args []string) {
 		os.Exit(1)
 	}
 
-	if err := waitForDevboxReady(sshBin, *identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
+	if err := waitForDevboxReady(sshBin, parsed.Identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "sync: %v\n", err)
 		os.Exit(1)
 	}
 
 	// build the rsync command
-	argv := buildRsyncArgs(*identity, transfer, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort, *deleteExtra)
+	argv := buildRsyncArgs(parsed.Identity, transfer, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort, parsed.DeleteExtra)
 	cmd := exec.Command(rsyncBin, argv...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
