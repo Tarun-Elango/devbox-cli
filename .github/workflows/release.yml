@@ -50,7 +50,7 @@ jobs:
           git tag -a "${TAG}" -m "devbox ${TAG}"
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${TAG}"
 
-      - name: Create release
+      - name: Create versioned release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -61,5 +61,30 @@ jobs:
             dist/devbox-darwin-amd64 \
             dist/devbox-darwin-arm64 \
             --title "devbox v${VERSION}" \
-            --notes "Linux and macOS builds for amd64 and arm64." \
+            --notes "Linux and macOS builds for amd64 and arm64."
+
+      - name: Refresh rolling latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(tr -d '[:space:]' < internal/version/VERSION)
+
+          if gh release view latest >/dev/null 2>&1; then
+            gh release delete latest --yes
+          fi
+
+          if git rev-parse --verify refs/tags/latest >/dev/null 2>&1; then
+            git tag -d latest
+          fi
+
+          git push origin :refs/tags/latest || true
+
+          gh release create latest \
+            dist/devbox-linux-amd64 \
+            dist/devbox-linux-arm64 \
+            dist/devbox-darwin-amd64 \
+            dist/devbox-darwin-arm64 \
+            --target "${GITHUB_SHA}" \
+            --title "devbox latest (v${VERSION})" \
+            --notes "Rolling latest release for the most recent devbox version: v${VERSION}." \
             --latest
