@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>devbox CLI</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 2rem 1rem 3rem;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 16px;
+      line-height: 1.5;
+      color: #000;
+      background: #c0c0c0 url("data:image/svg+xml,%3Csvg width='4' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='2' height='2' fill='%23a8a8a8'/%3E%3Crect x='2' y='2' width='2' height='2' fill='%23a8a8a8'/%3E%3C/svg%3E");
+    }
+
+    .wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      background: #fff;
+      border: 3px ridge #dfdfdf;
+    }
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 2.25rem;
+      font-weight: bold;
+      text-align: center;
+      color: #000080;
+      text-decoration: underline;
+    }
+
+    .tagline {
+      margin: 0 0 1.5rem;
+      text-align: center;
+      font-style: italic;
+      color: #333;
+    }
+
+    .card {
+      margin-bottom: 1.25rem;
+      padding: 0.75rem 1rem 1rem;
+      background: #ffffcc;
+      border: 2px inset #c0c0c0;
+    }
+
+    h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #000080;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    pre {
+      margin: 0;
+      padding: 0.75rem;
+      overflow-x: auto;
+      font-size: 0.9rem;
+      background: #000;
+      color: #00ff00;
+      border: 2px inset #333;
+    }
+
+    code {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.95em;
+    }
+
+    a:link { color: #0000ee; }
+    a:visited { color: #551a8b; }
+    a:hover { color: #ff0000; }
+
+    ul {
+      margin: 0;
+      padding-left: 1.5rem;
+    }
+
+    li { margin-bottom: 0.35rem; }
+
+    .note {
+      margin: 0.75rem 0 0;
+      font-size: 0.9rem;
+      font-style: italic;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+   
+    <h1>devbox CLI</h1>
+    <p class="tagline">Manage remote dev boxes from the terminal — provision, connect, sync, and destroy AWS EC2 instances.</p>
+
+    <div class="card">
+      <h2>Requirements</h2>
+      <ul>
+        <li>macOS or Linux</li>
+        <li>AWS account</li>
+      </ul>
+      <p class="note">AWS credentials and devbox config will be stored locally on your machine.</p>
+    </div>
+
+    <div class="card">
+      <h2>Quick install</h2>
+      <pre><code>curl -fsSL "https://github.com/Tarun-Elango/devbox-cli/releases/latest/download/devbox-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')" -o /tmp/devbox
+chmod +x /tmp/devbox
+sudo install -m 755 /tmp/devbox /usr/local/bin/devbox
+devbox version</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>Common commands</h2>
+      <ul>
+        <li><code>devbox setup</code> — configure AWS credentials</li>
+        <li><code>devbox create &lt;name&gt;</code> — create a box</li>
+        <li><code>devbox ls</code> — list boxes</li>
+        <li><code>devbox ssh &lt;name&gt;</code> — connect via SSH</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Links</h2>
+      <ul>
+        <li><a href="https://github.com/Tarun-Elango/devbox-cli">GitHub repository</a></li>
+        <li><a href="https://github.com/Tarun-Elango/devbox-cli/releases">Releases</a></li>
+        <li><a href="https://github.com/Tarun-Elango/devbox-cli/blob/main/readme.md">Full README</a></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
