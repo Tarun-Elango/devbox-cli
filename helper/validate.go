@@ -3,6 +3,7 @@ package helper
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"devbox-cli/service"
@@ -39,6 +40,19 @@ func ResolveBoxTarget(rt *service.Runtime, ref string) (*ResolvedBoxTarget, erro
 		ID:    record.AwsInstanceID,
 		Name:  record.Name,
 	}, nil
+}
+
+// ValidatePort returns a normalized TCP port (1-65535) or an error.
+func ValidatePort(port string) (string, error) {
+	port = strings.TrimSpace(port)
+	if port == "" {
+		return "", fmt.Errorf("port is required")
+	}
+	n, err := strconv.ParseUint(port, 10, 16)
+	if err != nil || n == 0 {
+		return "", fmt.Errorf("invalid port %q (must be 1-65535)", port)
+	}
+	return strconv.Itoa(int(n)), nil
 }
 
 // ValidateSnapshotAmiID validates that the given ID is a valid snapshot AMI ID.

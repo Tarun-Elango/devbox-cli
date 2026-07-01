@@ -27,6 +27,46 @@ func newTestRuntime(t *testing.T) *service.Runtime {
 // ParseNameAndFromFlag test cases
 // used in boxes when creating a new box
 // return name and from snapshot
+func TestValidatePort(t *testing.T) {
+	tests := []struct {
+		name    string
+		port    string
+		want    string
+		wantErr bool
+	}{
+		{name: "valid", port: "8080", want: "8080"},
+		{name: "min", port: "1", want: "1"},
+		{name: "max", port: "65535", want: "65535"},
+		{name: "trimmed", port: " 3000 ", want: "3000"},
+		{name: "leading zeros", port: "008080", want: "8080"},
+		{name: "empty", port: "", wantErr: true},
+		{name: "whitespace", port: "   ", wantErr: true},
+		{name: "non-numeric", port: "abc", wantErr: true},
+		{name: "zero", port: "0", wantErr: true},
+		{name: "negative", port: "-1", wantErr: true},
+		{name: "too high", port: "65536", wantErr: true},
+		{name: "far too high", port: "99999", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ValidatePort(tt.port)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ValidatePort() error = %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("ValidatePort() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseNameAndFromFlag(t *testing.T) {
 	tests := []struct {
 		name             string

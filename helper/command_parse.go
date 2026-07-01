@@ -41,7 +41,12 @@ func ParseForwardArgs(args []string, usage string) (ref, port string) {
 		fmt.Fprintln(os.Stderr, usage)
 		CommandParseExit(1)
 	}
-	return args[0], args[1]
+	port, err := ValidatePort(args[1])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		CommandParseExit(1)
+	}
+	return args[0], port
 }
 
 // ParseSnapshotArgs exits with code 1 unless args is exactly <id|name> <name>.

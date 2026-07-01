@@ -241,6 +241,66 @@ func TestParseForwardArgsAcceptsTwoArgs(t *testing.T) {
 	}
 }
 
+func TestParseForwardArgsTrimsPort(t *testing.T) {
+	ref, port := ParseForwardArgs([]string{"mybox", " 8080 "}, "usage: devbox forward <id|name> <port>")
+	if ref != "mybox" || port != "8080" {
+		t.Fatalf("ParseForwardArgs() = (%q, %q), want (%q, %q)", ref, port, "mybox", "8080")
+	}
+}
+
+func TestParseForwardArgsRejectsInvalidPort(t *testing.T) {
+	tests := []struct {
+		name string
+		port string
+	}{
+		{name: "non-numeric", port: "abc"},
+		{name: "out of range high", port: "99999"},
+		{name: "zero", port: "0"},
+		{name: "negative", port: "-1"},
+		{name: "empty", port: ""},
+		{name: "whitespace only", port: "   "},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var exitCode int
+			oldExit := CommandParseExit
+			CommandParseExit = func(code int) { exitCode = code; panic("exit") }
+			defer func() { CommandParseExit = oldExit }()
+
+			defer func() {
+				if recover() == nil {
+					t.Fatal("ParseForwardArgs() did not exit")
+				}
+				if exitCode != 1 {
+					t.Fatalf("exit code = %d, want 1", exitCode)
+				}
+			}()
+
+			ParseForwardArgs([]string{"mybox", tt.port}, "usage: devbox forward <id|name> <port>")
+		})
+	}
+}
+
+func TestParseForwardArgsAcceptsPortBoundaries(t *testing.T) {
+	tests := []struct {
+		in, want string
+	}{
+		{in: "1", want: "1"},
+		{in: "65535", want: "65535"},
+		{in: "008080", want: "8080"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			_, port := ParseForwardArgs([]string{"mybox", tt.in}, "usage: devbox forward <id|name> <port>")
+			if port != tt.want {
+				t.Fatalf("ParseForwardArgs() port = %q, want %q", port, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseSnapshotArgsRejectsWrongArgCount(t *testing.T) {
 	tests := []struct {
 		name string
