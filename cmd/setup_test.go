@@ -141,17 +141,6 @@ func loadTestConfig(t *testing.T) *config.Config {
 func TestSetup(t *testing.T) {
 	regions := service.AllRegions() // get all regions
 
-	t.Run("test_mode", func(t *testing.T) {
-		old := helper.TestMode
-		helper.TestMode = true
-		t.Cleanup(func() { helper.TestMode = old })
-
-		out := captureStdout(t, func() { Setup(nil) })
-		if !strings.Contains(out, "[test] setup: done") { // should have test stub message
-			t.Fatalf("stdout = %q, want test stub message", out)
-		}
-	})
-
 	t.Run("rejects extra args", func(t *testing.T) {
 		stderr := captureStderr(t, func() {
 			code, exited := withSetupExit(t, func() { Setup([]string{"extra"}) })
@@ -351,16 +340,6 @@ func TestSelectRegionFallback(t *testing.T) {
 }
 
 func TestClearCreds(t *testing.T) {
-	t.Run("test_mode", func(t *testing.T) {
-		old := helper.TestMode
-		helper.TestMode = true
-		t.Cleanup(func() { helper.TestMode = old })
-
-		out := captureStdout(t, func() { ClearCreds(nil) })
-		if !strings.Contains(out, "[test] clear-creds: done") {
-			t.Fatalf("stdout = %q, want test stub message", out)
-		}
-	})
 
 	t.Run("extra_args", func(t *testing.T) {
 		stderr := captureStderr(t, func() {

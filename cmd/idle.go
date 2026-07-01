@@ -76,11 +76,6 @@ func Idle(args []string) {
 		os.Exit(1)
 	}
 
-	if helper.TestMode {
-		fmt.Println("[test] idle-stop: done")
-		return
-	}
-
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	target, err := helper.ResolveBoxTarget(rt, ref)
@@ -233,11 +228,6 @@ sudo systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
 func deleteIdleStop(args []string) {
 	ref := args[0]
 
-	if helper.TestMode {
-		fmt.Println("[test] idle-stop delete: done")
-		return
-	}
-
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	target, err := helper.ResolveBoxTarget(rt, ref)
@@ -360,11 +350,6 @@ func updateIdleStop(args []string) {
 		os.Exit(1)
 	}
 
-	if helper.TestMode {
-		fmt.Println("[test] idle-stop update: done")
-		return
-	}
-
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	target, err := helper.ResolveBoxTarget(rt, ref)
@@ -467,11 +452,6 @@ date +%%s > /var/lib/devbox/last-activity
 // show for a specific instance
 func showIdleStop(args []string) {
 	ref := args[0]
-
-	if helper.TestMode {
-		fmt.Println("[test] idle-stop show: done")
-		return
-	}
 
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()

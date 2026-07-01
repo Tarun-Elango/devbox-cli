@@ -10,10 +10,7 @@ import (
 
 // Stop stops a running box.
 func Stop(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] stop: done")
-		return
-	}
+
 	ref := helper.ParseSingleBoxRef(args, "usage: devbox stop <id|name>")
 
 	rt := helper.MustOpenRuntime()

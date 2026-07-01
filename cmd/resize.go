@@ -11,10 +11,6 @@ import (
 )
 
 func Resize(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] resize: done")
-		return
-	}
 	ref := helper.ParseSingleBoxRef(args, "usage: devbox resize <id|name>")
 
 	rt := helper.MustOpenRuntime()

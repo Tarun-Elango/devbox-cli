@@ -11,10 +11,7 @@ import (
 // Snapshot creates an AMI snapshot of the given box.
 // Usage: devbox snapshot <id|name> <name>
 func Snapshot(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] snapshot: done")
-		return
-	}
+
 	ref, name := helper.ParseSnapshotArgs(args, "usage: devbox snapshot <id|name> <name>")
 	if name == "" {
 		fmt.Fprintln(os.Stderr, "error: snapshot name is required")

@@ -11,10 +11,6 @@ import (
 
 func TemplateList(args []string) {
 	helper.RejectExtraArgs(args, "usage: devbox template")
-	if helper.TestMode {
-		fmt.Println("[test] template: done")
-		return
-	}
 
 	var templates []*service.Template
 	fmt.Println("Listing local templates")
@@ -64,10 +60,6 @@ func formatTemplateScript(s string) string {
 func CreateTemplate(args []string) {
 
 	// -args wont have --template flag
-	if helper.TestMode {
-		fmt.Println("[test] create template: done")
-		return
-	}
 
 	templateRefs, name, fromSnapshot, err := helper.ParseCreateTemplateArgs(args)
 	if err != nil {

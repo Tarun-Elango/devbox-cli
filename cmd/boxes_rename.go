@@ -10,10 +10,6 @@ import (
 
 // Rename updates a local box name in AWS, the local DB, and SSH config.
 func Rename(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] rename: done")
-		return
-	}
 	ref, newName := helper.ParseRenameBoxArgs(args, "usage: devbox rename <id|name> <new-name>")
 
 	rt := helper.MustOpenRuntime()

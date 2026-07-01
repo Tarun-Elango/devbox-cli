@@ -90,15 +90,6 @@ func TemplateNew(args []string) {
 		os.Exit(1)
 	}
 
-	if helper.TestMode {
-		fmt.Printf("[test] template new: name=%q", name)
-		if startupScript != "" {
-			fmt.Printf(" startupScript=%q", startupScript)
-		}
-		fmt.Println()
-		return
-	}
-
 	var created service.Template
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
@@ -137,11 +128,6 @@ func TemplateDelete(args []string) {
 		os.Exit(1)
 	}
 
-	if helper.TestMode {
-		fmt.Printf("[test] template delete: id=%q\n", id)
-		return
-	}
-
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	if err := rt.DeleteTemplate(id, service.LocalUserID); err != nil {
@@ -177,11 +163,6 @@ func TemplateRename(args []string) {
 	if strings.HasPrefix(id, "--") || strings.HasPrefix(newName, "--") {
 		fmt.Fprintf(os.Stderr, "error: unknown flag\n")
 		os.Exit(1)
-	}
-
-	if helper.TestMode {
-		fmt.Printf("[test] template rename: id=%q newName=%q\n", id, newName)
-		return
 	}
 
 	rt := helper.MustOpenRuntime()

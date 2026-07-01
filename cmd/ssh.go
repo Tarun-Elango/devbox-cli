@@ -180,10 +180,7 @@ func waitForDevboxReady(sshBin, identity, user, host, portArg string) error {
 // -L 8080:localhost:8080) rather than as a remote command; use "devbox exec"
 // to run a one-off remote command instead.
 func SSH(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] ssh: done")
-		return
-	}
+
 	usage := func() {
 		fmt.Fprintln(os.Stderr, "usage: devbox ssh [-i key] <id|name> [-- <ssh-option>...]")
 	}
@@ -259,7 +256,7 @@ func SSH(args []string) {
 	fmt.Fprintf(os.Stderr, "Connecting to %s (box %s)...\n", sshTarget, targetLabel)
 
 	argv := append([]string{sshBin}, sshBaseArgs(parsed.Identity, defaultSSHPort)...) // create ssh command
-	argv = append(argv, parsed.SSHOptions...)                                        // user-supplied ssh flags (-v, -A, -L, -o, ...)
+	argv = append(argv, parsed.SSHOptions...)                                         // user-supplied ssh flags (-v, -A, -L, -o, ...)
 	argv = append(argv, sshTarget)
 
 	if err := syscall.Exec(sshBin, argv, os.Environ()); err != nil {
@@ -270,10 +267,7 @@ func SSH(args []string) {
 
 // Exec runs a one-off command on a running box over SSH.
 func Exec(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] exec: done")
-		return
-	}
+
 	fs := flag.NewFlagSet("exec", flag.ExitOnError)
 	identity := fs.String("i", defaultKeyPath(), "path to SSH private key") // something like ~/.ssh/id_ed25519
 	throughShell := fs.Bool("s", false, "run as a shell snippet via sh -lc (pipes, &&, cd); joins arguments and does not preserve per-arg boundaries (see buildExecRemoteCommand)")

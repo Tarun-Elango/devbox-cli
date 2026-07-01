@@ -10,10 +10,7 @@ import (
 
 // Restart reboots a running box.
 func Restart(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] restart: done")
-		return
-	}
+
 	ref := helper.ParseSingleBoxRef(args, "usage: devbox restart|reboot <id|name>")
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()

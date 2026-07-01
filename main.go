@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"devbox-cli/cmd"
-	"devbox-cli/helper"
 	"devbox-cli/internal/backup"
 )
 
@@ -78,16 +77,6 @@ func main() {
 
 	command := os.Args[1]
 	args := os.Args[2:]
-
-	if command == "-test" {
-		if len(os.Args) < 3 {
-			usage()
-			os.Exit(1)
-		}
-		helper.TestMode = true
-		command = os.Args[2]
-		args = os.Args[3:]
-	}
 
 	switch command {
 	case "version":

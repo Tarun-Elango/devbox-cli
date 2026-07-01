@@ -10,10 +10,6 @@ import (
 
 // Delete permanently deletes a box.
 func Delete(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] delete: done")
-		return
-	}
 	ref := helper.ParseSingleBoxRef(args, "usage: devbox delete <id|name>")
 
 	rt := helper.MustOpenRuntime()

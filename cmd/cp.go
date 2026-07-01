@@ -160,10 +160,6 @@ func cpStatusForBox(ref string) (*cpStatusResponse, error) {
 
 // CP copies one file between the local machine and a devbox using scp.
 func CP(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] cp: done")
-		return
-	}
 
 	fs := flag.NewFlagSet("cp", flag.ExitOnError)
 	fs.Usage = func() {

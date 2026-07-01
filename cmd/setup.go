@@ -14,10 +14,7 @@ var setupExit = os.Exit
 // Setup prompts for AWS secret, access key, and region, then saves to ~/.devbox/.
 func Setup(args []string) {
 	helper.RejectExtraArgs(args, "usage: devbox setup")
-	if helper.TestMode {
-		fmt.Println("[test] setup: done")
-		return
-	}
+
 	fmt.Println("Setup AWS credentials, if you have already done this, doing this will overwrite your existing credentials, CTRL+C to cancel.")
 
 	secret, err := helper.ReadPassword("AWS secret access key: ")
@@ -56,10 +53,6 @@ func Setup(args []string) {
 // ClearCreds prompts for confirmation, then removes saved AWS credentials.
 func ClearCreds(args []string) {
 	helper.RejectExtraArgs(args, "usage: devbox clear-creds")
-	if helper.TestMode {
-		fmt.Println("[test] clear-creds: done")
-		return
-	}
 
 	fmt.Print("Are you sure you want to clear saved AWS credentials? [y/N] ")
 	var answer string

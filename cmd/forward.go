@@ -26,10 +26,7 @@ func findFreePort() (int, error) {
 // <remotePort>.  Blocks until the user presses Ctrl-C.
 // Usage: devbox forward <id|name> <port>
 func Forward(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] forward: done")
-		return
-	}
+
 	ref, port := helper.ParseForwardArgs(args, "usage: devbox forward <id|name> <port>")
 
 	var result service.PortForwardResponse

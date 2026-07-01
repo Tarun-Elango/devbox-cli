@@ -23,11 +23,6 @@ func Create(args []string) {
 		os.Exit(1)
 	}
 
-	if helper.TestMode {
-		fmt.Println("[test] create: done")
-		return
-	}
-
 	pubKey := ""
 	if pk, err := readPublicKey(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: %v; box will be created without your public key\n", err)

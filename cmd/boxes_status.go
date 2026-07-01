@@ -10,10 +10,7 @@ import (
 
 // Status displays details for a single box.
 func Status(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] status: done")
-		return
-	}
+
 	ref := helper.ParseSingleBoxRef(args, "usage: devbox status <id|name>")
 
 	var b Box

@@ -23,10 +23,6 @@ type snapshotItem struct {
 //	devbox snapshots ls <amiId>   → show details for a specific snapshot
 //	devbox snapshots delete <amiId> → delete a snapshot
 func Snapshots(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] snapshots: done")
-		return
-	}
 
 	if len(args) == 0 {
 		snapshotsList(args)

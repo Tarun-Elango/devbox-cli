@@ -10,10 +10,7 @@ import (
 
 // Start starts a stopped box.
 func Start(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] start: done")
-		return
-	}
+
 	ref := helper.ParseSingleBoxRef(args, "usage: devbox start <id|name>")
 
 	rt := helper.MustOpenRuntime()

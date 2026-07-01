@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"devbox-cli/helper"
 )
 
 func withIdleExit(t *testing.T, fn func()) (code int, exited bool) {
@@ -52,8 +50,8 @@ func captureIdleStderr(t *testing.T, fn func()) string {
 	go func() {
 		var buf bytes.Buffer
 		_, _ = io.Copy(&buf, r)
-	done <- buf.String()
-}()
+		done <- buf.String()
+	}()
 
 	fn()
 	_ = w.Close()
@@ -73,8 +71,6 @@ func TestIdleRouterRejectsExtraArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			helper.TestMode = true
-			t.Cleanup(func() { helper.TestMode = false })
 
 			stderr := captureIdleStderr(t, func() {
 				code, exited := withIdleExit(t, func() { IdleRouter(tt.args) })
@@ -84,30 +80,6 @@ func TestIdleRouterRejectsExtraArgs(t *testing.T) {
 			})
 			if !strings.Contains(stderr, "usage:") {
 				t.Fatalf("stderr = %q, want usage message", stderr)
-			}
-		})
-	}
-}
-
-func TestIdleRouterAcceptsExactArgsInTestMode(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{name: "show", args: []string{"mybox", "show"}},
-		{name: "delete", args: []string{"mybox", "delete"}},
-		{name: "in", args: []string{"mybox", "in", "30"}},
-		{name: "update", args: []string{"mybox", "update", "30"}},
-	}
-
-	helper.TestMode = true
-	t.Cleanup(func() { helper.TestMode = false })
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			code, exited := withIdleExit(t, func() { IdleRouter(tt.args) })
-			if exited {
-				t.Fatalf("IdleRouter() exited with code %d, want success", code)
 			}
 		})
 	}

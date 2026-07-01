@@ -42,10 +42,6 @@ func buildRsyncArgs(identity string, transfer cpTransfer, user, host, portArg st
 
 // Sync synchronizes files or directories between the local machine and a devbox using rsync.
 func Sync(args []string) {
-	if helper.TestMode {
-		fmt.Println("[test] sync: done")
-		return
-	}
 
 	fs := flag.NewFlagSet("sync", flag.ExitOnError)
 	fs.Usage = func() {

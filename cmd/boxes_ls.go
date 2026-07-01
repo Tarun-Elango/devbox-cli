@@ -12,11 +12,6 @@ import (
 // Ls lists all boxes belonging to the authenticated user.
 func Ls(args []string) {
 	helper.RejectExtraArgs(args, "usage: devbox ls")
-	if helper.TestMode {
-		fmt.Println("[test] ls: done")
-		return
-	}
-
 	var boxes []Box
 
 	fmt.Println("Listing local boxes")
