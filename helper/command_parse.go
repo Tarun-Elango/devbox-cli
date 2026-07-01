@@ -124,10 +124,13 @@ func parseLeadingIdentityArg(args []string, defaultIdentity string) (identity st
 			if next+1 >= len(args) {
 				return "", 0, fmt.Errorf("missing value for -i")
 			}
-			identity = args[next+1]
+			identity = StripSurroundingQuotes(args[next+1])
+			if identity == "" {
+				return "", 0, fmt.Errorf("missing value for -i")
+			}
 			next += 2
 		case strings.HasPrefix(arg, "-i="):
-			identity = strings.TrimPrefix(arg, "-i=")
+			identity = StripSurroundingQuotes(strings.TrimPrefix(arg, "-i="))
 			if identity == "" {
 				return "", 0, fmt.Errorf("missing value for -i")
 			}
@@ -203,10 +206,13 @@ func ParseSyncCommandArgs(args []string, defaultIdentity string) (SyncCommandArg
 			if next+1 >= len(args) {
 				return SyncCommandArgs{}, fmt.Errorf("missing value for -i")
 			}
-			parsed.Identity = args[next+1]
+			parsed.Identity = StripSurroundingQuotes(args[next+1])
+			if parsed.Identity == "" {
+				return SyncCommandArgs{}, fmt.Errorf("missing value for -i")
+			}
 			next += 2
 		case strings.HasPrefix(arg, "-i="):
-			parsed.Identity = strings.TrimPrefix(arg, "-i=")
+			parsed.Identity = StripSurroundingQuotes(strings.TrimPrefix(arg, "-i="))
 			if parsed.Identity == "" {
 				return SyncCommandArgs{}, fmt.Errorf("missing value for -i")
 			}

@@ -23,6 +23,11 @@ func TestParseSSHCommandArgsMatchesMainUsage(t *testing.T) {
 			want: SSHCommandArgs{Identity: "/tmp/custom-key", Ref: "box-123"},
 		},
 		{
+			name: "quoted identity",
+			args: []string{"-i", `"/tmp/custom key"`, "box-123"},
+			want: SSHCommandArgs{Identity: "/tmp/custom key", Ref: "box-123"},
+		},
+		{
 			name: "raw ssh options after separator",
 			args: []string{"-i=/tmp/custom-key", "box-123", "--", "-v", "-L", "8080:localhost:8080"},
 			want: SSHCommandArgs{
@@ -77,6 +82,15 @@ func TestParseCPCommandArgsMatchesMainUsage(t *testing.T) {
 			args: []string{"-i", "/tmp/custom-key", "mybox:/home/ec2-user/app/main.go", "./"},
 			want: CopyCommandArgs{
 				Identity: "/tmp/custom-key",
+				Source:   "mybox:/home/ec2-user/app/main.go",
+				Dest:     "./",
+			},
+		},
+		{
+			name: "quoted identity",
+			args: []string{"-i", `"/tmp/custom key"`, "mybox:/home/ec2-user/app/main.go", "./"},
+			want: CopyCommandArgs{
+				Identity: "/tmp/custom key",
 				Source:   "mybox:/home/ec2-user/app/main.go",
 				Dest:     "./",
 			},
@@ -397,6 +411,16 @@ func TestParseSyncCommandArgsMatchesMainUsage(t *testing.T) {
 			args: []string{"-i", "/tmp/custom-key", "--delete", "mybox:/home/ec2-user/project", "./project"},
 			want: SyncCommandArgs{
 				Identity:    "/tmp/custom-key",
+				DeleteExtra: true,
+				Source:      "mybox:/home/ec2-user/project",
+				Dest:        "./project",
+			},
+		},
+		{
+			name: "quoted identity",
+			args: []string{"-i", `"/tmp/custom key"`, "--delete", "mybox:/home/ec2-user/project", "./project"},
+			want: SyncCommandArgs{
+				Identity:    "/tmp/custom key",
 				DeleteExtra: true,
 				Source:      "mybox:/home/ec2-user/project",
 				Dest:        "./project",

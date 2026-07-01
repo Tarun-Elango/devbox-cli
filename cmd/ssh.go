@@ -295,6 +295,7 @@ func Exec(args []string) {
 	if err := fs.Parse(args); err != nil {
 		os.Exit(1)
 	}
+	identityPath := helper.StripSurroundingQuotes(*identity)
 	if fs.NArg() != 1 || len(remoteCommand) == 0 {
 		fs.Usage()
 		os.Exit(1)
@@ -351,13 +352,13 @@ func Exec(args []string) {
 		os.Exit(1)
 	}
 
-	if err := waitForDevboxReady(sshBin, *identity, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
+	if err := waitForDevboxReady(sshBin, identityPath, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "exec: %v\n", err)
 		os.Exit(1)
 	}
 
 	sshTarget := fmt.Sprintf("%s@%s", defaultSSHUser, b.PublicIP)
-	argv := sshBaseArgs(*identity, defaultSSHPort)
+	argv := sshBaseArgs(identityPath, defaultSSHPort)
 	if *allocateTTY {
 		argv = append(argv, "-t")
 	}
