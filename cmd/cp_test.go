@@ -45,6 +45,19 @@ func TestParseCPTransferDownload(t *testing.T) {
 	}
 }
 
+func TestParseCPTransferPathsWithSpaces(t *testing.T) {
+	got, err := parseCPTransfer(`"./my file.go"`, `"mybox:/home/ec2-user/my dir/"`)
+	if err != nil {
+		t.Fatalf("parseCPTransfer() error = %v", err)
+	}
+	if got.Local != "./my file.go" {
+		t.Fatalf("parseCPTransfer() Local = %q, want %q", got.Local, "./my file.go")
+	}
+	if got.Remote != "/home/ec2-user/my dir/" {
+		t.Fatalf("parseCPTransfer() Remote = %q, want %q", got.Remote, "/home/ec2-user/my dir/")
+	}
+}
+
 func TestParseCPTransferRequiresOneRemotePath(t *testing.T) {
 	tests := []struct {
 		name   string

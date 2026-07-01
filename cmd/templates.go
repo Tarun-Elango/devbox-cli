@@ -5,50 +5,25 @@ import (
 	"os"
 	"strings"
 
-	"devbox-cli/internal/api"
+	"devbox-cli/helper"
 	"devbox-cli/service"
 )
 
-func Templates(args []string) {
-	if TestMode {
-		fmt.Println("[test] templates: done")
+func TemplateList(args []string) {
+	helper.RejectExtraArgs(args, "usage: devbox template")
+	if helper.TestMode {
+		fmt.Println("[test] template: done")
 		return
 	}
 
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
+	var templates []*service.Template
+	fmt.Println("Listing local templates")
+	rt := helper.MustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	templates, err := rt.ListTemplates(service.LocalUserID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
-	}
-
-	var templates []*service.Template
-	if mode == "local" {
-		fmt.Println("Listing local templates")
-		rt := mustOpenRuntime()
-		defer func() { _ = rt.Close() }()
-		templates, err = rt.ListTemplates(service.LocalUserID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-	} else {
-		fmt.Println("Fetching Templates")
-		client, err := api.NewDefault()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-
-		resp, err := client.Get("/v1/boxes/templates")
-		if err != nil {
-			api.FailBox("templates", err)
-		}
-		if err := api.CheckStatus(resp); err != nil {
-			api.FailBox("templates", err)
-		}
-		if err := api.DecodeJSON(resp, &templates); err != nil {
-			api.FailBox("templates", err)
-		}
 	}
 
 	if len(templates) == 0 {
@@ -89,70 +64,15 @@ func formatTemplateScript(s string) string {
 func CreateTemplate(args []string) {
 
 	// -args wont have --template flag
-	if TestMode {
+	if helper.TestMode {
 		fmt.Println("[test] create template: done")
 		return
 	}
 
-	if len(args) < 2 {
+	templateRefs, name, fromSnapshot, err := helper.ParseCreateTemplateArgs(args)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		fmt.Fprintln(os.Stderr, "usage: devbox create --template <template> [<template>...] <name> [--from <snapshot_ami_id>]")
-		os.Exit(1)
-	}
-
-	var positionalArgs []string
-	var name, fromSnapshot string
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--from": // means next arg is the snapshot ami id
-			if i+1 >= len(args) {
-				fmt.Fprintln(os.Stderr, "error: --from requires a snapshot AMI ID")
-				os.Exit(1)
-			}
-			i++ // next has to ba a snapshot ami id
-			if err := validateSnapshotAmiID(args[i]); err != nil {
-				fmt.Fprintf(os.Stderr, "error: %v\n", err)
-				os.Exit(1)
-			}
-			fromSnapshot = strings.TrimSpace(args[i])
-		default: // means next arg is the template id
-			if strings.HasPrefix(args[i], "--") {
-				fmt.Fprintf(os.Stderr, "error: %v\n", unknownCreateFlagError(args[i]))
-				os.Exit(1)
-			}
-			arg := strings.TrimSpace(args[i])
-			if arg == "" {
-				fmt.Fprintln(os.Stderr, "error: template name is required")
-				os.Exit(1)
-			}
-			positionalArgs = append(positionalArgs, arg)
-		}
-	}
-
-	if len(positionalArgs) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: devbox create --template <template> [<template>...] <name> [--from <snapshot_ami_id>]")
-		os.Exit(1)
-	}
-
-	name = positionalArgs[len(positionalArgs)-1]
-	templateRefs := positionalArgs[:len(positionalArgs)-1]
-
-	if len(templateRefs) == 0 {
-		fmt.Fprintln(os.Stderr, "error: at least one template is required")
-		os.Exit(1)
-	}
-	for _, ref := range templateRefs {
-		if strings.HasPrefix(ref, "--") {
-			fmt.Fprintln(os.Stderr, "error: template name is required")
-			os.Exit(1)
-		}
-	}
-
-	if name == "" {
-		fmt.Fprintln(os.Stderr, "usage: devbox create --template <template> [<template>...] <name> [--from <snapshot_ami_id>]")
-		os.Exit(1)
-	}
-	if strings.HasPrefix(name, "--") {
-		fmt.Fprintln(os.Stderr, "error: box name cannot start with --")
 		os.Exit(1)
 	}
 
@@ -163,38 +83,30 @@ func CreateTemplate(args []string) {
 		pubKey = pk
 	}
 
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
+	instanceType := service.DefaultInstanceType
+	volumeSizeGB := service.DefaultVolumeSizeGB
+	selected, err := helper.SelectInstanceType(service.AllInstanceTypes())
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "error selecting instance type: %v\n", err)
+		os.Exit(1)
+	}
+	if err := service.ValidateInstanceType(selected); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+	instanceType = selected
 
-	instanceType := service.DefaultInstanceType
-	volumeSizeGB := service.DefaultVolumeSizeGB
-	if mode == "local" {
-		selected, err := selectInstanceType(service.AllInstanceTypes())
+	if fromSnapshot == "" {
+		selectedVolume, err := helper.SelectVolumeSizeGB()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error selecting instance type: %v\n", err)
+			fmt.Fprintf(os.Stderr, "error selecting volume size: %v\n", err)
 			os.Exit(1)
 		}
-		if err := service.ValidateInstanceType(selected); err != nil {
+		if err := service.ValidateVolumeSizeGB(selectedVolume); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
-		instanceType = selected
-
-		if fromSnapshot == "" {
-			selectedVolume, err := selectVolumeSizeGB()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error selecting volume size: %v\n", err)
-				os.Exit(1)
-			}
-			if err := service.ValidateVolumeSizeGB(selectedVolume); err != nil {
-				fmt.Fprintf(os.Stderr, "error: %v\n", err)
-				os.Exit(1)
-			}
-			volumeSizeGB = selectedVolume
-		}
+		volumeSizeGB = selectedVolume
 	}
 
 	if fromSnapshot != "" {
@@ -204,41 +116,15 @@ func CreateTemplate(args []string) {
 	}
 
 	var b Box
-	if mode == "local" {
-		rt := mustOpenRuntime()
-		defer func() { _ = rt.Close() }()
-		inst, err := rt.CreateBoxFromTemplates(name, templateRefs, pubKey, fromSnapshot, service.LocalUserID, instanceType, volumeSizeGB)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-		b = instancesToBoxes([]*service.Instance{inst})[0]
-	} else {
-		body := map[string]any{"name": name, "templateIds": templateRefs}
-		if fromSnapshot != "" {
-			body["fromSnapshot"] = fromSnapshot
-		}
-		if pubKey != "" {
-			body["publicKey"] = pubKey
-		}
 
-		client, err := api.NewDefault()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-
-		resp, err := client.Post("/v2/boxes", body)
-		if err != nil {
-			api.FailBox("create template", err)
-		}
-		if err := api.CheckStatus(resp); err != nil {
-			api.FailBox("create template", err)
-		}
-		if err := api.DecodeJSON(resp, &b); err != nil {
-			api.FailBox("create template", err)
-		}
+	rt := helper.MustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	inst, err := rt.CreateBoxFromTemplates(name, templateRefs, pubKey, fromSnapshot, service.LocalUserID, instanceType, volumeSizeGB)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
+	b = instancesToBoxes([]*service.Instance{inst})[0]
 
 	fmt.Printf("Box created.\n")
 	fmt.Printf("  ID:        %s\n", b.ID)
@@ -247,7 +133,7 @@ func CreateTemplate(args []string) {
 	if b.InstanceType != "" {
 		fmt.Printf("  Type:      %s\n", b.InstanceType)
 	}
-	if mode == "local" && fromSnapshot == "" {
+	if fromSnapshot == "" {
 		fmt.Printf("  Storage:   %d GB\n", volumeSizeGB)
 	}
 	if b.PublicIP != "" {

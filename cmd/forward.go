@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"devbox-cli/internal/api"
+	"devbox-cli/helper"
 	"devbox-cli/service"
 )
 
@@ -26,101 +26,32 @@ func findFreePort() (int, error) {
 // <remotePort>.  Blocks until the user presses Ctrl-C.
 // Usage: devbox forward <id|name> <port>
 func Forward(args []string) {
-	if TestMode {
+	if helper.TestMode {
 		fmt.Println("[test] forward: done")
 		return
 	}
-	if len(args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: devbox forward <id|name> <port>")
-		os.Exit(1)
-	}
-	ref := args[0]
-	port := args[1]
-
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
+	ref, port := helper.ParseForwardArgs(args, "usage: devbox forward <id|name> <port>")
 
 	var result service.PortForwardResponse
-	if mode == "local" {
-		rt := mustOpenRuntime()
-		target, err := resolveBoxTarget(mode, rt, ref)
-		if err != nil {
-			_ = rt.Close()
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-			os.Exit(1)
-		}
-		resp, err := rt.ForwardPort(target.ID, port, service.LocalUserID)
-		closeErr := rt.Close()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-			os.Exit(1)
-		}
-		if closeErr != nil {
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", closeErr)
-			os.Exit(1)
-		}
-		result = *resp
-	} else {
-		target, err := resolveBoxTarget(mode, nil, ref)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-			os.Exit(1)
-		}
-		client, err := api.NewDefault()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
 
-		statusResp, err := client.Get("/v2/boxes/" + target.ID + "/ssh-status")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-			os.Exit(1)
-		}
-		if err := api.CheckStatus(statusResp); err != nil {
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-			os.Exit(1)
-		}
-		var status SshStatusResponse
-		if err := api.DecodeJSON(statusResp, &status); err != nil {
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-			os.Exit(1)
-		}
-		if !status.Ready {
-			fmt.Fprintln(os.Stderr, "forward: box is not ready yet (EC2 status checks still pending)")
-			os.Exit(1)
-		}
-		if status.Instance == nil {
-			fmt.Fprintln(os.Stderr, "forward: server reported ready but returned no instance details, try the command again in a few minutes.")
-			os.Exit(1)
-		}
-		if status.Instance.PublicIP == "" {
-			fmt.Fprintln(os.Stderr, "forward: box has no IP address (is it running?)")
-			os.Exit(1)
-		}
-		if status.Instance.Status != "running" {
-			fmt.Fprintf(os.Stderr, "forward: box is %s, not running\n", status.Instance.Status)
-			os.Exit(1)
-		}
-
-		body := map[string]string{"port": port}
-		resp, err := client.Post("/v1/boxes/"+target.ID+"/ports", body)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-			os.Exit(1)
-		}
-		if err := api.CheckStatus(resp); err != nil {
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-			os.Exit(1)
-		}
-		if err := api.DecodeJSON(resp, &result); err != nil { // add to result var
-			fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
-			os.Exit(1)
-		}
+	rt := helper.MustOpenRuntime()
+	target, err := helper.ResolveBoxTarget(rt, ref)
+	if err != nil {
+		_ = rt.Close()
+		fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+		os.Exit(1)
 	}
+	resp, err := rt.ForwardPort(target.ID, port, service.LocalUserID)
+	closeErr := rt.Close()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "forward failed: %v\n", err)
+		os.Exit(1)
+	}
+	if closeErr != nil {
+		fmt.Fprintf(os.Stderr, "forward failed: %v\n", closeErr)
+		os.Exit(1)
+	}
+	result = *resp
 
 	sshBin, err := exec.LookPath("ssh") // look for ssh binary in PATH
 	if err != nil {
@@ -149,7 +80,7 @@ func Forward(args []string) {
 	}
 
 	bindSpec := fmt.Sprintf("%s:localhost:%s", strconv.Itoa(localPort), result.RemotePort)
-	target := fmt.Sprintf("%s@%s", result.User, result.Host)
+	sshTarget := fmt.Sprintf("%s@%s", result.User, result.Host)
 
 	argv := []string{
 		sshBin,
@@ -161,7 +92,7 @@ func Forward(args []string) {
 	if identity != "" {
 		argv = append(argv, "-i", identity)
 	}
-	argv = append(argv, target)
+	argv = append(argv, sshTarget)
 
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Stdout = os.Stderr

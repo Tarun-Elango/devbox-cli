@@ -6,33 +6,20 @@ import (
 	"os"
 	"strings"
 
+	"devbox-cli/helper"
 	"devbox-cli/service"
 )
 
 func Resize(args []string) {
-	if TestMode {
+	if helper.TestMode {
 		fmt.Println("[test] resize: done")
 		return
 	}
-	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: devbox resize <id|name>")
-		os.Exit(1)
-	}
-	ref := args[0]
+	ref := helper.ParseSingleBoxRef(args, "usage: devbox resize <id|name>")
 
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	if mode != "local" {
-		fmt.Fprintln(os.Stderr, "error: resize is only supported in local mode")
-		os.Exit(1)
-	}
-
-	rt := mustOpenRuntime()
+	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	target, err := resolveBoxTarget(mode, rt, ref)
+	target, err := helper.ResolveBoxTarget(rt, ref)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -57,7 +44,7 @@ func Resize(args []string) {
 		os.Exit(1)
 	}
 	if changeType {
-		selected, err := selectInstanceTypeWithDefault(service.AllInstanceTypes(), info.Instance.InstanceType)
+		selected, err := helper.SelectInstanceTypeWithDefault(service.AllInstanceTypes(), info.Instance.InstanceType)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error selecting instance type: %v\n", err)
 			os.Exit(1)
@@ -77,7 +64,7 @@ func Resize(args []string) {
 		os.Exit(1)
 	}
 	if changeSize {
-		selectedVolume, err := selectVolumeSizeGBWithDefault(info.VolumeSizeGB, info.VolumeSizeGB)
+		selectedVolume, err := helper.SelectVolumeSizeGBWithDefault(info.VolumeSizeGB, info.VolumeSizeGB)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error selecting volume size: %v\n", err)
 			os.Exit(1)

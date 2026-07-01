@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"devbox-cli/internal/api"
+	"devbox-cli/helper"
 	"devbox-cli/service"
 )
 
@@ -53,7 +53,7 @@ func cpDefaultKeyPath() string {
 }
 
 func parseCPLocation(raw string) (cpLocation, error) {
-	raw = strings.TrimSpace(raw)
+	raw = helper.StripSurroundingQuotes(strings.TrimSpace(raw))
 	if raw == "" {
 		return cpLocation{}, fmt.Errorf("path is required")
 	}
@@ -137,64 +137,30 @@ func buildSCPArgs(identity string, transfer cpTransfer, user, host, portArg stri
 }
 
 func cpStatusForBox(ref string) (*cpStatusResponse, error) {
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
+	rt := helper.MustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+
+	target, err := helper.ResolveBoxTarget(rt, ref)
 	if err != nil {
 		return nil, err
 	}
 
-	if mode == "local" {
-		rt := mustOpenRuntime()
-		target, err := resolveBoxTarget(mode, rt, ref)
-		if err != nil {
-			_ = rt.Close()
-			return nil, err
-		}
-
-		sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
-		closeErr := rt.Close()
-		if err != nil {
-			return nil, err
-		}
-		if closeErr != nil {
-			return nil, closeErr
-		}
-
-		status := &cpStatusResponse{Ready: sshStatus.Ready}
-		if sshStatus.Instance != nil {
-			box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
-			status.Instance = &box
-		}
-		return status, nil
-	}
-
-	// below is for the cloud mode - ignore as we dont use it
-	target, err := resolveBoxTarget(mode, nil, ref)
-	if err != nil {
-		return nil, err
-	}
-	client, err := api.NewDefault()
+	sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.Get("/v2/boxes/" + target.ID + "/ssh-status")
-	if err != nil {
-		return nil, err
+	status := &cpStatusResponse{Ready: sshStatus.Ready}
+	if sshStatus.Instance != nil {
+		box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
+		status.Instance = &box
 	}
-	if err := api.CheckStatus(resp); err != nil {
-		return nil, err
-	}
-
-	var status cpStatusResponse
-	if err := api.DecodeJSON(resp, &status); err != nil {
-		return nil, err
-	}
-	return &status, nil
+	return status, nil
 }
 
 // CP copies one file between the local machine and a devbox using scp.
 func CP(args []string) {
-	if TestMode {
+	if helper.TestMode {
 		fmt.Println("[test] cp: done")
 		return
 	}
@@ -207,7 +173,7 @@ func CP(args []string) {
 		fmt.Fprintln(os.Stderr, "  devbox cp mybox:/home/ec2-user/app/main.go ./")
 	}
 
-	parsed, err := parseCPCommandArgs(args, cpDefaultKeyPath())
+	parsed, err := helper.ParseCPCommandArgs(args, cpDefaultKeyPath())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cp: %v\n", err)
 		fs.Usage()

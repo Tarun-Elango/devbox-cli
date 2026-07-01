@@ -22,7 +22,7 @@ type Runtime struct {
 }
 
 // Open connects to the local database. AWS clients are created lazily on first use.
-// called by cmd/runtime.go
+// called by helper/runtime.go
 func Open(ctx context.Context, cancel context.CancelFunc) (*Runtime, error) {
 	if ctx == nil {
 		ctx = context.Background()

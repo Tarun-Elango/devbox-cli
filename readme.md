@@ -7,6 +7,7 @@ Usage: run locally with an AWS access key and secret key (stored locally)
 
 ## Table of Contents
 - [Download and Install (from GitHub release)](#download-and-install-from-github-release)
+- [Setup](#setup)
 - [Build using github repo](#build-using-github-repo)
 - [Install (system-wide) using github repo](#install-system-wide-using-github-repo)
 - [Common commands](#common-commands)
@@ -50,6 +51,16 @@ curl -fsSL "https://github.com/Tarun-Elango/devbox-cli/releases/download/latest/
 chmod +x ~/.local/bin/devbox
 export PATH="$HOME/.local/bin:$PATH"
 ```
+
+## Setup
+
+Run the interactive setup wizard to configure AWS credentials and local config:
+
+```bash
+devbox setup
+```
+
+Credentials are stored locally in your home directory.
 
 ## Build using github repo
 
@@ -136,7 +147,7 @@ Run `devbox` with no arguments to print usage, or see the table below.
 
 | Command | Notes |
 | --- | --- |
-| `ssh [-i key] <id-or-name>` | Open an SSH session to a box (`-i` path to private key; default `~/.ssh/id_ed25519`) |
+| `ssh [-i key] <id-or-name> [-- <ssh-option>...]` | Open an SSH session to a box (`-i` path to private key; default `~/.ssh/id_ed25519`) |
 | `cp [-i key] <source> <dest>` | Copy a file to or from a box (e.g. `devbox cp ./main.go mybox:/home/ec2-user/app/`) |
 | `sync [-i key] [--delete] <source> <dest>` | Sync files or directories to or from a box (`--delete` removes destination files missing from source) |
 | `exec [-i key] [-s] [-t] <id-or-name> -- <command>` | Run a one-off command on a running box (`-s` run through `sh`; `-t` allocate a TTY) |
@@ -146,7 +157,7 @@ Run `devbox` with no arguments to print usage, or see the table below.
 
 | Command | Notes |
 | --- | --- |
-| `snapshot <id-or-name> [name]` | Create a snapshot of a box |
+| `snapshot <id-or-name> <name>` | Create a snapshot of a box |
 | `snapshots` | List all your snapshots |
 | `snapshots ls <amiId>` | Show details for a specific snapshot |
 | `snapshots delete <amiId>` | Delete a snapshot |
@@ -156,7 +167,7 @@ Run `devbox` with no arguments to print usage, or see the table below.
 
 | Command | Notes |
 | --- | --- |
-| `templates` | List available templates |
+| `template` | List available templates |
 | `template new <name> [command string]` | Create a new template with a command to run on startup |
 | `template delete <id>` | Delete a template |
 | `template rename <id> <new-name>` | Rename a template |

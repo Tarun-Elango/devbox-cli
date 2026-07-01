@@ -1,66 +1,64 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"strings"
-	"syscall"
-	"unsafe"
 
+	"devbox-cli/helper"
 	"devbox-cli/service"
 )
 
+// setupExit is os.Exit by default; tests replace it to capture exit codes.
+var setupExit = os.Exit
+
 // Setup prompts for AWS secret, access key, and region, then saves to ~/.devbox/.
 func Setup(args []string) {
-	if TestMode {
+	helper.RejectExtraArgs(args, "usage: devbox setup")
+	if helper.TestMode {
 		fmt.Println("[test] setup: done")
 		return
 	}
 	fmt.Println("Setup AWS credentials, if you have already done this, doing this will overwrite your existing credentials, CTRL+C to cancel.")
 
-	secret, err := readPassword("AWS secret access key: ") // from auth.go
+	secret, err := helper.ReadPassword("AWS secret access key: ")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error reading secret: %v\n", err)
-		os.Exit(1)
+		setupExit(1)
 	}
 	if secret == "" {
 		fmt.Fprintln(os.Stderr, "setup failed: secret is required")
-		os.Exit(1)
+		setupExit(1)
 	}
 
-	accessKey, err := readPassword("AWS access key ID: ")
+	accessKey, err := helper.ReadPassword("AWS access key ID: ")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error reading access key: %v\n", err)
-		os.Exit(1)
+		setupExit(1)
 	}
 	if accessKey == "" {
 		fmt.Fprintln(os.Stderr, "setup failed: access key is required")
-		os.Exit(1)
+		setupExit(1)
 	}
 
 	regions := service.AllRegions() // get all regions
 	region, err := selectRegion(regions)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error selecting region: %v\n", err)
-		os.Exit(1)
+		setupExit(1)
 	}
 
 	if err := service.SaveAWSCredentials(secret, accessKey, region); err != nil {
 		fmt.Fprintf(os.Stderr, "save config: %v\n", err)
-		os.Exit(1)
+		setupExit(1)
 	}
 }
 
 // ClearCreds prompts for confirmation, then removes saved AWS credentials.
 func ClearCreds(args []string) {
-	if TestMode {
+	helper.RejectExtraArgs(args, "usage: devbox clear-creds")
+	if helper.TestMode {
 		fmt.Println("[test] clear-creds: done")
 		return
-	}
-	if len(args) != 0 {
-		fmt.Fprintln(os.Stderr, "usage: devbox clear-creds")
-		os.Exit(1)
 	}
 
 	fmt.Print("Are you sure you want to clear saved AWS credentials? [y/N] ")
@@ -73,20 +71,20 @@ func ClearCreds(args []string) {
 
 	if err := service.ClearAWSCredentials(); err != nil {
 		fmt.Fprintf(os.Stderr, "clear credentials: %v\n", err)
-		os.Exit(1)
+		setupExit(1)
 	}
 }
 
 // function to select region
 func selectRegion(regions []service.Region) (string, error) {
-	if !isTerminal(os.Stdin) {
+	if !helper.IsTerminal(os.Stdin) {
 		return selectRegionFallback(regions)
 	}
 
 	selected := 0
 	const visible = 12
 
-	restore, err := enableRawMode()
+	restore, err := helper.EnableRawMode()
 	if err != nil {
 		return selectRegionFallback(regions)
 	}
@@ -122,26 +120,26 @@ func selectRegion(regions []service.Region) (string, error) {
 	redraw()
 
 	for {
-		key, err := readKey()
+		key, err := helper.ReadKey()
 		if err != nil {
 			return "", err
 		}
 
 		switch key {
-		case keyUp:
+		case helper.KeyUp:
 			if selected > 0 {
 				selected--
 				redraw()
 			}
-		case keyDown:
+		case helper.KeyDown:
 			if selected < len(regions)-1 {
 				selected++
 				redraw()
 			}
-		case keyEnter:
+		case helper.KeyEnter:
 			fmt.Println()
 			return regions[selected].ID, nil
-		case keyCtrlC:
+		case helper.KeyCtrlC:
 			fmt.Println()
 			return "", fmt.Errorf("cancelled")
 		}
@@ -155,12 +153,10 @@ func selectRegionFallback(regions []service.Region) (string, error) {
 	}
 	fmt.Print("Enter number or region id: ")
 
-	reader := bufio.NewReader(os.Stdin)
-	line, err := reader.ReadString('\n')
+	line, err := helper.ReadStdinLine()
 	if err != nil {
 		return "", err
 	}
-	line = strings.TrimSpace(line)
 
 	if n := 0; len(line) > 0 {
 		if _, err := fmt.Sscanf(line, "%d", &n); err == nil {
@@ -175,75 +171,4 @@ func selectRegionFallback(regions []service.Region) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("invalid region %q", line)
-}
-
-type keyCode int
-
-const (
-	keyUp keyCode = iota
-	keyDown
-	keyEnter
-	keyCtrlC
-	keyOther
-)
-
-func readKey() (keyCode, error) {
-	var b [1]byte
-	if _, err := os.Stdin.Read(b[:]); err != nil {
-		return keyOther, err
-	}
-
-	switch b[0] {
-	case 3: // Ctrl+C
-		return keyCtrlC, nil
-	case '\r', '\n':
-		return keyEnter, nil
-	case 27: // ESC — arrow keys
-		seq := make([]byte, 2)
-		if _, err := os.Stdin.Read(seq[:]); err != nil {
-			return keyOther, err
-		}
-		if seq[0] != '[' {
-			return keyOther, nil
-		}
-		switch seq[1] {
-		case 'A':
-			return keyUp, nil
-		case 'B':
-			return keyDown, nil
-		}
-	}
-	return keyOther, nil
-}
-
-func isTerminal(f *os.File) bool {
-	fd := int(f.Fd())
-	var state syscall.Termios
-	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		uintptr(fd), ioctlReadTermios, uintptr(unsafe.Pointer(&state)))
-	return errno == 0
-}
-
-func enableRawMode() (func(), error) {
-	fd := int(os.Stdin.Fd())
-	var oldState syscall.Termios
-	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		uintptr(fd), ioctlReadTermios, uintptr(unsafe.Pointer(&oldState))); errno != 0 {
-		return nil, fmt.Errorf("terminal not available")
-	}
-
-	newState := oldState
-	newState.Lflag &^= syscall.ECHO | syscall.ICANON
-	newState.Cc[syscall.VMIN] = 1
-	newState.Cc[syscall.VTIME] = 0
-
-	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&newState))); errno != 0 {
-		return nil, fmt.Errorf("enable raw mode: %v", errno)
-	}
-
-	return func() {
-		_, _, _ = syscall.Syscall(syscall.SYS_IOCTL,
-			uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&oldState)))
-	}, nil
 }

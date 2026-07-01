@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"devbox-cli/cmd"
+	"devbox-cli/helper"
 	"devbox-cli/internal/backup"
 )
 
@@ -27,8 +28,11 @@ Commands:
   start <id|name>          Start a stopped box
   restart|reboot <id|name> Reboot a running box
   delete <id|name>         Delete a box
-  ssh [-i key] <id|name>     Open an SSH session to a box
+  ssh [-i key] <id|name> [-- <ssh-option>...]  Open an SSH session to a box
                              -i  Path to SSH private key (default: ~/.ssh/id_ed25519)
+                             --  Pass native ssh options/flags through, inserted before the
+                                 target (e.g. -v, -A, -L 8080:localhost:8080); to run a
+                                 one-off remote command instead, use "devbox exec"
   cp [-i key] <source> <dest> Copy a file to or from a box
                              Examples:
                                devbox cp ./main.go mybox:/home/ec2-user/app/
@@ -45,13 +49,13 @@ Commands:
                              -t  Allocate a pseudo-TTY (for sudo / interactive commands)
   forward <id|name> <port> Forward a port from a box
 
-  snapshot <id|name> [name]  Create a snapshot of a box
+  snapshot <id|name> <name>  Create a snapshot of a box
   snapshots                  List all your snapshots
   snapshots ls <amiId>       Show details for a specific snapshot
   snapshots delete <amiId>   Delete a snapshot
   create <name> [--from <snapshot_ami_id>]  Create a new box (optionally restore from snapshot)
 
-  templates                  					List available templates
+  template                      List available templates
   template new <name> [command string] 			Create a new template with a command to run on startup
   template delete <id> 		 					Delete a template
   template rename <id> <new-name> 				Rename a template
@@ -80,7 +84,7 @@ func main() {
 			usage()
 			os.Exit(1)
 		}
-		cmd.TestMode = true
+		helper.TestMode = true
 		command = os.Args[2]
 		args = os.Args[3:]
 	}
@@ -88,24 +92,16 @@ func main() {
 	switch command {
 	case "version":
 		cmd.Version(args)
-	// case "mode":
-	// 	cmd.Mode(args)
 	case "setup":
 		cmd.Setup(args)
 	case "clear-creds":
 		cmd.ClearCreds(args)
 	case "health":
 		cmd.Health(args)
-	case "login":
-		cmd.Login(args)
-	case "signup":
-		cmd.Signup(args)
-	case "logout":
-		cmd.Logout()
 	case "create":
 		cmd.Create(args)
 	case "ls":
-		cmd.Ls()
+		cmd.Ls(args)
 	case "status":
 		cmd.Status(args)
 	case "rename":
@@ -134,8 +130,6 @@ func main() {
 		cmd.Snapshot(args)
 	case "snapshots":
 		cmd.Snapshots(args)
-	case "templates":
-		cmd.Templates(args)
 	case "template":
 		cmd.Template(args)
 	case "idle-stop":

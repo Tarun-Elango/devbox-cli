@@ -8,12 +8,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 
+	"devbox-cli/helper"
 	"devbox-cli/internal/config"
 	awsclient "devbox-cli/service/aws"
 	"devbox-cli/service/localDb"
 )
 
 func Health(args []string) {
+	helper.RejectExtraArgs(args, "usage: devbox health")
 	var failed bool
 
 	// helper closure to check the health of the system
@@ -59,7 +61,7 @@ func Health(args []string) {
 		check("aws creds", "not configured", "run: devbox setup")
 		check("aws updated", "n/a", "")
 	} else {
-		ctx, cancel := CommandContext()
+		ctx, cancel := helper.CommandContext()
 		defer cancel() // cancel the context if the aws call fails
 		client, err := awsclient.NewClient(ctx)
 		if err != nil {

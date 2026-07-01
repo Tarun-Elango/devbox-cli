@@ -9,60 +9,62 @@ import (
 	"strconv"
 	"strings"
 
+	"devbox-cli/helper"
 	"devbox-cli/scripts"
 	"devbox-cli/service"
 )
 
 const idleStopUsage = "usage: devbox idle-stop <id|name> [in <minutes> | show | update <minutes> | delete]"
 
+// idleStopExit is os.Exit by default; tests replace it to capture exit codes.
+var idleStopExit = os.Exit
+
 func IdleRouter(args []string) {
 	if len(args) < 2 {
 		fmt.Fprintln(os.Stderr, idleStopUsage)
-		os.Exit(1)
+		idleStopExit(1)
 	}
 
 	ref := args[0] // box id or name
 	if ref == "" {
 		fmt.Fprintln(os.Stderr, "error: box id or name is required")
-		os.Exit(1)
+		idleStopExit(1)
 	}
 	switch args[1] {
 	case "in":
+		if len(args) != 3 {
+			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> in <minutes>")
+			idleStopExit(1)
+		}
 		Idle(args)
 	case "show":
+		if len(args) != 2 {
+			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> show")
+			idleStopExit(1)
+		}
 		showIdleStop(args)
 	case "update":
+		if len(args) != 3 {
+			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> update <minutes>")
+			idleStopExit(1)
+		}
 		updateIdleStop(args)
 	case "delete":
+		if len(args) != 2 {
+			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> delete")
+			idleStopExit(1)
+		}
 		deleteIdleStop(args)
 	default:
 		fmt.Fprintf(os.Stderr, "idle-stop: unknown sub-command %q\n", args[1])
 		fmt.Fprintln(os.Stderr, idleStopUsage)
-		os.Exit(1)
+		idleStopExit(1)
 	}
 
 }
 
 func Idle(args []string) {
-	if TestMode {
-		fmt.Println("[test] idle-stop: done")
-		return
-	}
-
-	if len(args) != 3 {
-		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> in <minutes>")
-		os.Exit(1)
-	}
-
 	ref := args[0] // box id or name
-	if ref == "" {
-		fmt.Fprintln(os.Stderr, "error: box id or name is required")
-		os.Exit(1)
-	}
-	if args[1] != "in" {
-		fmt.Fprintln(os.Stderr, "error: expected 'in' as second argument")
-		os.Exit(1)
-	}
 
 	minutesInt, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -74,9 +76,14 @@ func Idle(args []string) {
 		os.Exit(1)
 	}
 
-	rt := mustOpenRuntime()
+	if helper.TestMode {
+		fmt.Println("[test] idle-stop: done")
+		return
+	}
+
+	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	target, err := resolveBoxTarget("local", rt, ref)
+	target, err := helper.ResolveBoxTarget(rt, ref)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -224,29 +231,16 @@ sudo systemctl reset-failed devbox-idle-stop.service 2>/dev/null || true
 sudo systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
 */
 func deleteIdleStop(args []string) {
-	if TestMode {
+	ref := args[0]
+
+	if helper.TestMode {
 		fmt.Println("[test] idle-stop delete: done")
 		return
 	}
 
-	if len(args) != 2 {
-		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> delete")
-		os.Exit(1)
-	}
-
-	ref := args[0]
-	if ref == "" {
-		fmt.Fprintln(os.Stderr, "error: box id or name is required")
-		os.Exit(1)
-	}
-	if args[1] != "delete" {
-		fmt.Fprintln(os.Stderr, "error: expected 'delete' as second argument")
-		os.Exit(1)
-	}
-
-	rt := mustOpenRuntime()
+	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	target, err := resolveBoxTarget("local", rt, ref)
+	target, err := helper.ResolveBoxTarget(rt, ref)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -354,25 +348,7 @@ systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
 
 // update for a specific instance
 func updateIdleStop(args []string) {
-	if TestMode {
-		fmt.Println("[test] idle-stop update: done")
-		return
-	}
-
-	if len(args) != 3 {
-		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> update <minutes>")
-		os.Exit(1)
-	}
-
 	ref := args[0]
-	if ref == "" {
-		fmt.Fprintln(os.Stderr, "error: box id or name is required")
-		os.Exit(1)
-	}
-	if args[1] != "update" {
-		fmt.Fprintln(os.Stderr, "error: expected 'update' as second argument")
-		os.Exit(1)
-	}
 
 	minutesInt, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -384,9 +360,14 @@ func updateIdleStop(args []string) {
 		os.Exit(1)
 	}
 
-	rt := mustOpenRuntime()
+	if helper.TestMode {
+		fmt.Println("[test] idle-stop update: done")
+		return
+	}
+
+	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	target, err := resolveBoxTarget("local", rt, ref)
+	target, err := helper.ResolveBoxTarget(rt, ref)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -485,25 +466,16 @@ date +%%s > /var/lib/devbox/last-activity
 
 // show for a specific instance
 func showIdleStop(args []string) {
-	if TestMode {
+	ref := args[0]
+
+	if helper.TestMode {
 		fmt.Println("[test] idle-stop show: done")
 		return
 	}
 
-	if len(args) != 2 {
-		fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> show")
-		os.Exit(1)
-	}
-
-	ref := args[0]
-	if args[1] != "show" {
-		fmt.Fprintln(os.Stderr, "error: expected 'show' as second argument")
-		os.Exit(1)
-	}
-
-	rt := mustOpenRuntime()
+	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	target, err := resolveBoxTarget("local", rt, ref)
+	target, err := helper.ResolveBoxTarget(rt, ref)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

@@ -88,6 +88,7 @@ func (r *Runtime) ListInstances(userID string) ([]*Instance, error) {
 	}
 
 	ctx := r.Context()
+	// get the instances from aws for the given instance ids
 	resp, err := ec2Client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
 		Filters: []types.Filter{
 			{
@@ -96,52 +97,40 @@ func (r *Runtime) ListInstances(userID string) ([]*Instance, error) {
 			},
 		},
 	})
-	//fmt.Println("Describe instances response:", resp)
 	if err != nil {
 		return nil, awsclient.WrapError("describe instances", err)
 	}
-	//part 1 - delete instances from database that are not in aws
+
 	// aws instance id -> instance object from aws response
 	found := make(map[string]types.Instance)
 	for _, reservation := range resp.Reservations {
 		for _, inst := range reservation.Instances {
-			found[aws.ToString(inst.InstanceId)] = inst // map of aws instance id to instance object
+			found[aws.ToString(inst.InstanceId)] = inst
 		}
-	}
-	// delete instances from database that are not in aws
-	for _, record := range records {
-		if _, ok := found[record.AwsInstanceID]; !ok {
-			// delete the instance from the database
-			if err := db.DeleteInstanceByAwsInstanceID(record.AwsInstanceID); err != nil {
-				return nil, err
-			}
-			// delete the host from the ssh config
-			_ = DeleteHost(record.Name)
-		}
-	}
-
-	// part 2 - compare aws response with local db ( dont care if we look at deleted instances)
-	// cause we only consider found/instances in aws response
-	// instanceID -> cached DB record from records/localDb from records/localDb
-	recordByInstanceID := make(map[string]localDb.InstanceRecord, len(records))
-	for _, record := range records {
-		recordByInstanceID[record.AwsInstanceID] = record
 	}
 
 	instances := make([]*Instance, 0, len(found))
 
-	// loop through the instances in aws response ( only use records for local db values)
-	for _, inst := range found {
-		dto := instanceFromAWS(inst)
+	// single pass over the local db records: rows missing from aws are stale
+	// and get deleted, rows still present in aws get synced if outdated
+	for _, record := range records {
+		inst, ok := found[record.AwsInstanceID]
+		if !ok {
+			if err := db.DeleteInstanceByAwsInstanceID(record.AwsInstanceID); err != nil {
+				return nil, err
+			}
+			_ = DeleteHost(record.Name)
+			continue
+		}
+
+		dto := instanceFromAWS(inst) // convert aws instance to custom Instance struct
 		ip := dto.IPAddress
 		if ip == "" {
 			ip = dto.PrivateIPAddress
 		}
-		record := recordByInstanceID[dto.ID] // record has the corresponding record from local db
 
-		// for each instance, if any of the fields are different, sync the instance from aws
 		if record.NeedsAWSSync(dto.Status, ip, dto.InstanceType, dto.Name) {
-			if err := db.SyncInstanceFromAWS( // input is new values from aws response
+			if err := db.SyncInstanceFromAWS(
 				dto.ID,
 				dto.Status,
 				ip,
@@ -151,7 +140,7 @@ func (r *Runtime) ListInstances(userID string) ([]*Instance, error) {
 				return nil, err
 			}
 
-			// if we are syncing the the aws instance to db, then update the ssh config in case the ip address has changed
+			// if we are syncing the aws instance to db, then update the ssh config in case the ip address has changed
 			if ip != "" {
 				if err := syncSSHHostIP(record.Name, ip); err != nil {
 					return nil, fmt.Errorf("update SSH config for %q: %w", record.Name, err)
@@ -471,7 +460,6 @@ func appendReadyMarker(sb *strings.Builder) {
 }
 
 // GetInstance returns live instance details from AWS for a box owned by userID.
-// Mirrors Lighthouse GET /v2/boxes/{id}: ec2Service.getInstance(id, userId).
 func (r *Runtime) GetInstance(instanceId, userID string) (*Instance, error) {
 	db := r.DB()
 
@@ -764,7 +752,7 @@ type SshStatus struct {
 // user-data probe in cmd, not EC2 instance/system status checks.
 // Mirrors Lighthouse GET /v2/boxes/{id}/ssh-status: ec2Service.getSshStatus(id, userId).
 func (r *Runtime) GetSshStatus(instanceID, userID string) (*SshStatus, error) {
-	// Ownership is validated by callers via resolveBoxTarget → ResolveInstanceByNameOrAwsInstanceID.
+	// Ownership is validated by callers via helper.ResolveBoxTarget → ResolveInstanceByNameOrAwsInstanceID.
 	// if _, err := requireOwnedInstance(r.DB(), instanceID, userID); err != nil {
 	// 	return nil, err
 	// }

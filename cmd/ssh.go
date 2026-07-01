@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"devbox-cli/internal/api"
+	"devbox-cli/helper"
 	"devbox-cli/service"
 )
 
@@ -176,16 +176,19 @@ func waitForDevboxReady(sshBin, identity, user, host, portArg string) error {
 }
 
 // SSH checks EC2 health and the devbox ready marker, then execs ssh.
+// Arguments after "--" are forwarded as native ssh options (e.g. -v, -A,
+// -L 8080:localhost:8080) rather than as a remote command; use "devbox exec"
+// to run a one-off remote command instead.
 func SSH(args []string) {
-	if TestMode {
+	if helper.TestMode {
 		fmt.Println("[test] ssh: done")
 		return
 	}
 	usage := func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox ssh [-i key] <id|name>")
+		fmt.Fprintln(os.Stderr, "usage: devbox ssh [-i key] <id|name> [-- <ssh-option>...]")
 	}
 
-	parsed, err := parseSSHCommandArgs(args, defaultKeyPath())
+	parsed, err := helper.ParseSSHCommandArgs(args, defaultKeyPath())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 		usage()
@@ -193,66 +196,32 @@ func SSH(args []string) {
 	}
 	ref := parsed.Ref
 
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-
 	var status SshStatusResponse
 	var targetLabel string
-	if mode == "local" {
-		rt := mustOpenRuntime()
-		target, err := resolveBoxTarget(mode, rt, ref)
-		if err != nil {
-			_ = rt.Close()
-			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
-			os.Exit(1)
-		}
-		targetLabel = fmt.Sprintf("%s (%s)", target.Name, target.ID)
-		sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
-		closeErr := rt.Close()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
-			os.Exit(1)
-		}
-		if closeErr != nil {
-			fmt.Fprintf(os.Stderr, "ssh: %v\n", closeErr)
-			os.Exit(1)
-		}
-		status.Ready = sshStatus.Ready
-		if sshStatus.Instance != nil {
 
-			box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
-			status.Instance = &box
-		}
-	} else {
-		target, err := resolveBoxTarget(mode, nil, ref)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
-			os.Exit(1)
-		}
-		ref = target.ID
-		targetLabel = target.ID
-		client, err := api.NewDefault()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
+	rt := helper.MustOpenRuntime()
+	target, err := helper.ResolveBoxTarget(rt, ref)
+	if err != nil {
+		_ = rt.Close()
+		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
+		os.Exit(1)
+	}
+	targetLabel = fmt.Sprintf("%s (%s)", target.Name, target.ID)
+	sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
+	closeErr := rt.Close()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
+		os.Exit(1)
+	}
+	if closeErr != nil {
+		fmt.Fprintf(os.Stderr, "ssh: %v\n", closeErr)
+		os.Exit(1)
+	}
+	status.Ready = sshStatus.Ready
+	if sshStatus.Instance != nil {
 
-		resp, err := client.Get("/v2/boxes/" + ref + "/ssh-status")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
-			os.Exit(1)
-		}
-		if err := api.CheckStatus(resp); err != nil {
-			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
-			os.Exit(1)
-		}
-		if err := api.DecodeJSON(resp, &status); err != nil {
-			fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
-			os.Exit(1)
-		}
+		box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
+		status.Instance = &box
 	}
 
 	if !status.Ready {
@@ -280,18 +249,18 @@ func SSH(args []string) {
 		os.Exit(1)
 	}
 
-	target := fmt.Sprintf("%s@%s", defaultSSHUser, b.PublicIP)
+	sshTarget := fmt.Sprintf("%s@%s", defaultSSHUser, b.PublicIP)
 
 	if err := waitForDevboxReady(sshBin, parsed.Identity, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stderr, "Connecting to %s (box %s)...\n", target, targetLabel)
+	fmt.Fprintf(os.Stderr, "Connecting to %s (box %s)...\n", sshTarget, targetLabel)
 
 	argv := append([]string{sshBin}, sshBaseArgs(parsed.Identity, defaultSSHPort)...) // create ssh command
-	argv = append(argv, target)
-	argv = append(argv, parsed.Extra...)
+	argv = append(argv, parsed.SSHOptions...)                                        // user-supplied ssh flags (-v, -A, -L, -o, ...)
+	argv = append(argv, sshTarget)
 
 	if err := syscall.Exec(sshBin, argv, os.Environ()); err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: exec failed: %v\n", err)
@@ -301,7 +270,7 @@ func SSH(args []string) {
 
 // Exec runs a one-off command on a running box over SSH.
 func Exec(args []string) {
-	if TestMode {
+	if helper.TestMode {
 		fmt.Println("[test] exec: done")
 		return
 	}
@@ -332,61 +301,29 @@ func Exec(args []string) {
 	}
 	ref := fs.Arg(0)
 
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
+	var status SshStatusResponse
+
+	rt := helper.MustOpenRuntime()
+	target, err := helper.ResolveBoxTarget(rt, ref)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		_ = rt.Close()
+		fmt.Fprintf(os.Stderr, "exec: %v\n", err)
 		os.Exit(1)
 	}
-
-	var status SshStatusResponse
-	if mode == "local" {
-		rt := mustOpenRuntime()
-		target, err := resolveBoxTarget(mode, rt, ref)
-		if err != nil {
-			_ = rt.Close()
-			fmt.Fprintf(os.Stderr, "exec: %v\n", err)
-			os.Exit(1)
-		}
-		sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
-		closeErr := rt.Close()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "exec: %v\n", err)
-			os.Exit(1)
-		}
-		if closeErr != nil {
-			fmt.Fprintf(os.Stderr, "exec: %v\n", closeErr)
-			os.Exit(1)
-		}
-		status.Ready = sshStatus.Ready
-		if sshStatus.Instance != nil {
-			box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
-			status.Instance = &box
-		}
-	} else {
-		target, err := resolveBoxTarget(mode, nil, ref)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "exec: %v\n", err)
-			os.Exit(1)
-		}
-		client, err := api.NewDefault()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-
-		resp, err := client.Get("/v2/boxes/" + target.ID + "/ssh-status")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "exec: %v\n", err)
-			os.Exit(1)
-		}
-		if err := api.CheckStatus(resp); err != nil {
-			fmt.Fprintf(os.Stderr, "exec: %v\n", err)
-			os.Exit(1)
-		}
-		if err := api.DecodeJSON(resp, &status); err != nil {
-			fmt.Fprintf(os.Stderr, "exec: %v\n", err)
-			os.Exit(1)
-		}
+	sshStatus, err := rt.GetSshStatus(target.ID, service.LocalUserID)
+	closeErr := rt.Close()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "exec: %v\n", err)
+		os.Exit(1)
+	}
+	if closeErr != nil {
+		fmt.Fprintf(os.Stderr, "exec: %v\n", closeErr)
+		os.Exit(1)
+	}
+	status.Ready = sshStatus.Ready
+	if sshStatus.Instance != nil {
+		box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
+		status.Instance = &box
 	}
 
 	if !status.Ready {
@@ -419,12 +356,12 @@ func Exec(args []string) {
 		os.Exit(1)
 	}
 
-	target := fmt.Sprintf("%s@%s", defaultSSHUser, b.PublicIP)
+	sshTarget := fmt.Sprintf("%s@%s", defaultSSHUser, b.PublicIP)
 	argv := sshBaseArgs(*identity, defaultSSHPort)
 	if *allocateTTY {
 		argv = append(argv, "-t")
 	}
-	argv = append(argv, target)
+	argv = append(argv, sshTarget)
 	argv = append(argv, buildExecRemoteCommand(remoteCommand, *throughShell)...)
 
 	fmt.Fprintln(os.Stderr, "exec: trying command...")

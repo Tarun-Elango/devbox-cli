@@ -5,21 +5,28 @@ import (
 	"os"
 	"strings"
 
-	"devbox-cli/internal/api"
+	"devbox-cli/helper"
 	"devbox-cli/service"
 )
 
 const templateNewUsageLine = "usage: devbox template new <name> [command string]"
 
+// FailBox prints a clean error for a box subcommand and exits.
+func FailBox(cmd string, err error) {
+	fmt.Fprintf(os.Stderr, "%s failed: %s\n", cmd, err)
+	os.Exit(1)
+}
+
 // Template dispatches template sub-commands.
 //
-//	devbox template new <name> [command string] → create a template
-//	devbox template delete <id>                  → delete a template
-//	devbox template rename <id> <new-name>       → rename a template
+//	devbox template                                → list available templates
+//	devbox template new <name> [command string]    → create a template
+//	devbox template delete <id>                    → delete a template
+//	devbox template rename <id> <new-name>         → rename a template
 func Template(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: devbox template <new|delete|rename> ...")
-		os.Exit(1)
+		TemplateList(args)
+		return
 	}
 
 	sub := args[0]
@@ -83,7 +90,7 @@ func TemplateNew(args []string) {
 		os.Exit(1)
 	}
 
-	if TestMode {
+	if helper.TestMode {
 		fmt.Printf("[test] template new: name=%q", name)
 		if startupScript != "" {
 			fmt.Printf(" startupScript=%q", startupScript)
@@ -92,44 +99,14 @@ func TemplateNew(args []string) {
 		return
 	}
 
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-
 	var created service.Template
-	if mode == "local" {
-		rt := mustOpenRuntime()
-		defer func() { _ = rt.Close() }()
-		tmpl, err := rt.CreateTemplate(name, startupScript, service.LocalUserID)
-		if err != nil {
-			api.FailBox("template new", err)
-		}
-		created = *tmpl
-	} else {
-		client, err := api.NewDefault()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-
-		body := map[string]string{"name": name}
-		if startupScript != "" {
-			body["startupScript"] = startupScript
-		}
-
-		resp, err := client.Post("/v1/boxes/templates", body)
-		if err != nil {
-			api.FailBox("template new", err)
-		}
-		if err := api.CheckStatus(resp); err != nil {
-			api.FailBox("template new", err)
-		}
-		if err := api.DecodeJSON(resp, &created); err != nil {
-			api.FailBox("template new", err)
-		}
+	rt := helper.MustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	tmpl, err := rt.CreateTemplate(name, startupScript, service.LocalUserID)
+	if err != nil {
+		FailBox("template new", err)
 	}
+	created = *tmpl
 
 	fmt.Printf("Template created.\n")
 	fmt.Printf("  Name: %s\n", created.Name)
@@ -149,13 +126,7 @@ const templateDeleteUsageLine = "usage: devbox template delete <id>"
 // TemplateDelete deletes a user-owned startup template.
 // Usage: devbox template delete <id>
 func TemplateDelete(args []string) {
-	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "error: template id is required")
-		fmt.Fprintln(os.Stderr, templateDeleteUsageLine)
-		os.Exit(1)
-	}
-
-	id := strings.TrimSpace(args[0])
+	id := strings.TrimSpace(helper.ParseTemplateDeleteArgs(args, templateDeleteUsageLine))
 	if id == "" {
 		fmt.Fprintln(os.Stderr, "error: template id is required")
 		fmt.Fprintln(os.Stderr, templateDeleteUsageLine)
@@ -165,27 +136,13 @@ func TemplateDelete(args []string) {
 		fmt.Fprintf(os.Stderr, "error: unknown flag %q\n", id)
 		os.Exit(1)
 	}
-	if len(args) > 1 {
-		fmt.Fprintln(os.Stderr, templateDeleteUsageLine)
-		os.Exit(1)
-	}
 
-	if TestMode {
+	if helper.TestMode {
 		fmt.Printf("[test] template delete: id=%q\n", id)
 		return
 	}
 
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	if mode != "local" {
-		fmt.Fprintf(os.Stderr, "error: template delete is only supported in local mode\n")
-		os.Exit(1)
-	}
-
-	rt := mustOpenRuntime()
+	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	if err := rt.DeleteTemplate(id, service.LocalUserID); err != nil {
 		if strings.Contains(err.Error(), "not found") {
@@ -204,14 +161,9 @@ const templateRenameUsageLine = "usage: devbox template rename <id> <new-name>"
 // TemplateRename updates a user-owned template name.
 // Usage: devbox template rename <id> <new-name>
 func TemplateRename(args []string) {
-	if len(args) < 2 {
-		fmt.Fprintln(os.Stderr, "error: template id and new name are required")
-		fmt.Fprintln(os.Stderr, templateRenameUsageLine)
-		os.Exit(1)
-	}
-
-	id := strings.TrimSpace(args[0])
-	newName := strings.TrimSpace(args[1])
+	id, newName := helper.ParseTemplateRenameArgs(args, templateRenameUsageLine)
+	id = strings.TrimSpace(id)
+	newName = strings.TrimSpace(newName)
 	if id == "" {
 		fmt.Fprintln(os.Stderr, "error: template id is required")
 		fmt.Fprintln(os.Stderr, templateRenameUsageLine)
@@ -226,27 +178,13 @@ func TemplateRename(args []string) {
 		fmt.Fprintf(os.Stderr, "error: unknown flag\n")
 		os.Exit(1)
 	}
-	if len(args) > 2 {
-		fmt.Fprintln(os.Stderr, templateRenameUsageLine)
-		os.Exit(1)
-	}
 
-	if TestMode {
+	if helper.TestMode {
 		fmt.Printf("[test] template rename: id=%q newName=%q\n", id, newName)
 		return
 	}
 
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	if mode != "local" {
-		fmt.Fprintf(os.Stderr, "error: template rename is only supported in local mode\n")
-		os.Exit(1)
-	}
-
-	rt := mustOpenRuntime()
+	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	renamed, err := rt.RenameTemplate(id, newName, service.LocalUserID)
 	if err != nil {

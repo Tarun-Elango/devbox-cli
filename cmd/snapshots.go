@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 
-	"devbox-cli/internal/api"
+	"devbox-cli/helper"
 	"devbox-cli/service"
 )
 
@@ -24,13 +23,13 @@ type snapshotItem struct {
 //	devbox snapshots ls <amiId>   → show details for a specific snapshot
 //	devbox snapshots delete <amiId> → delete a snapshot
 func Snapshots(args []string) {
-	if TestMode {
+	if helper.TestMode {
 		fmt.Println("[test] snapshots: done")
 		return
 	}
 
 	if len(args) == 0 {
-		snapshotsList()
+		snapshotsList(args)
 		return
 	}
 
@@ -39,17 +38,11 @@ func Snapshots(args []string) {
 
 	switch sub {
 	case "ls":
-		if len(subArgs) < 1 {
-			fmt.Fprintln(os.Stderr, "usage: devbox snapshots ls <amiId>")
-			os.Exit(1)
-		}
-		snapshotsShow(subArgs[0])
+		amiID := helper.ParseSingleSnapshotAmiIDArg(subArgs, "usage: devbox snapshots ls <amiId>")
+		snapshotsShow(amiID)
 	case "delete":
-		if len(subArgs) < 1 {
-			fmt.Fprintln(os.Stderr, "usage: devbox snapshots delete <amiId>")
-			os.Exit(1)
-		}
-		snapshotsDelete(subArgs[0])
+		amiID := helper.ParseSingleSnapshotAmiIDArg(subArgs, "usage: devbox snapshots delete <amiId>")
+		snapshotsDelete(amiID)
 	default:
 		fmt.Fprintf(os.Stderr, "snapshots: unknown sub-command %q\n", sub)
 		fmt.Fprintln(os.Stderr, "usage: devbox snapshots [ls <amiId> | delete <amiId>]")
@@ -57,45 +50,18 @@ func Snapshots(args []string) {
 	}
 }
 
-func snapshotsList() {
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
+func snapshotsList(args []string) {
+	helper.RejectExtraArgs(args, "usage: devbox snapshots")
 
 	var items []snapshotItem
-	if mode == "local" {
-		rt := mustOpenRuntime()
-		defer func() { _ = rt.Close() }()
-		snaps, err := rt.ListSnapshots(service.LocalUserID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-			os.Exit(1)
-		}
-		items = snapshotsToItems(snaps)
-	} else {
-		client, err := api.NewDefault()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-		}
-
-		resp, err := client.Get("/v1/snapshots")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-			os.Exit(1)
-		}
-		if err := api.CheckStatus(resp); err != nil {
-			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-			os.Exit(1)
-		}
-
-		if err := api.DecodeJSON(resp, &items); err != nil { // add response to items
-			fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
-			os.Exit(1)
-		}
+	rt := helper.MustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	snaps, err := rt.ListSnapshots(service.LocalUserID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "snapshots failed: %v\n", err)
+		os.Exit(1)
 	}
+	items = snapshotsToItems(snaps)
 
 	if len(items) == 0 {
 		fmt.Println("No snapshots found.")
@@ -119,12 +85,7 @@ func snapshotsToItems(snaps []*service.Snapshot) []snapshotItem {
 }
 
 func snapshotsShow(amiID string) {
-	if _, err := service.EnsureLocalModeAndGetCurrMode(); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-
-	rt := mustOpenRuntime()
+	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	snap, err := rt.GetSnapshot(amiID, service.LocalUserID)
 	if err != nil {
@@ -140,50 +101,17 @@ func snapshotsShow(amiID string) {
 }
 
 func snapshotsDelete(amiID string) {
-	mode, err := service.EnsureLocalModeAndGetCurrMode()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
 
-	if mode == "local" {
-		rt := mustOpenRuntime()
-		defer func() { _ = rt.Close() }()
-		if err := rt.DeleteSnapshot(amiID, service.LocalUserID); err != nil {
-			if strings.Contains(err.Error(), "not found") {
-				fmt.Fprintf(os.Stderr, "snapshot %s not found\n", amiID)
-			} else {
-				fmt.Fprintf(os.Stderr, "snapshot delete failed: %v\n", err)
-			}
-			os.Exit(1)
+	rt := helper.MustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	if err := rt.DeleteSnapshot(amiID, service.LocalUserID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			fmt.Fprintf(os.Stderr, "snapshot %s not found\n", amiID)
+		} else {
+			fmt.Fprintf(os.Stderr, "snapshot delete failed: %v\n", err)
 		}
-		fmt.Printf("Snapshot %s deleted.\n", amiID)
-		return
-	}
-
-	client, err := api.NewDefault()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-
-	resp, err := client.Delete("/v1/snapshots/" + amiID)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "snapshot delete failed: %v\n", err)
-		os.Exit(1)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode == http.StatusNotFound {
-		fmt.Fprintf(os.Stderr, "snapshot %s not found\n", amiID)
-		os.Exit(1)
-	}
-
-	if err := api.CheckStatus(resp); err != nil {
-		fmt.Fprintf(os.Stderr, "snapshot delete failed: %v\n", err)
-		os.Exit(1)
-	}
-
 	fmt.Printf("Snapshot %s deleted.\n", amiID)
 }
 
