@@ -75,18 +75,16 @@ func CreateTemplate(args []string) {
 		pubKey = pk
 	}
 
-	instanceType := service.DefaultInstanceType
 	volumeSizeGB := service.DefaultVolumeSizeGB
-	selected, err := helper.SelectInstanceType(service.AllInstanceTypes())
+	instanceType, err := helper.SelectInstanceType(service.AllInstanceTypes())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error selecting instance type: %v\n", err)
 		os.Exit(1)
 	}
-	if err := service.ValidateInstanceType(selected); err != nil {
+	if err := service.ValidateInstanceType(instanceType); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-	instanceType = selected
 
 	if fromSnapshot == "" {
 		selectedVolume, err := helper.SelectVolumeSizeGB()
