@@ -12,61 +12,68 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `Usage: devbox <command> [args]
 
 Commands:
+  help, -h, --help    Show this help message
+
   version             Show the devbox CLI version
   update              Check for a newer release and install it (asks for confirmation)
 
-  setup               Configure/Change AWS credentials and region - stored in ~/.devbox/config.json
+  setup               Configure AWS credentials and region (stored in ~/.devbox/config.json)
   clear-creds         Clear saved AWS credentials from ~/.devbox/config.json
   health              Check config, AWS credentials, region, and database
 
-  create <name>       Create a new box
+  create <name> [--from <snapshot_ami_id>]
+                      Create a new box (optionally restore from a snapshot)
+  create --template <template> [<template>...] <name> [--from <snapshot_ami_id>]
+                      Create a box from one or more templates (optionally from snapshot)
+
   ls                  List all boxes
-  status <id|name>         Show details for a box
-  rename <id|name> <new-name> Rename a box
-  resize|upgrade <id|name> Resize a stopped box instance type or root disk
-  stop <id|name>           Stop a running box
-  start <id|name>          Start a stopped box
-  restart|reboot <id|name> Reboot a running box
-  delete <id|name>         Delete a box
-  ssh [-i key] <id|name> [-- <ssh-option>...]  Open an SSH session to a box
-                             -i  Path to SSH private key (default: ~/.ssh/id_ed25519)
-                             --  Pass native ssh options/flags through, inserted before the
-                                 target (e.g. -v, -A, -L 8080:localhost:8080); to run a
-                                 one-off remote command instead, use "devbox exec"
-  cp [-i key] <source> <dest> Copy a file to or from a box
-                             Examples:
-                               devbox cp ./main.go mybox:/home/ec2-user/app/
-                               devbox cp mybox:/home/ec2-user/app/main.go ./
-  sync [-i key] [--delete] <source> <dest> Sync files or directories to or from a box
-                            --delete  Delete destination files missing from source
-                             Examples:
-                               devbox sync ./project mybox:/home/ec2-user/project
-                               devbox sync mybox:/home/ec2-user/project ./project
+  status <id|name>    Show details for a box
+  rename <id|name> <new-name>
+                      Rename a box
+  resize|upgrade <id|name>
+                      Resize a stopped box instance type or root disk
+  stop <id|name>      Stop a running box
+  start <id|name>     Start a stopped box
+  restart|reboot <id|name>
+                      Reboot a running box
+  delete <id|name>    Delete a box
+
+  ssh [-i key] <id|name> [-- <ssh-option>...]
+                      Open an SSH session to a box
+                        -i  Path to SSH private key (default: ~/.ssh/id_ed25519)
+                        --  Pass native ssh options before the target (e.g. -v, -A,
+                            -L 8080:localhost:8080); for one-off remote commands use exec
+  cp [-i key] <source> <dest>
+                      Copy a file to or from a box
+                        devbox cp ./main.go mybox:/home/ec2-user/app/
+                        devbox cp mybox:/home/ec2-user/app/main.go ./
+  sync [-i key] [--delete] <source> <dest>
+                      Sync files or directories to or from a box
+                        --delete  Remove destination files missing from source
+                        devbox sync ./project mybox:/home/ec2-user/project
+                        devbox sync mybox:/home/ec2-user/project ./project
   exec [-i key] [-s] [-t] <id|name> -- <command>
-                             Run a one-off command on a running box
-                             -s  Run as a shell snippet via sh -lc (for pipes, &&, cd);
-                                 joins arguments and does not preserve per-arg boundaries
-                             -t  Allocate a pseudo-TTY (for sudo / interactive commands)
-  forward <id|name> <port> Forward a port from a box
+                      Run a one-off command on a running box
+                        -s  Run as a shell snippet via sh -lc (pipes, &&, cd)
+                        -t  Allocate a pseudo-TTY (for sudo / interactive commands)
+  forward <id|name> <port>
+                      Forward a port from a box
 
-  snapshot <id|name> <name>  Create a snapshot of a box
-  snapshots                  List all your snapshots
-  snapshots ls <amiId>       Show details for a specific snapshot
-  snapshots delete <amiId>   Delete a snapshot
-  create <name> [--from <snapshot_ami_id>]  Create a new box (optionally restore from snapshot)
+  snapshot                              List all snapshots
+  snapshot create <id|name> <name>      Create a snapshot of a box
+  snapshot ls <amiId>                   Show details for a snapshot
+  snapshot delete <amiId>               Delete a snapshot
 
-  template                      List available templates
-  template new <name> [command string] 			Create a new template with a command to run on startup
-  template delete <id> 		 					Delete a template
-  template rename <id> <new-name> 				Rename a template
-  create --template <template> [<template>...] <name> Create a new box from one or more templates
-  create --template <template> [<template>...] <name> --from <snapshot_ami_id> Create from templates and restore from a snapshot
+  template                              List available templates
+  template new <name> [command string]  Create a template with optional startup command
+  template delete <name>                Delete a template
+  template rename <name> <new-name>     Rename a template
 
-  idle-stop <id|name> in <minutes> 			Stop the box after <minutes> minutes of inactivity
-  idle-stop <id|name> show 					Show the idle stop for a box
-  idle-stop <id|name> update <minutes> 		Update the idle stop for a box
-  idle-stop <id|name> delete 				Delete the idle stop for a box
-  `)
+  idle-stop set <id|name> <minutes>     Stop the box after inactivity
+  idle-stop show <id|name>              Show idle-stop settings for a box
+  idle-stop update <id|name> <minutes>  Update idle-stop timeout
+  idle-stop delete <id|name>            Remove idle-stop from a box
+`)
 }
 
 func main() {
@@ -80,6 +87,9 @@ func main() {
 	args := os.Args[2:]
 
 	switch command {
+	case "help", "-h", "--help":
+		usage()
+		os.Exit(0)
 	case "version":
 		cmd.Version(args)
 	case "update":
@@ -120,8 +130,6 @@ func main() {
 		cmd.Forward(args)
 	case "snapshot":
 		cmd.Snapshot(args)
-	case "snapshots":
-		cmd.Snapshots(args)
 	case "template":
 		cmd.Template(args)
 	case "idle-stop":

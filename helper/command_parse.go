@@ -67,7 +67,7 @@ func ParseSingleSnapshotAmiIDArg(args []string, usage string) string {
 	return args[0]
 }
 
-// ParseTemplateDeleteArgs exits with code 1 unless args is exactly <id>.
+// ParseTemplateDeleteArgs exits with code 1 unless args is exactly <name>.
 func ParseTemplateDeleteArgs(args []string, usage string) string {
 	if len(args) != 1 {
 		fmt.Fprintln(os.Stderr, usage)
@@ -76,7 +76,7 @@ func ParseTemplateDeleteArgs(args []string, usage string) string {
 	return args[0]
 }
 
-// ParseTemplateRenameArgs exits with code 1 unless args is exactly <id> <new-name>.
+// ParseTemplateRenameArgs exits with code 1 unless args is exactly <name> <new-name>.
 func ParseTemplateRenameArgs(args []string, usage string) (id, newName string) {
 	if len(args) != 2 {
 		fmt.Fprintln(os.Stderr, usage)

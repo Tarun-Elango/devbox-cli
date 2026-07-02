@@ -21,8 +21,8 @@ func FailBox(cmd string, err error) {
 //
 //	devbox template                                → list available templates
 //	devbox template new <name> [command string]    → create a template
-//	devbox template delete <id>                    → delete a template
-//	devbox template rename <id> <new-name>         → rename a template
+//	devbox template delete <name>                    → delete a template
+//	devbox template rename <name> <new-name>         → rename a template
 func Template(args []string) {
 	if len(args) == 0 {
 		TemplateList(args)
@@ -112,14 +112,14 @@ func TemplateNew(args []string) {
 	}
 }
 
-const templateDeleteUsageLine = "usage: devbox template delete <id>"
+const templateDeleteUsageLine = "usage: devbox template delete <name>"
 
 // TemplateDelete deletes a user-owned startup template.
-// Usage: devbox template delete <id>
+// Usage: devbox template delete <name>
 func TemplateDelete(args []string) {
 	id := strings.TrimSpace(helper.ParseTemplateDeleteArgs(args, templateDeleteUsageLine))
 	if id == "" {
-		fmt.Fprintln(os.Stderr, "error: template id is required")
+		fmt.Fprintln(os.Stderr, "error: template name is required")
 		fmt.Fprintln(os.Stderr, templateDeleteUsageLine)
 		os.Exit(1)
 	}
@@ -142,16 +142,16 @@ func TemplateDelete(args []string) {
 	fmt.Printf("Template %s deleted.\n", id)
 }
 
-const templateRenameUsageLine = "usage: devbox template rename <id> <new-name>"
+const templateRenameUsageLine = "usage: devbox template rename <name> <new-name>"
 
 // TemplateRename updates a user-owned template name.
-// Usage: devbox template rename <id> <new-name>
+// Usage: devbox template rename <name> <new-name>
 func TemplateRename(args []string) {
 	id, newName := helper.ParseTemplateRenameArgs(args, templateRenameUsageLine)
 	id = strings.TrimSpace(id)
 	newName = strings.TrimSpace(newName)
 	if id == "" {
-		fmt.Fprintln(os.Stderr, "error: template id is required")
+		fmt.Fprintln(os.Stderr, "error: template name is required")
 		fmt.Fprintln(os.Stderr, templateRenameUsageLine)
 		os.Exit(1)
 	}

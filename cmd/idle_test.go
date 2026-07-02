@@ -63,10 +63,10 @@ func TestIdleRouterRejectsExtraArgs(t *testing.T) {
 		name string
 		args []string
 	}{
-		{name: "show extra", args: []string{"mybox", "show", "extra"}},
-		{name: "delete extra", args: []string{"mybox", "delete", "extra"}},
-		{name: "in extra", args: []string{"mybox", "in", "30", "extra"}},
-		{name: "update extra", args: []string{"mybox", "update", "30", "extra"}},
+		{name: "show extra", args: []string{"show", "mybox", "extra"}},
+		{name: "delete extra", args: []string{"delete", "mybox", "extra"}},
+		{name: "set extra", args: []string{"set", "mybox", "30", "extra"}},
+		{name: "update extra", args: []string{"update", "mybox", "30", "extra"}},
 	}
 
 	for _, tt := range tests {
