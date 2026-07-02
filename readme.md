@@ -118,7 +118,8 @@ Run `devbox` with no arguments to print usage, or see the table below.
 
 | Command | Notes |
 | --- | --- |
-| `create <name>` | Create a new box |
+| `create <name> [--from <amiId\|name>]` | Create a new box (optionally restore from a snapshot) |
+| `create --template <template> [<template>...] <name> [--from <amiId\|name>]` | Create a box from one or more templates (optionally from snapshot) |
 | `ls` | List all boxes |
 | `status <id-or-name>` | Show details for a box |
 | `rename <id-or-name> <new-name>` | Rename a box |
@@ -132,41 +133,38 @@ Run `devbox` with no arguments to print usage, or see the table below.
 
 | Command | Notes |
 | --- | --- |
-| `ssh [-i key] <id-or-name> [-- <ssh-option>...]` | Open an SSH session to a box (`-i` path to private key; default `~/.ssh/id_ed25519`) |
+| `ssh [-i key] <id-or-name> [-- <ssh-option>...]` | Open an SSH session to a box (`-i` path to private key; default `~/.ssh/id_ed25519`; `--` passes native ssh options before the target, e.g. `-v`, `-A`, `-L 8080:localhost:8080`; for one-off remote commands use `exec`) |
 | `cp [-i key] <source> <dest>` | Copy a file to or from a box (e.g. `devbox cp ./main.go mybox:/home/ec2-user/app/`) |
 | `sync [-i key] [--delete] <source> <dest>` | Sync files or directories to or from a box (`--delete` removes destination files missing from source) |
-| `exec [-i key] [-s] [-t] <id-or-name> -- <command>` | Run a one-off command on a running box (`-s` run through `sh`; `-t` allocate a TTY) |
+| `exec [-i key] [-s] [-t] <id-or-name> -- <command>` | Run a one-off command on a running box (`-s` run as a shell snippet via `sh -lc`; `-t` allocate a pseudo-TTY for sudo or interactive commands) |
 | `forward <id-or-name> <port>` | Forward a port from a box |
 
 ### Snapshots
 
 | Command | Notes |
 | --- | --- |
-| `snapshot <id-or-name> <name>` | Create a snapshot of a box |
-| `snapshots` | List all your snapshots |
-| `snapshots ls <amiId>` | Show details for a specific snapshot |
-| `snapshots delete <amiId>` | Delete a snapshot |
-| `create <name> [--from <snapshot_ami_id>]` | Create a new box (optionally restore from a snapshot) |
+| `snapshot` | List all snapshots |
+| `snapshot create <id-or-name> <name>` | Create a snapshot of a box |
+| `snapshot ls <amiId-or-name>` | Show details for a snapshot |
+| `snapshot delete <amiId-or-name>` | Delete a snapshot |
 
 ### Templates
 
 | Command | Notes |
 | --- | --- |
 | `template` | List available templates |
-| `template new <name> [command string]` | Create a new template with a command to run on startup |
-| `template delete <id>` | Delete a template |
-| `template rename <id> <new-name>` | Rename a template |
-| `create --template <template> [<template>...] <name>` | Create a new box from one or more templates |
-| `create --template <template> [<template>...] <name> --from <snapshot_ami_id>` | Create from templates and restore from a snapshot |
+| `template new <name> [command string]` | Create a template with optional startup command |
+| `template delete <name>` | Delete a template |
+| `template rename <name> <new-name>` | Rename a template |
 
 ### Idle stop
 
 | Command | Notes |
 | --- | --- |
-| `idle-stop <id-or-name> in <minutes>` | Stop the box after `<minutes>` minutes of inactivity |
-| `idle-stop <id-or-name> show` | Show the idle stop for a box |
-| `idle-stop <id-or-name> update <minutes>` | Update the idle stop for a box |
-| `idle-stop <id-or-name> delete` | Delete the idle stop for a box |
+| `idle-stop set <id-or-name> <minutes>` | Stop the box after inactivity |
+| `idle-stop show <id-or-name>` | Show idle-stop settings for a box |
+| `idle-stop update <id-or-name> <minutes>` | Update idle-stop timeout |
+| `idle-stop delete <id-or-name>` | Remove idle-stop from a box |
 
 ## Notes on local config (`~/.devbox`)
 
