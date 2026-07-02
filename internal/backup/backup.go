@@ -1,7 +1,6 @@
 package backup
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -28,9 +27,7 @@ var backupMu sync.Mutex
 // MaybeDaily creates a backup if at least 24 hours have passed since the last one.
 // Best-effort: errors are ignored; backup blocks so short-lived CLI commands do not exit mid-backup.
 func MaybeDaily() {
-	if !isLocalMode() {
-		return
-	}
+
 	dir, err := backupDir()
 	if err != nil {
 		return
@@ -44,10 +41,7 @@ func MaybeDaily() {
 // BeforeConfigSave copies the current config and db before persisting changes in local mode.
 // Blocks until the backup finishes so the snapshot is the previous version, not a race.
 // Best-effort: errors are ignored.
-func BeforeConfigSave(mode string) {
-	if mode != "" && mode != "local" {
-		return
-	}
+func BeforeConfigSave() {
 	dir, err := backupDir()
 	if err != nil {
 		return
@@ -59,27 +53,6 @@ func runLocked(dir string) {
 	backupMu.Lock()
 	defer backupMu.Unlock()
 	_ = create(dir)
-}
-
-func isLocalMode() bool {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return false
-	}
-	data, err := os.ReadFile(filepath.Join(home, devboxDir, configFile))
-	if os.IsNotExist(err) {
-		return true
-	}
-	if err != nil {
-		return false
-	}
-	var cfg struct {
-		Mode string `json:"mode"`
-	}
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return false
-	}
-	return cfg.Mode == "" || cfg.Mode == "local"
 }
 
 // get the path to the backup directory

@@ -97,10 +97,10 @@ func parseDotEnv(path string) map[string]string {
 
 // Config holds the persistent CLI configuration stored at ~/.devbox/config.json.
 type Config struct {
-	Token        string    `json:"token"`
-	RefreshToken string    `json:"refresh_token"`
-	TokenExpiry  time.Time `json:"token_expiry"`
-	ServerURL    string    `json:"serverUrl"`
+	Token             string    `json:"token"`
+	RefreshToken      string    `json:"refresh_token"`
+	TokenExpiry       time.Time `json:"token_expiry"`
+	ServerURL         string    `json:"serverUrl"`
 	AwsSecret         string    `json:"awsSecret"`
 	AwsAccessKey      string    `json:"awsAccessKey"`
 	AwsRegion         string    `json:"awsRegion"`
@@ -155,7 +155,7 @@ func Load() (*Config, error) {
 
 // Save writes cfg to ~/.devbox/config.json, creating the directory if needed.
 func Save(cfg *Config) error {
-	backup.BeforeConfigSave("local") // we dont care about cloud
+	backup.BeforeConfigSave()
 	path, err := ConfigPath()
 	if err != nil {
 		return err
