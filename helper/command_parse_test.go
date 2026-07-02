@@ -327,13 +327,13 @@ func TestParseSnapshotArgsRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseSnapshotArgs(tt.args, "usage: devbox snapshot <id|name> <name>")
+			ParseSnapshotArgs(tt.args, "usage: devbox snapshot create <id|name> <name>")
 		})
 	}
 }
 
 func TestParseSnapshotArgsAcceptsTwoArgs(t *testing.T) {
-	ref, snapshotName := ParseSnapshotArgs([]string{"mybox", " snap-name "}, "usage: devbox snapshot <id|name> <name>")
+	ref, snapshotName := ParseSnapshotArgs([]string{"mybox", " snap-name "}, "usage: devbox snapshot create <id|name> <name>")
 	if ref != "mybox" || snapshotName != "snap-name" {
 		t.Fatalf("ParseSnapshotArgs() = (%q, %q), want (%q, %q)", ref, snapshotName, "mybox", "snap-name")
 	}
@@ -364,13 +364,13 @@ func TestParseSingleSnapshotAmiIDArgRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseSingleSnapshotAmiIDArg(tt.args, "usage: devbox snapshots ls <amiId>")
+			ParseSingleSnapshotAmiIDArg(tt.args, "usage: devbox snapshot ls <amiId>")
 		})
 	}
 }
 
 func TestParseSingleSnapshotAmiIDArgAcceptsOneArg(t *testing.T) {
-	got := ParseSingleSnapshotAmiIDArg([]string{"ami-12345678"}, "usage: devbox snapshots ls <amiId>")
+	got := ParseSingleSnapshotAmiIDArg([]string{"ami-12345678"}, "usage: devbox snapshot ls <amiId>")
 	if got != "ami-12345678" {
 		t.Fatalf("ParseSingleSnapshotAmiIDArg() = %q, want %q", got, "ami-12345678")
 	}
@@ -401,13 +401,13 @@ func TestParseTemplateDeleteArgsRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseTemplateDeleteArgs(tt.args, "usage: devbox template delete <id>")
+			ParseTemplateDeleteArgs(tt.args, "usage: devbox template delete <name>")
 		})
 	}
 }
 
 func TestParseTemplateDeleteArgsAcceptsOneArg(t *testing.T) {
-	got := ParseTemplateDeleteArgs([]string{"my-template"}, "usage: devbox template delete <id>")
+	got := ParseTemplateDeleteArgs([]string{"my-template"}, "usage: devbox template delete <name>")
 	if got != "my-template" {
 		t.Fatalf("ParseTemplateDeleteArgs() = %q, want %q", got, "my-template")
 	}
@@ -439,13 +439,13 @@ func TestParseTemplateRenameArgsRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseTemplateRenameArgs(tt.args, "usage: devbox template rename <id> <new-name>")
+			ParseTemplateRenameArgs(tt.args, "usage: devbox template rename <name> <new-name>")
 		})
 	}
 }
 
 func TestParseTemplateRenameArgsAcceptsTwoArgs(t *testing.T) {
-	id, newName := ParseTemplateRenameArgs([]string{"my-template", " new-name "}, "usage: devbox template rename <id> <new-name>")
+	id, newName := ParseTemplateRenameArgs([]string{"my-template", " new-name "}, "usage: devbox template rename <name> <new-name>")
 	if id != "my-template" || newName != " new-name " {
 		t.Fatalf("ParseTemplateRenameArgs() = (%q, %q), want (%q, %q)", id, newName, "my-template", " new-name ")
 	}

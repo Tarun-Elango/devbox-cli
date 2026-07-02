@@ -14,59 +14,59 @@ import (
 	"devbox-cli/service"
 )
 
-const idleStopUsage = "usage: devbox idle-stop <id|name> [in <minutes> | show | update <minutes> | delete]"
+const idleStopUsage = "usage: devbox idle-stop [set <id|name> <minutes> | show <id|name> | update <id|name> <minutes> | delete <id|name>]"
 
 // idleStopExit is os.Exit by default; tests replace it to capture exit codes.
 var idleStopExit = os.Exit
 
 func IdleRouter(args []string) {
-	if len(args) < 2 {
+	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, idleStopUsage)
 		idleStopExit(1)
+		return
 	}
 
-	ref := args[0] // box id or name
-	if ref == "" {
-		fmt.Fprintln(os.Stderr, "error: box id or name is required")
-		idleStopExit(1)
-	}
-	switch args[1] {
-	case "in":
-		if len(args) != 3 {
-			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> in <minutes>")
+	sub := args[0]
+	rest := args[1:]
+
+	switch sub {
+	case "set":
+		if len(rest) != 2 {
+			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop set <id|name> <minutes>")
 			idleStopExit(1)
+			return
 		}
-		Idle(args)
+		idleSet(rest[0], rest[1])
 	case "show":
-		if len(args) != 2 {
-			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> show")
+		if len(rest) != 1 {
+			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop show <id|name>")
 			idleStopExit(1)
+			return
 		}
-		showIdleStop(args)
+		showIdleStop(rest[0])
 	case "update":
-		if len(args) != 3 {
-			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> update <minutes>")
+		if len(rest) != 2 {
+			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop update <id|name> <minutes>")
 			idleStopExit(1)
+			return
 		}
-		updateIdleStop(args)
+		updateIdleStop(rest[0], rest[1])
 	case "delete":
-		if len(args) != 2 {
-			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop <id|name> delete")
+		if len(rest) != 1 {
+			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop delete <id|name>")
 			idleStopExit(1)
+			return
 		}
-		deleteIdleStop(args)
+		deleteIdleStop(rest[0])
 	default:
-		fmt.Fprintf(os.Stderr, "idle-stop: unknown sub-command %q\n", args[1])
+		fmt.Fprintf(os.Stderr, "idle-stop: unknown sub-command %q\n", sub)
 		fmt.Fprintln(os.Stderr, idleStopUsage)
 		idleStopExit(1)
 	}
-
 }
 
-func Idle(args []string) {
-	ref := args[0] // box id or name
-
-	minutesInt, err := strconv.Atoi(args[2])
+func idleSet(ref, minutesStr string) {
+	minutesInt, err := strconv.Atoi(minutesStr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error: minutes must be an integer")
 		os.Exit(1)
@@ -225,9 +225,7 @@ sudo systemctl daemon-reload
 sudo systemctl reset-failed devbox-idle-stop.service 2>/dev/null || true
 sudo systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
 */
-func deleteIdleStop(args []string) {
-	ref := args[0]
-
+func deleteIdleStop(ref string) {
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	target, err := helper.ResolveBoxTarget(rt, ref)
@@ -337,10 +335,8 @@ systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
 }
 
 // update for a specific instance
-func updateIdleStop(args []string) {
-	ref := args[0]
-
-	minutesInt, err := strconv.Atoi(args[2])
+func updateIdleStop(ref, minutesStr string) {
+	minutesInt, err := strconv.Atoi(minutesStr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error: minutes must be an integer")
 		os.Exit(1)
@@ -365,7 +361,7 @@ func updateIdleStop(args []string) {
 		os.Exit(1)
 	}
 	if !inst.IdleStopMinutes.Valid {
-		fmt.Fprintln(os.Stderr, "error: idle-stop is not set — use 'devbox idle-stop <id|name> in <minutes>' first")
+		fmt.Fprintln(os.Stderr, "error: idle-stop is not set — use 'devbox idle-stop set <id|name> <minutes>' first")
 		os.Exit(1)
 	}
 
@@ -450,9 +446,7 @@ date +%%s > /var/lib/devbox/last-activity
 }
 
 // show for a specific instance
-func showIdleStop(args []string) {
-	ref := args[0]
-
+func showIdleStop(ref string) {
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	target, err := helper.ResolveBoxTarget(rt, ref)
