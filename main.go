@@ -13,6 +13,7 @@ func usage() {
 
 Commands:
   version             Show the devbox CLI version
+  update              Check for a newer release and install it (asks for confirmation)
 
   setup               Configure/Change AWS credentials and region - stored in ~/.devbox/config.json
   clear-creds         Clear saved AWS credentials from ~/.devbox/config.json
@@ -81,6 +82,8 @@ func main() {
 	switch command {
 	case "version":
 		cmd.Version(args)
+	case "update":
+		cmd.Update(args)
 	case "setup":
 		cmd.Setup(args)
 	case "clear-creds":

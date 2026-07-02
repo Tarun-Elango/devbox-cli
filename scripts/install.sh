@@ -53,14 +53,17 @@ chmod +x "$tmp"
 
 # --- Install ---
 # Copy the binary into place
-mkdir -p "$install_dir"
-install -m 755 "$tmp" "${install_dir}/devbox"
-echo "Installed devbox to ${install_dir}/devbox"
+mkdir -p "$install_dir"  # create the directory if it doesn't exist
+install -m 755 "$tmp" "${install_dir}/devbox"  # copy the binary into the directory
+echo "Installed devbox to ${install_dir}/devbox" # print the path of the binary
 
 # --- PATH setup ---
-# (config_home / config_shell were resolved above, alongside install_dir)
+# Purpose: check if the install directory is usable, if not asks the 
+# user to add it their shell config, or tells the user to add it manually
 
-is_system_bin_dir() {
+
+# check if the install directory is a system directory, if so, skip the path setup
+is_system_bin_dir() { 
   case "$1" in
     /usr/local/bin | /usr/bin | /usr/local/sbin | /usr/sbin) return 0 ;;
   esac
@@ -74,6 +77,8 @@ if is_system_bin_dir "${install_dir}"; then
   exit 0
 fi
 
+# if the user is running as root without sudo, skip the path setup
+# tells the user to add it manually
 if [ "${EUID}" -eq 0 ] && [ -z "${SUDO_USER:-}" ]; then
   echo "Running as root without sudo; skipping shell config updates."
   echo "Add this to your shell config manually:"
@@ -86,6 +91,8 @@ if echo ":${PATH}:" | grep -q ":${install_dir}:"; then
   exit 0
 fi
 
+# checks if the install directory is already configured in the shell config
+# if so, skips the path setup
 path_configured_in_rc() {
   local rc="$1"
   [ -f "$rc" ] || return 1
@@ -140,6 +147,7 @@ if path_configured_in_rc "${rc_file}"; then
   exit 0
 fi
 
+# ask the user if they want to add it to their shell config
 if [ -t 0 ]; then
   printf 'Add %s to PATH in %s? [y/N] ' "${install_dir}" "${rc_file}"
   read -r reply
@@ -157,6 +165,7 @@ else
   exit 0
 fi
 
+# add the install directory to the shell config
 {
   echo ""
   echo "# devbox"
