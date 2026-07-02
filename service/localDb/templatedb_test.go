@@ -146,18 +146,18 @@ func TestSeedDefaultTemplates(t *testing.T) {
 		t.Fatalf("got %d templates, want %d", len(records), len(defaultTemplates))
 	}
 
-	python, err := db.GetTemplateByNameAndUserID("python", LocalUserID)
+	python, err := db.GetTemplateByNameAndUserID("python3", LocalUserID)
 	if err != nil {
-		t.Fatalf("get python template: %v", err)
+		t.Fatalf("get python3 template: %v", err)
 	}
 	if !strings.Contains(python.StartupScript.String, "dnf install -y python3") {
-		t.Fatalf("unexpected python script: %q", python.StartupScript.String)
+		t.Fatalf("unexpected python3 script: %q", python.StartupScript.String)
 	}
 	if !python.Description.Valid || python.Description.String == "" {
-		t.Fatal("expected python template description")
+		t.Fatal("expected python3 template description")
 	}
 
-	// Re-seeding must not duplicate or overwrite user-visible rows.
+	// Re-seeding syncs script/description from code but must not duplicate rows.
 	if err := db.seedDefaultTemplates(); err != nil {
 		t.Fatalf("re-seed default templates: %v", err)
 	}
@@ -169,14 +169,14 @@ func TestSeedDefaultTemplates(t *testing.T) {
 		t.Fatalf("after re-seed got %d templates, want %d", len(records), len(defaultTemplates))
 	}
 
-	if err := db.DeleteTemplateByNameAndUserID("python", LocalUserID); err != nil {
-		t.Fatalf("delete python template: %v", err)
+	if err := db.DeleteTemplateByNameAndUserID("python3", LocalUserID); err != nil {
+		t.Fatalf("delete python3 template: %v", err)
 	}
 	if err := db.seedDefaultTemplates(); err != nil {
 		t.Fatalf("seed after delete: %v", err)
 	}
-	if _, err := db.GetTemplateByNameAndUserID("python", LocalUserID); err == nil {
-		t.Fatal("expected deleted python template to stay deleted after re-seed")
+	if _, err := db.GetTemplateByNameAndUserID("python3", LocalUserID); err == nil {
+		t.Fatal("expected deleted python3 template to stay deleted after re-seed")
 	}
 	records, err = db.ListTemplatesByUserID(LocalUserID)
 	if err != nil {
@@ -184,5 +184,38 @@ func TestSeedDefaultTemplates(t *testing.T) {
 	}
 	if len(records) != len(defaultTemplates)-1 {
 		t.Fatalf("after delete and re-seed got %d templates, want %d", len(records), len(defaultTemplates)-1)
+	}
+}
+
+func TestSeedDefaultTemplatesSyncsScriptUpdates(t *testing.T) {
+	db := newTestDB(t)
+
+	if err := db.seedDefaultTemplates(); err != nil {
+		t.Fatalf("seed default templates: %v", err)
+	}
+
+	_, err := db.conn.Exec(`
+		UPDATE templates SET startup_script = ? WHERE name = ? AND user_id = ?`,
+		"echo stale",
+		"python3",
+		LocalUserID,
+	)
+	if err != nil {
+		t.Fatalf("stale python3 script: %v", err)
+	}
+
+	if err := db.seedDefaultTemplates(); err != nil {
+		t.Fatalf("re-seed default templates: %v", err)
+	}
+
+	python, err := db.GetTemplateByNameAndUserID("python3", LocalUserID)
+	if err != nil {
+		t.Fatalf("get python3 template: %v", err)
+	}
+	if strings.Contains(python.StartupScript.String, "echo stale") {
+		t.Fatalf("expected python3 script resynced from defaults, got %q", python.StartupScript.String)
+	}
+	if !strings.Contains(python.StartupScript.String, "dnf install -y python3") {
+		t.Fatalf("unexpected python3 script after sync: %q", python.StartupScript.String)
 	}
 }

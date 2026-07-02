@@ -97,6 +97,28 @@ func (db *DB) InsertTemplate(id, userID, name, startupScript string) error {
 	return nil
 }
 
+// GetTemplateByID returns the template row for id, or sql.ErrNoRows if not found.
+func (db *DB) GetTemplateByID(id string) (*TemplateRecord, error) {
+	var r TemplateRecord
+	err := db.conn.QueryRow(`
+		SELECT id, user_id, name, description, startup_script, created_at
+		FROM templates
+		WHERE id = ?`,
+		id,
+	).Scan(
+		&r.ID,
+		&r.UserID,
+		&r.Name,
+		&r.Description,
+		&r.StartupScript,
+		&r.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
 // GetTemplateByNameAndUserID returns the template row for name owned by userID,
 // or sql.ErrNoRows if not found.
 func (db *DB) GetTemplateByNameAndUserID(name, userID string) (*TemplateRecord, error) {

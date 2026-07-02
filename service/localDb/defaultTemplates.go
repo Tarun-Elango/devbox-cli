@@ -15,11 +15,12 @@ type defaultTemplate struct {
 
 // Built-in startup templates for Amazon Linux 2023 (dnf). Each ID is seeded at most
 // once; default_template_seeds records offerings so user deletes are not restored on Open().
+// When a seeded row still exists, description and startup_script are synced from this file.
 var defaultTemplates = []defaultTemplate{
 	// Languages
 	{
 		ID:          "00000000-0000-0000-0001-000000000001",
-		Name:        "python",
+		Name:        "python3",
 		Description: "Python 3 and pip (Amazon Linux 2023)",
 		CreatedAt:   "1970-01-01 00:00:01",
 		Script: `command -v python3 >/dev/null 2>&1 || dnf install -y python3 python3-pip
@@ -27,7 +28,7 @@ var defaultTemplates = []defaultTemplate{
 	},
 	{
 		ID:          "00000000-0000-0000-0001-000000000002",
-		Name:        "java",
+		Name:        "java21",
 		Description: "OpenJDK 21 (Amazon Corretto) on Amazon Linux 2023",
 		CreatedAt:   "1970-01-01 00:00:02",
 		Script: `command -v javac >/dev/null 2>&1 || dnf install -y java-21-amazon-corretto-devel
@@ -67,7 +68,7 @@ var defaultTemplates = []defaultTemplate{
 	},
 	{
 		ID:          "00000000-0000-0000-0001-000000000007",
-		Name:        "node",
+		Name:        "node22",
 		Description: "Node.js 22 and npm from Amazon Linux 2023 repos",
 		CreatedAt:   "1970-01-01 00:00:07",
 		Script: `command -v node >/dev/null 2>&1 || dnf install -y nodejs22 nodejs22-npm
@@ -75,8 +76,8 @@ var defaultTemplates = []defaultTemplate{
 	},
 	{
 		ID:          "00000000-0000-0000-0001-000000000008",
-		Name:        "dotnet",
-		Description: ".NET SDK on Amazon Linux 2023",
+		Name:        "dotnet8",
+		Description: ".NET 8 SDK on Amazon Linux 2023",
 		CreatedAt:   "1970-01-01 00:00:08",
 		Script: `command -v dotnet >/dev/null 2>&1 || dnf install -y dotnet-sdk-8.0
 `,
@@ -93,7 +94,7 @@ var defaultTemplates = []defaultTemplate{
 	},
 	{
 		ID:          "00000000-0000-0000-0001-000000000011",
-		Name:        "npm",
+		Name:        "npm22",
 		Description: "npm via Node.js 22 on Amazon Linux 2023",
 		CreatedAt:   "1970-01-01 00:00:11",
 		Script: `command -v npm >/dev/null 2>&1 || dnf install -y nodejs22 nodejs22-npm
@@ -113,20 +114,76 @@ fi
 	},
 	{
 		ID:          "00000000-0000-0000-0001-000000000013",
-		Name:        "pnpm",
-		Description: "pnpm via npm (installs Node.js 22 if needed)",
+		Name:        "pnpm22",
+		Description: "pnpm via npm for ec2-user (installs Node.js 22 if needed)",
 		CreatedAt:   "1970-01-01 00:00:13",
-		Script: `command -v npm >/dev/null 2>&1 || dnf install -y nodejs22 nodejs22-npm
-command -v pnpm >/dev/null 2>&1 || npm install -g pnpm
+		Script: `command -v node >/dev/null 2>&1 || dnf install -y nodejs22 nodejs22-npm
+if ! runuser -u ec2-user -- bash -lc 'command -v pnpm >/dev/null 2>&1'; then
+  runuser -u ec2-user -- bash -lc 'npm install -g pnpm'
+  grep -q '\.local/bin' /home/ec2-user/.bashrc 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/ec2-user/.bashrc
+fi
 `,
 	},
 	{
 		ID:          "00000000-0000-0000-0001-000000000014",
-		Name:        "yarn",
-		Description: "Yarn via npm (installs Node.js 22 if needed)",
+		Name:        "yarn22",
+		Description: "Yarn via npm for ec2-user (installs Node.js 22 if needed)",
 		CreatedAt:   "1970-01-01 00:00:14",
-		Script: `command -v npm >/dev/null 2>&1 || dnf install -y nodejs22 nodejs22-npm
-command -v yarn >/dev/null 2>&1 || npm install -g yarn
+		Script: `command -v node >/dev/null 2>&1 || dnf install -y nodejs22 nodejs22-npm
+if ! runuser -u ec2-user -- bash -lc 'command -v yarn >/dev/null 2>&1'; then
+  runuser -u ec2-user -- bash -lc 'npm install -g yarn'
+  grep -q '\.local/bin' /home/ec2-user/.bashrc 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/ec2-user/.bashrc
+fi
+`,
+	},
+
+	// Tools
+	{
+		ID:          "00000000-0000-0000-0001-000000000015",
+		Name:        "git",
+		Description: "Git version control on Amazon Linux 2023",
+		CreatedAt:   "1970-01-01 00:00:15",
+		Script: `command -v git >/dev/null 2>&1 || dnf install -y git
+`,
+	},
+	{
+		ID:          "00000000-0000-0000-0001-000000000016",
+		Name:        "docker",
+		Description: "Docker engine on Amazon Linux 2023 (ec2-user in docker group)",
+		CreatedAt:   "1970-01-01 00:00:16",
+		Script: `if ! command -v docker >/dev/null 2>&1; then
+  dnf install -y docker
+  systemctl enable --now docker
+fi
+getent group docker >/dev/null || groupadd docker
+usermod -aG docker ec2-user 2>/dev/null || true
+`,
+	},
+	{
+		ID:          "00000000-0000-0000-0001-000000000017",
+		Name:        "uv",
+		Description: "uv Python package manager for ec2-user",
+		CreatedAt:   "1970-01-01 00:00:17",
+		Script: `if ! runuser -u ec2-user -- bash -lc 'command -v uv >/dev/null 2>&1'; then
+  runuser -u ec2-user -- bash -lc 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+  grep -q '\.local/bin' /home/ec2-user/.bashrc 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/ec2-user/.bashrc
+fi
+`,
+	},
+	{
+		ID:          "00000000-0000-0000-0001-000000000018",
+		Name:        "maven",
+		Description: "Apache Maven on Amazon Linux 2023",
+		CreatedAt:   "1970-01-01 00:00:18",
+		Script: `command -v mvn >/dev/null 2>&1 || dnf install -y maven
+`,
+	},
+	{
+		ID:          "00000000-0000-0000-0001-000000000019",
+		Name:        "gradle",
+		Description: "Gradle build tool on Amazon Linux 2023",
+		CreatedAt:   "1970-01-01 00:00:19",
+		Script: `command -v gradle >/dev/null 2>&1 || dnf install -y gradle
 `,
 	},
 
@@ -162,11 +219,14 @@ fi
 	},
 	{
 		ID:          "00000000-0000-0000-0001-000000000022",
-		Name:        "codex",
-		Description: "OpenAI Codex CLI via npm (installs Node.js 22 if needed)",
+		Name:        "codex22",
+		Description: "OpenAI Codex CLI via npm for ec2-user (installs Node.js 22 if needed)",
 		CreatedAt:   "1970-01-01 00:00:22",
-		Script: `command -v npm >/dev/null 2>&1 || dnf install -y nodejs22 nodejs22-npm
-command -v codex >/dev/null 2>&1 || npm install -g @openai/codex
+		Script: `command -v node >/dev/null 2>&1 || dnf install -y nodejs22 nodejs22-npm
+if ! runuser -u ec2-user -- bash -lc 'command -v codex >/dev/null 2>&1'; then
+  runuser -u ec2-user -- bash -lc 'npm install -g @openai/codex'
+  grep -q '\.local/bin' /home/ec2-user/.bashrc 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/ec2-user/.bashrc
+fi
 `,
 	},
 	{
@@ -203,6 +263,10 @@ func (db *DB) seedDefaultTemplates() error {
 			return fmt.Errorf("check seed state for %s: %w", tmpl.Name, err)
 		}
 		if seeded {
+			// sync the template with the built-in template, incase content has changed
+			if err := db.syncDefaultTemplate(tmpl); err != nil {
+				return fmt.Errorf("sync template %s: %w", tmpl.Name, err)
+			}
 			continue
 		}
 
@@ -238,6 +302,44 @@ func (db *DB) seedDefaultTemplates() error {
 		if err := tx.Commit(); err != nil {
 			return fmt.Errorf("seed template %s: %w", tmpl.Name, err)
 		}
+	}
+	return nil
+}
+
+// syncDefaultTemplate updates name, description, and startup_script when the built-in row
+// still exists. User-deleted templates are left deleted.
+func (db *DB) syncDefaultTemplate(tmpl defaultTemplate) error {
+	record, err := db.GetTemplateByID(tmpl.ID)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if record.UserID != LocalUserID {
+		return nil
+	}
+
+	wantDescription := tmpl.Description
+	wantScript := tmpl.Script
+	if record.Name == tmpl.Name &&
+		nullStringValue(record.Description) == wantDescription &&
+		nullStringValue(record.StartupScript) == wantScript {
+		return nil
+	}
+
+	_, err = db.conn.Exec(`
+		UPDATE templates
+		SET name = ?, description = ?, startup_script = ?
+		WHERE id = ? AND user_id = ?`,
+		tmpl.Name,
+		nullIfEmpty(wantDescription),
+		nullIfEmpty(wantScript),
+		tmpl.ID,
+		LocalUserID,
+	)
+	if err != nil {
+		return fmt.Errorf("update template content: %w", err)
 	}
 	return nil
 }
