@@ -480,7 +480,7 @@ func TestClearCreds(t *testing.T) {
 		if err := json.Unmarshal(data, &raw); err != nil {
 			t.Fatal(err)
 		}
-		raw["serverUrl"] = json.RawMessage(`"https://example.test"`)
+		raw["mode"] = json.RawMessage(`"local"`)
 		updated, err := json.MarshalIndent(raw, "", "  ")
 		if err != nil {
 			t.Fatal(err)
@@ -498,8 +498,8 @@ func TestClearCreds(t *testing.T) {
 		})
 
 		cfg := loadTestConfig(t)
-		if cfg.ServerURL != "https://example.test" {
-			t.Fatalf("ServerURL = %q, want preserved custom server URL", cfg.ServerURL)
+		if cfg.Mode != "local" {
+			t.Fatalf("Mode = %q, want preserved mode field", cfg.Mode)
 		}
 		if cfg.AwsSecret != "" || cfg.AwsAccessKey != "" {
 			t.Fatalf("config = %+v, want only credentials cleared", cfg)

@@ -81,21 +81,3 @@ func ClearAWSCredentials() error {
 	fmt.Println("AWS credentials cleared from ~/.devbox/config.json.")
 	return nil
 }
-
-// EnsureLocalModeAndGetCurrMode returns the configured mode. If unset, it
-// persists "local" and returns "local".
-func EnsureLocalModeAndGetCurrMode() (string, error) {
-	// as we set the mode to local in saveAWSCredentials, we can just return local
-	// cfg, err := config.Load()
-	// if err != nil {
-	// 	return "", err
-	// }
-	// if cfg.Mode != "" {
-	// 	return cfg.Mode, nil
-	// }
-	// cfg.Mode = "local"
-	// if err := config.Save(cfg); err != nil {
-	// 	return "", err
-	// }
-	return "local", nil
-}
