@@ -158,6 +158,7 @@ func CreateTemplate(args []string) {
 	} else {
 		fmt.Printf("Creating box %q from templates %s...\n", name, strings.Join(templateRefs, ", "))
 	}
+	fmt.Println("Note: older startup scripts may not fully install — after SSH, verify your tools/libraries are present.")
 
 	var b Box
 
