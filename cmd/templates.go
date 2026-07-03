@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -13,7 +14,7 @@ func TemplateList(args []string) {
 	helper.RejectExtraArgs(args, "usage: devbox template")
 
 	var templates []*service.Template
-	fmt.Println("Listing local templates")
+
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	templates, err := rt.ListTemplates(service.LocalUserID)
@@ -27,11 +28,27 @@ func TemplateList(args []string) {
 		return
 	}
 
+	if err := helper.WriteStdoutMaybePaged(buildTemplateListOutput(templates)); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// buildTemplateListOutput Builds the entire table as one string before anything is printed
+func buildTemplateListOutput(templates []*service.Template) string {
+	var b strings.Builder
+	b.WriteString("Listing local templates\n")
+	writeTemplateTable(&b, templates)
+	return b.String()
+}
+
+// writeTemplateTable: creates header and separator
+func writeTemplateTable(w io.Writer, templates []*service.Template) {
 	const colSep = "  |  "
-	fmt.Printf("%-20s%s%s\n", "TEMPLATE", colSep, "STARTUP SCRIPT")
-	fmt.Println(strings.Repeat("-", 60))
+	fmt.Fprintf(w, "%-20s%s%s\n", "TEMPLATE", colSep, "STARTUP SCRIPT")
+	fmt.Fprintln(w, strings.Repeat("-", 60))
 	for _, t := range templates {
-		printTemplateRow(t, colSep)
+		writeTemplateRow(w, t, colSep) // one row per template
 	}
 }
 
@@ -63,22 +80,17 @@ func TemplateSearch(args []string) { // args should be a string of the query
 		return
 	}
 
-	// print the templates matching the query
-	const colSep = "  |  "
 	fmt.Printf("Templates matching %q:\n", query)
-	fmt.Printf("%-20s%s%s\n", "TEMPLATE", colSep, "STARTUP SCRIPT")
-	fmt.Println(strings.Repeat("-", 60))
-	for _, t := range templates {
-		printTemplateRow(t, colSep)
-	}
+	writeTemplateTable(os.Stdout, templates)
 }
 
-func printTemplateRow(t *service.Template, colSep string) {
+// writeTemplateRow: writes one row per template
+func writeTemplateRow(w io.Writer, t *service.Template, colSep string) {
 	ref := t.ID
 	if ref == "" {
 		ref = t.Name
 	}
-	fmt.Printf("%-20s%s%s\n", ref, colSep, formatTemplateScript(t.StartupScript))
+	fmt.Fprintf(w, "%-20s%s%s\n", ref, colSep, formatTemplateScript(t.StartupScript))
 }
 
 func formatTemplateScript(s string) string {
