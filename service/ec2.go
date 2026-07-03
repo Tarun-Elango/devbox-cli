@@ -17,7 +17,7 @@ import (
 	localDb "devbox-cli/service/localDb"
 )
 
-// EC2 defaults — mirrors Lighthouse application.properties.
+// EC2 defaults — mirrors Lighthouse application.properties..
 const (
 	defaultAmiID           = "ami-096f34d377a72cea5" // amazon linux 2023 ami
 	defaultSecurityGroupID = ""                      // we dont have one, so we will default to creating in the code
