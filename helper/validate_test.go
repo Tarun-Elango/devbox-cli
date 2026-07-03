@@ -78,16 +78,15 @@ func TestParseNameAndFromFlag(t *testing.T) {
 		{name: "no name or from", args: []string{}, wantName: "", wantFromSnapshot: "", wantErr: true},
 		{name: "name only", args: []string{"mybox"}, wantName: "mybox", wantFromSnapshot: "", wantErr: false},
 		{name: "name and from", args: []string{"mybox", "--from", "ami-1234567890"}, wantName: "mybox", wantFromSnapshot: "ami-1234567890"},
+		{name: "name and from by snapshot name", args: []string{"mybox", "--from", "before-upgrade"}, wantName: "mybox", wantFromSnapshot: "before-upgrade"},
 		{name: "--from before name", args: []string{"--from", "ami-1234567890", "mybox"}, wantErr: true},
 		// --from with nothing after it
 		{name: "--from missing value", args: []string{"mybox", "--from"}, wantErr: true},
-		// invalid AMI format
-		{name: "invalid ami", args: []string{"mybox", "--from", "not-an-ami"}, wantErr: true},
-		// AMI too short (needs ami- + 8–17 hex chars)
-		{name: "ami too short", args: []string{"mybox", "--from", "ami-123"}, wantErr: true},
-		// empty / whitespace-only AMI
-		{name: "empty ami", args: []string{"mybox", "--from", ""}, wantErr: true},
-		{name: "whitespace ami", args: []string{"mybox", "--from", "   "}, wantErr: true},
+		// snapshot refs are resolved later; non-ami strings are valid names at parse time
+		{name: "from snapshot name", args: []string{"mybox", "--from", "not-an-ami"}, wantName: "mybox", wantFromSnapshot: "not-an-ami"},
+		// empty / whitespace-only ref
+		{name: "empty ref", args: []string{"mybox", "--from", ""}, wantErr: true},
+		{name: "whitespace ref", args: []string{"mybox", "--from", "   "}, wantErr: true},
 		// next token is another flag
 		{name: "ami is a flag", args: []string{"mybox", "--from", "--other"}, wantErr: true},
 		{name: "unknown flag", args: []string{"mybox", "--foo"}, wantErr: true},
@@ -100,8 +99,8 @@ func TestParseNameAndFromFlag(t *testing.T) {
 		{name: "uppercase ami", args: []string{"mybox", "--from", "AMI-1234567890"}, wantName: "mybox", wantFromSnapshot: "AMI-1234567890"},
 		{name: "ami min length", args: []string{"mybox", "--from", "ami-12345678"}, wantName: "mybox", wantFromSnapshot: "ami-12345678"},
 		{name: "ami max length", args: []string{"mybox", "--from", "ami-12345678901234567"}, wantName: "mybox", wantFromSnapshot: "ami-12345678901234567"},
-		{name: "ami too long", args: []string{"mybox", "--from", "ami-123456789012345678"}, wantErr: true},
-		{name: "ami non-hex", args: []string{"mybox", "--from", "ami-1234567g"}, wantErr: true},
+		{name: "ami too long accepted as name ref", args: []string{"mybox", "--from", "ami-123456789012345678"}, wantName: "mybox", wantFromSnapshot: "ami-123456789012345678"},
+		{name: "ami non-hex accepted as name ref", args: []string{"mybox", "--from", "ami-1234567g"}, wantName: "mybox", wantFromSnapshot: "ami-1234567g"},
 		{name: "whitespace name before from", args: []string{"   ", "--from", "ami-12345678"}, wantErr: true},
 		{name: "typo --f suggests from", args: []string{"mybox", "--f"}, wantErr: true},
 		{name: "typo --fo suggests from", args: []string{"mybox", "--fo"}, wantErr: true},
@@ -142,16 +141,18 @@ func TestParseCreateTemplateArgs(t *testing.T) {
 		{name: "one template and name", args: []string{"web", "mybox"}, wantTemplates: []string{"web"}, wantName: "mybox"},
 		{name: "two templates and name", args: []string{"web", "db", "mybox"}, wantTemplates: []string{"web", "db"}, wantName: "mybox"},
 		{name: "with from at end", args: []string{"web", "mybox", "--from", ami}, wantTemplates: []string{"web"}, wantName: "mybox", wantFromSnapshot: ami},
+		{name: "with from snapshot name", args: []string{"web", "mybox", "--from", "before-upgrade"}, wantTemplates: []string{"web"}, wantName: "mybox", wantFromSnapshot: "before-upgrade"},
 		{name: "from in middle rejected", args: []string{"web", "--from", ami, "mybox"}, wantErr: true, wantSubstr: "unexpected extra arguments"},
 		{name: "missing template and name", args: []string{}, wantErr: true, wantSubstr: "at least one template"},
 		{name: "only template", args: []string{"web"}, wantErr: true, wantSubstr: "at least one template"},
 		{name: "only from", args: []string{"--from", ami}, wantErr: true, wantSubstr: "at least one template"},
-		{name: "from missing value", args: []string{"web", "mybox", "--from"}, wantErr: true, wantSubstr: "--from requires a snapshot AMI ID"},
+		{name: "from missing value", args: []string{"web", "mybox", "--from"}, wantErr: true, wantSubstr: "--from requires a snapshot ami id or name"},
 		{name: "extra after from", args: []string{"web", "mybox", "--from", ami, "extra"}, wantErr: true, wantSubstr: "unexpected extra arguments"},
 		{name: "duplicate from", args: []string{"web", "mybox", "--from", ami, "--from", ami}, wantErr: true, wantSubstr: "unexpected extra arguments"},
 		{name: "unknown flag", args: []string{"web", "mybox", "--foo"}, wantErr: true, wantSubstr: "unknown flag"},
 		{name: "flag-like template", args: []string{"web", "--bad"}, wantErr: true, wantSubstr: "unknown flag"},
-		{name: "invalid ami", args: []string{"web", "mybox", "--from", "not-an-ami"}, wantErr: true, wantSubstr: "invalid snapshot AMI ID"},
+		{name: "invalid ref flag", args: []string{"web", "mybox", "--from", "--other"}, wantErr: true, wantSubstr: "got flag"},
+		{name: "from snapshot name accepted", args: []string{"web", "mybox", "--from", "not-an-ami"}, wantTemplates: []string{"web"}, wantName: "mybox", wantFromSnapshot: "not-an-ami"},
 		{name: "empty template", args: []string{"", "mybox"}, wantErr: true, wantSubstr: "template name is required"},
 	}
 	for _, tt := range tests {
@@ -216,6 +217,36 @@ func TestUnknownCreateFlagError(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tt.wantSubstr) {
 				t.Fatalf("got %q, want substring %q", err.Error(), tt.wantSubstr)
+			}
+		})
+	}
+}
+
+// ValidateSnapshotRef test cases
+func TestValidateSnapshotRef(t *testing.T) {
+	tests := []struct {
+		name    string
+		ref     string
+		wantErr bool
+	}{
+		{name: "ami id", ref: "ami-12345678", wantErr: false},
+		{name: "snapshot name", ref: "before-upgrade", wantErr: false},
+		{name: "ref with surrounding spaces", ref: "  before-upgrade  ", wantErr: false},
+		{name: "empty ref", ref: "", wantErr: true},
+		{name: "whitespace ref", ref: "   ", wantErr: true},
+		{name: "flag ref", ref: "--from", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSnapshotRef(tt.ref)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		})
 	}
@@ -334,4 +365,63 @@ func TestResolveBoxTarget(t *testing.T) {
 		}
 	})
 
+}
+
+func TestResolveSnapshotTarget(t *testing.T) {
+	rt := newTestRuntime(t)
+
+	const (
+		amiID = "ami-1234567890abcdef0"
+		name  = "before-upgrade"
+	)
+
+	if err := rt.DB().InsertSnapshot("snap-1", amiID, name, service.LocalUserID, "", "pending"); err != nil {
+		t.Fatalf("insert snapshot: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := rt.DB().DeleteSnapshotByAmiID(amiID); err != nil {
+			t.Errorf("cleanup delete: %v", err)
+		}
+	})
+
+	t.Run("resolve by name", func(t *testing.T) {
+		got, err := ResolveSnapshotTarget(rt, name)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Input != name || got.AmiID != amiID || got.Name != name {
+			t.Fatalf("got %+v, want Input=%q AmiID=%q Name=%q", got, name, amiID, name)
+		}
+	})
+
+	t.Run("resolve by ami id", func(t *testing.T) {
+		got, err := ResolveSnapshotTarget(rt, amiID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Input != amiID || got.AmiID != amiID || got.Name != name {
+			t.Fatalf("got %+v, want Input=%q AmiID=%q Name=%q", got, amiID, amiID, name)
+		}
+	})
+
+	t.Run("empty ref", func(t *testing.T) {
+		_, err := ResolveSnapshotTarget(rt, "")
+		if err == nil || !strings.Contains(err.Error(), "snapshot ami id or name is required") {
+			t.Fatalf("got %v", err)
+		}
+	})
+
+	t.Run("nil runtime", func(t *testing.T) {
+		_, err := ResolveSnapshotTarget(nil, name)
+		if err == nil || !strings.Contains(err.Error(), "runtime is required") {
+			t.Fatalf("got %v", err)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		_, err := ResolveSnapshotTarget(rt, "does-not-exist")
+		if err == nil || !strings.Contains(err.Error(), "snapshot not found") {
+			t.Fatalf("got %v", err)
+		}
+	})
 }

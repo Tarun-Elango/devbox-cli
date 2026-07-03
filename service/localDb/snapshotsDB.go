@@ -3,7 +3,11 @@ package localDb
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
+	"strings"
 )
+
+var snapshotAmiIDPattern = regexp.MustCompile(`^ami-[0-9a-f]{8,17}$`)
 
 // SnapshotRecord is a row from the snapshots table.
 type SnapshotRecord struct {
@@ -22,14 +26,49 @@ type SnapshotWithBoxAwsID struct {
 	BoxAwsID sql.NullString
 }
 
+func validateSnapshotName(name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("snapshot name is required")
+	}
+	if snapshotAmiIDPattern.MatchString(strings.ToLower(name)) {
+		return fmt.Errorf("snapshot name cannot look like an AMI id: %s", name)
+	}
+	return nil
+}
+
+// ValidateSnapshotNameAvailable verifies that name can be used for a new snapshot owned by userID.
+func (db *DB) ValidateSnapshotNameAvailable(name, userID string) error {
+	name = strings.TrimSpace(name)
+	if err := validateSnapshotName(name); err != nil {
+		return err
+	}
+
+	taken, err := db.SnapshotNameTaken(userID, name)
+	if err != nil {
+		return err
+	}
+	if taken {
+		return fmt.Errorf("snapshot name already exists: %s", name)
+	}
+	return nil
+}
+
 // InsertSnapshot creates a new snapshot row owned by userID.
 func (db *DB) InsertSnapshot(id, amiID, name, userID, boxID, state string) error {
+	if err := db.ValidateSnapshotNameAvailable(name, userID); err != nil {
+		return err
+	}
+
 	_, err := db.conn.Exec(`
 		INSERT INTO snapshots (id, ami_id, name, user_id, box_id, state)
 		VALUES (?, ?, ?, ?, ?, ?)`,
-		id, amiID, name, userID, nullIfEmpty(boxID), nullIfEmpty(state),
+		id, amiID, strings.TrimSpace(name), userID, nullIfEmpty(boxID), nullIfEmpty(state),
 	)
 	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: snapshots.user_id, snapshots.name") {
+			return fmt.Errorf("snapshot name already exists: %s", strings.TrimSpace(name))
+		}
 		return fmt.Errorf("insert snapshot: %w", err)
 	}
 	return nil
@@ -65,6 +104,62 @@ func (db *DB) SnapshotBelongsToUser(id, userID string) (bool, error) {
 		return false, fmt.Errorf("check snapshot owner: %w", err)
 	}
 	return true, nil
+}
+
+// GetSnapshotByNameAndUserID returns the snapshot row for name owned by userID,
+// or sql.ErrNoRows if not found.
+func (db *DB) GetSnapshotByNameAndUserID(name, userID string) (*SnapshotRecord, error) {
+	var r SnapshotRecord
+	err := db.conn.QueryRow(`
+		SELECT id, ami_id, name, user_id, box_id, state, created_at
+		FROM snapshots
+		WHERE name = ? AND user_id = ?`,
+		strings.TrimSpace(name), userID,
+	).Scan(
+		&r.ID,
+		&r.AmiID,
+		&r.Name,
+		&r.UserID,
+		&r.BoxID,
+		&r.State,
+		&r.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+// ResolveSnapshotByAmiIDOrName resolves a user-provided snapshot reference.
+// The reference may be either an AMI id or a unique snapshot name.
+func (db *DB) ResolveSnapshotByAmiIDOrName(ref, userID string) (*SnapshotRecord, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return nil, fmt.Errorf("snapshot ami id or name is required")
+	}
+
+	if snapshotAmiIDPattern.MatchString(strings.ToLower(ref)) {
+		// check if the ref is an ami id
+		lookupAmiID := strings.ToLower(ref)
+		byAmi, amiErr := db.GetSnapshotByAmiIDAndUserID(lookupAmiID, userID)
+		if amiErr == nil {
+			return byAmi, nil
+		}
+		if amiErr != sql.ErrNoRows {
+			return nil, amiErr
+		}
+	}
+
+	// if the ref is not an ami id, look up the snapshot by name
+	byName, nameErr := db.GetSnapshotByNameAndUserID(ref, userID)
+	if nameErr == nil {
+		return byName, nil
+	}
+	if nameErr != sql.ErrNoRows {
+		return nil, nameErr
+	}
+
+	return nil, fmt.Errorf("snapshot not found: %s", ref)
 }
 
 // GetSnapshotByAmiIDAndUserID returns the snapshot row for amiID owned by userID,

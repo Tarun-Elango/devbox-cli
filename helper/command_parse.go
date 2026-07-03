@@ -58,8 +58,8 @@ func ParseSnapshotArgs(args []string, usage string) (ref, snapshotName string) {
 	return args[0], strings.TrimSpace(args[1])
 }
 
-// ParseSingleSnapshotAmiIDArg exits with code 1 unless args is exactly <amiId>.
-func ParseSingleSnapshotAmiIDArg(args []string, usage string) string {
+// ParseSingleSnapshotRefArg exits with code 1 unless args is exactly <amiId|name>.
+func ParseSingleSnapshotRefArg(args []string, usage string) string {
 	if len(args) != 1 {
 		fmt.Fprintln(os.Stderr, usage)
 		CommandParseExit(1)

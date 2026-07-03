@@ -52,6 +52,38 @@ func (db *DB) ListTemplatesByUserID(userID string) ([]TemplateRecord, error) {
 	return records, rows.Err()
 }
 
+// SearchTemplatesByUserID returns templates owned by userID whose name contains query.
+func (db *DB) SearchTemplatesByUserID(userID, query string) ([]TemplateRecord, error) {
+	rows, err := db.conn.Query(`
+		SELECT id, user_id, name, description, startup_script, created_at
+		FROM templates
+		WHERE user_id = ? AND INSTR(LOWER(name), LOWER(?)) > 0
+		ORDER BY name`,
+		userID, query,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("search templates: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var records []TemplateRecord
+	for rows.Next() {
+		var r TemplateRecord
+		if err := rows.Scan(
+			&r.ID,
+			&r.UserID,
+			&r.Name,
+			&r.Description,
+			&r.StartupScript,
+			&r.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan template: %w", err)
+		}
+		records = append(records, r)
+	}
+	return records, rows.Err()
+}
+
 // InsertTemplate creates a new template row owned by userID.
 func (db *DB) InsertTemplate(id, userID, name, startupScript string) error {
 	_, err := db.conn.Exec(`
@@ -63,6 +95,28 @@ func (db *DB) InsertTemplate(id, userID, name, startupScript string) error {
 		return fmt.Errorf("insert template: %w", err)
 	}
 	return nil
+}
+
+// GetTemplateByID returns the template row for id, or sql.ErrNoRows if not found.
+func (db *DB) GetTemplateByID(id string) (*TemplateRecord, error) {
+	var r TemplateRecord
+	err := db.conn.QueryRow(`
+		SELECT id, user_id, name, description, startup_script, created_at
+		FROM templates
+		WHERE id = ?`,
+		id,
+	).Scan(
+		&r.ID,
+		&r.UserID,
+		&r.Name,
+		&r.Description,
+		&r.StartupScript,
+		&r.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
 }
 
 // GetTemplateByNameAndUserID returns the template row for name owned by userID,

@@ -42,6 +42,35 @@ func (r *Runtime) ListTemplates(userID string) ([]*Template, error) {
 	return templates, nil
 }
 
+// SearchTemplates returns templates for userID whose name contains query.
+func (r *Runtime) SearchTemplates(userID, query string) ([]*Template, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, fmt.Errorf("search query is required")
+	}
+
+	db := r.DB()
+
+	records, err := db.SearchTemplatesByUserID(userID, query)
+	if err != nil {
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, nil
+	}
+
+	templates := make([]*Template, 0, len(records))
+	for _, rec := range records {
+		templates = append(templates, &Template{
+			ID:            rec.Name,
+			Name:          rec.Name,
+			Description:   nullStringValue(rec.Description),
+			StartupScript: normalizeStartupScript(nullStringValue(rec.StartupScript)),
+		})
+	}
+	return templates, nil
+}
+
 func nullStringValue(n sql.NullString) string {
 	if !n.Valid {
 		return ""

@@ -9,7 +9,7 @@ import (
 	"devbox-cli/service"
 )
 
-const snapshotUsage = "usage: devbox snapshot [create <id|name> <name> | ls <amiId> | delete <amiId>]"
+const snapshotUsage = "usage: devbox snapshot [create <id|name> <name> | ls <amiId|name> | delete <amiId|name>]"
 
 // snapshotItem represents a snapshot as returned by the API.
 type snapshotItem struct {
@@ -23,8 +23,8 @@ type snapshotItem struct {
 //
 //	devbox snapshot                         → list all user snapshots
 //	devbox snapshot create <id|name> <name> → create a snapshot
-//	devbox snapshot ls <amiId>              → show details for a specific snapshot
-//	devbox snapshot delete <amiId>          → delete a snapshot
+//	devbox snapshot ls <amiId|name>              → show details for a specific snapshot
+//	devbox snapshot delete <amiId|name>          → delete a snapshot
 func Snapshot(args []string) {
 	if len(args) == 0 {
 		snapshotsList(args)
@@ -38,11 +38,11 @@ func Snapshot(args []string) {
 	case "create":
 		snapshotCreate(subArgs)
 	case "ls":
-		amiID := helper.ParseSingleSnapshotAmiIDArg(subArgs, "usage: devbox snapshot ls <amiId>")
-		snapshotsShow(amiID)
+		ref := helper.ParseSingleSnapshotRefArg(subArgs, "usage: devbox snapshot ls <amiId|name>")
+		snapshotShowByRef(ref)
 	case "delete":
-		amiID := helper.ParseSingleSnapshotAmiIDArg(subArgs, "usage: devbox snapshot delete <amiId>")
-		snapshotsDelete(amiID)
+		ref := helper.ParseSingleSnapshotRefArg(subArgs, "usage: devbox snapshot delete <amiId|name>")
+		snapshotDeleteByRef(ref)
 	default:
 		fmt.Fprintf(os.Stderr, "snapshot: unknown sub-command %q\n", sub)
 		fmt.Fprintln(os.Stderr, snapshotUsage)
@@ -73,7 +73,37 @@ func snapshotCreate(args []string) {
 	result = *snap
 
 	fmt.Printf("Snapshot created: %s  name=%s  state=%s\n", result.AmiID, result.Name, result.State)
-	fmt.Printf("Snapshot creation may take a minute or so to finish. Check status with: devbox snapshot ls %s\n", result.AmiID)
+	fmt.Printf("Snapshot creation may take a minute or so to finish. Check status with: devbox snapshot ls %s\n", result.Name)
+}
+
+func snapshotShowByRef(ref string) {
+	rt := helper.MustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	target, err := helper.ResolveSnapshotTarget(rt, ref)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			fmt.Fprintf(os.Stderr, "snapshot %s not found\n", ref)
+		} else {
+			fmt.Fprintf(os.Stderr, "snapshot failed: %v\n", err)
+		}
+		os.Exit(1)
+	}
+	snapshotsShow(target.AmiID)
+}
+
+func snapshotDeleteByRef(ref string) {
+	rt := helper.MustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	target, err := helper.ResolveSnapshotTarget(rt, ref)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			fmt.Fprintf(os.Stderr, "snapshot %s not found\n", ref)
+		} else {
+			fmt.Fprintf(os.Stderr, "snapshot delete failed: %v\n", err)
+		}
+		os.Exit(1)
+	}
+	snapshotsDelete(target.AmiID)
 }
 
 func snapshotsList(args []string) {

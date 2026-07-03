@@ -339,7 +339,7 @@ func TestParseSnapshotArgsAcceptsTwoArgs(t *testing.T) {
 	}
 }
 
-func TestParseSingleSnapshotAmiIDArgRejectsWrongArgCount(t *testing.T) {
+func TestParseSingleSnapshotRefArgRejectsWrongArgCount(t *testing.T) {
 	tests := []struct {
 		name string
 		args []string
@@ -357,22 +357,22 @@ func TestParseSingleSnapshotAmiIDArgRejectsWrongArgCount(t *testing.T) {
 
 			defer func() {
 				if recover() == nil {
-					t.Fatal("ParseSingleSnapshotAmiIDArg() did not exit")
+					t.Fatal("ParseSingleSnapshotRefArg() did not exit")
 				}
 				if exitCode != 1 {
 					t.Fatalf("exit code = %d, want 1", exitCode)
 				}
 			}()
 
-			ParseSingleSnapshotAmiIDArg(tt.args, "usage: devbox snapshot ls <amiId>")
+			ParseSingleSnapshotRefArg(tt.args, "usage: devbox snapshot ls <amiId|name>")
 		})
 	}
 }
 
-func TestParseSingleSnapshotAmiIDArgAcceptsOneArg(t *testing.T) {
-	got := ParseSingleSnapshotAmiIDArg([]string{"ami-12345678"}, "usage: devbox snapshot ls <amiId>")
-	if got != "ami-12345678" {
-		t.Fatalf("ParseSingleSnapshotAmiIDArg() = %q, want %q", got, "ami-12345678")
+func TestParseSingleSnapshotRefArgAcceptsOneArg(t *testing.T) {
+	got := ParseSingleSnapshotRefArg([]string{"before-upgrade"}, "usage: devbox snapshot ls <amiId|name>")
+	if got != "before-upgrade" {
+		t.Fatalf("ParseSingleSnapshotRefArg() = %q, want %q", got, "before-upgrade")
 	}
 }
 

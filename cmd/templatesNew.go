@@ -23,6 +23,7 @@ func FailBox(cmd string, err error) {
 //	devbox template new <name> [command string]    → create a template
 //	devbox template delete <name>                    → delete a template
 //	devbox template rename <name> <new-name>         → rename a template
+//	devbox template search <query>                   → search templates by name
 func Template(args []string) {
 	if len(args) == 0 {
 		TemplateList(args)
@@ -39,8 +40,10 @@ func Template(args []string) {
 		TemplateDelete(subArgs)
 	case "rename":
 		TemplateRename(subArgs)
+	case "search":
+		TemplateSearch(subArgs)
 	default:
-		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q (expected %q, %q, or %q)\n", sub, "new", "delete", "rename")
+		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q (expected %q, %q, %q, or %q)\n", sub, "new", "delete", "rename", "search")
 		os.Exit(1)
 	}
 }

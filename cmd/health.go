@@ -5,12 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/sts"
-
 	"devbox-cli/helper"
 	"devbox-cli/internal/config"
-	awsclient "devbox-cli/service/aws"
+	"devbox-cli/service"
 	"devbox-cli/service/localDb"
 )
 
@@ -62,19 +59,9 @@ func Health(args []string) {
 		check("aws updated", "n/a", "")
 	} else {
 		ctx, cancel := helper.CommandContext()
-		defer cancel() // cancel the context if the aws call fails
-		client, err := awsclient.NewClient(ctx)
-		if err != nil {
-			check("aws creds", "error", err.Error())
-		} else {
-			// pass ctx, so there is a timeout for the aws call
-			out, err := sts.NewFromConfig(client.Config()).GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
-			if err != nil {
-				check("aws creds", "invalid", awsclient.ShortMessage(err))
-			} else {
-				check("aws creds", "ok", "account "+aws.ToString(out.Account))
-			}
-		}
+		defer cancel()
+		creds := service.CheckAWSCredentials(ctx)
+		check("aws creds", creds.Status, creds.Detail)
 
 		if cfg.AwsCredsUpdatedAt.IsZero() {
 			check("aws updated", "unknown", "")

@@ -59,6 +59,11 @@ func Open() (*DB, error) {
 		return nil, fmt.Errorf("ensure local user: %w", err)
 	}
 
+	if err := db.seedDefaultTemplates(); err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("seed default templates: %w", err)
+	}
+
 	// ping the database to ensure it is connected
 	if err := conn.Ping(); err != nil {
 		_ = conn.Close()

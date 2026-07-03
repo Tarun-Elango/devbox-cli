@@ -9,7 +9,7 @@ import (
 )
 
 // Create creates a new box with an optional name and returns as soon as EC2 accepts the launch.
-// Pass --from <snapshot_ami_id> to restore from a previously saved snapshot.
+// Pass --from <amiId|name> to restore from a previously saved snapshot.
 func Create(args []string) {
 	if len(args) > 0 && args[0] == "--template" {
 		CreateTemplate(args[1:])
@@ -19,7 +19,7 @@ func Create(args []string) {
 	name, fromSnapshot, err := helper.ParseNameAndFromFlag(args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--from <snapshot_ami_id>]")
+		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--from <amiId|name>]")
 		os.Exit(1)
 	}
 
@@ -56,7 +56,7 @@ func Create(args []string) {
 	}
 
 	if fromSnapshot != "" {
-		fmt.Printf("Creating box %q from snapshot AMI %s...\n", name, fromSnapshot)
+		fmt.Printf("Creating box %q from snapshot %s...\n", name, fromSnapshot)
 	} else {
 		fmt.Printf("Creating box %q...\n", name)
 	}
@@ -64,6 +64,15 @@ func Create(args []string) {
 	var b Box
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
+	if fromSnapshot != "" {
+		snapshotTarget, err := helper.ResolveSnapshotTarget(rt, fromSnapshot)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		fromSnapshot = snapshotTarget.AmiID
+	}
+
 	inst, err := rt.CreateInstance(name, pubKey, fromSnapshot, service.LocalUserID, instanceType, volumeSizeGB)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)

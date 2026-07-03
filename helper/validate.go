@@ -19,6 +19,12 @@ type ResolvedBoxTarget struct {
 	Name  string
 }
 
+type ResolvedSnapshotTarget struct {
+	Input string
+	AmiID string
+	Name  string
+}
+
 // ResolveBoxTarget resolves a box target from a box id or name.
 func ResolveBoxTarget(rt *service.Runtime, ref string) (*ResolvedBoxTarget, error) {
 	ref = strings.TrimSpace(ref)
@@ -42,6 +48,29 @@ func ResolveBoxTarget(rt *service.Runtime, ref string) (*ResolvedBoxTarget, erro
 	}, nil
 }
 
+// ResolveSnapshotTarget resolves a snapshot target from an AMI id or name.
+func ResolveSnapshotTarget(rt *service.Runtime, ref string) (*ResolvedSnapshotTarget, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return nil, fmt.Errorf("snapshot ami id or name is required")
+	}
+
+	if rt == nil {
+		return nil, fmt.Errorf("internal error: runtime is required in local mode")
+	}
+
+	record, err := rt.DB().ResolveSnapshotByAmiIDOrName(ref, service.LocalUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResolvedSnapshotTarget{
+		Input: ref,
+		AmiID: record.AmiID,
+		Name:  record.Name,
+	}, nil
+}
+
 // ValidatePort returns a normalized TCP port (1-65535) or an error.
 func ValidatePort(port string) (string, error) {
 	port = strings.TrimSpace(port)
@@ -53,6 +82,18 @@ func ValidatePort(port string) (string, error) {
 		return "", fmt.Errorf("invalid port %q (must be 1-65535)", port)
 	}
 	return strconv.Itoa(int(n)), nil
+}
+
+// ValidateSnapshotRef validates a snapshot reference for --from (AMI id or name).
+func ValidateSnapshotRef(ref string) error {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return fmt.Errorf("--from requires a snapshot ami id or name")
+	}
+	if strings.HasPrefix(ref, "--") {
+		return fmt.Errorf("--from requires a snapshot ami id or name, got flag %q", ref)
+	}
+	return nil
 }
 
 // ValidateSnapshotAmiID validates that the given ID is a valid snapshot AMI ID.
@@ -78,8 +119,8 @@ func UnknownCreateFlagError(flag string) error {
 	return fmt.Errorf("unknown flag %q", flag)
 }
 
-// ParseNameAndFromFlag parses a box name and optional --from <snapshot_ami_id> from args.
-// The name must appear before --from (see: devbox create <name> [--from <snapshot_ami_id>]).
+// ParseNameAndFromFlag parses a box name and optional --from <amiId|name> from args.
+// The name must appear before --from (see: devbox create <name> [--from <amiId|name>]).
 func ParseNameAndFromFlag(args []string) (name, fromSnapshot string, err error) {
 	fromSeen := false
 	for i := 0; i < len(args); i++ {
@@ -94,10 +135,10 @@ func ParseNameAndFromFlag(args []string) (name, fromSnapshot string, err error) 
 			}
 			fromSeen = true
 			if i+1 >= len(args) {
-				return "", "", fmt.Errorf("--from requires a snapshot AMI ID")
+				return "", "", fmt.Errorf("--from requires a snapshot ami id or name")
 			}
 			i++
-			if err := ValidateSnapshotAmiID(args[i]); err != nil {
+			if err := ValidateSnapshotRef(args[i]); err != nil {
 				return "", "", err
 			}
 			fromSnapshot = strings.TrimSpace(args[i])
@@ -118,17 +159,21 @@ func ParseNameAndFromFlag(args []string) (name, fromSnapshot string, err error) 
 }
 
 // ParseCreateTemplateArgs parses args after the --template flag:
-// <template> [<template>...] <name> [--from <snapshot_ami_id>]
+// <template> [<template>...] <name> [--from <amiId|name>]
 // The last positional is the box name; --from, if present, must be final with no trailing args.
 func ParseCreateTemplateArgs(args []string) (templateRefs []string, name, fromSnapshot string, err error) {
 	fromIdx := -1
-	for i, arg := range args {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
 		switch {
 		case arg == "--from":
 			if fromIdx >= 0 {
 				return nil, "", "", fmt.Errorf("unexpected extra arguments: %s", strings.Join(args[i:], " "))
 			}
 			fromIdx = i
+			if i+1 < len(args) {
+				i++ // skip --from value during flag scan
+			}
 		case strings.HasPrefix(arg, "--"):
 			return nil, "", "", UnknownCreateFlagError(arg)
 		}
@@ -138,12 +183,12 @@ func ParseCreateTemplateArgs(args []string) (templateRefs []string, name, fromSn
 	if fromIdx >= 0 {
 		tail := args[fromIdx:]
 		if len(tail) == 1 {
-			return nil, "", "", fmt.Errorf("--from requires a snapshot AMI ID")
+			return nil, "", "", fmt.Errorf("--from requires a snapshot ami id or name")
 		}
 		if len(tail) > 2 {
 			return nil, "", "", fmt.Errorf("unexpected extra arguments: %s", strings.Join(tail[2:], " "))
 		}
-		if err := ValidateSnapshotAmiID(tail[1]); err != nil {
+		if err := ValidateSnapshotRef(tail[1]); err != nil {
 			return nil, "", "", err
 		}
 		fromSnapshot = strings.TrimSpace(tail[1])

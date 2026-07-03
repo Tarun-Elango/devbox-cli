@@ -30,6 +30,8 @@ var createTables = []string{
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )`,
 	`CREATE INDEX IF NOT EXISTS idx_snapshots_box ON snapshots(box_id)`,
+	`CREATE UNIQUE INDEX IF NOT EXISTS idx_snapshots_name_user ON snapshots(user_id, name)`,
+	// Built-in startup templates are seeded in defaultTemplates.go on first DB open.
 	`CREATE TABLE IF NOT EXISTS templates (
   id              TEXT PRIMARY KEY,
   user_id         TEXT NOT NULL REFERENCES users(id),
@@ -38,5 +40,10 @@ var createTables = []string{
   startup_script  TEXT,
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(user_id, name)
+)`,
+	// Tracks built-in template IDs already offered; survives user deletes so Open() won't re-seed.
+	`CREATE TABLE IF NOT EXISTS default_template_seeds (
+  template_id TEXT PRIMARY KEY,
+  seeded_at   TEXT NOT NULL DEFAULT (datetime('now'))
 )`,
 }
