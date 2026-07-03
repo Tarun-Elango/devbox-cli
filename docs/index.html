@@ -108,10 +108,11 @@
 
     <div class="card">
       <h2>Quick install</h2>
-      <pre><code>curl -fsSL "https://github.com/Tarun-Elango/devbox-cli/releases/latest/download/devbox-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')" -o /tmp/devbox
-chmod +x /tmp/devbox
-sudo install -m 755 /tmp/devbox /usr/local/bin/devbox
-devbox version</code></pre>
+      <pre><code>curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/main/scripts/install.sh | bash</code></pre>
+      <p class="note">Detects your OS and CPU, downloads the matching binary, installs to <code>~/.local/bin</code>, and adds that directory to your shell config if needed. Restart your shell, then verify:</p>
+      <pre><code>devbox ls</code></pre>
+      <p class="note">System-wide install (<code>/usr/local/bin</code>, requires <code>sudo</code>, no shell config changes):</p>
+      <pre><code>INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/main/scripts/install.sh | sudo bash</code></pre>
     </div>
 
     <div class="card">
@@ -122,6 +123,7 @@ devbox version</code></pre>
         <li><code>devbox ls</code> — list boxes</li>
         <li><code>devbox ssh &lt;name&gt;</code> — connect via SSH</li>
       </ul>
+      <p class="note"><a href="https://github.com/Tarun-Elango/devbox-cli#common-commands">See all commands</a></p>
     </div>
 
     <div class="card">
