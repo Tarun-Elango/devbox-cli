@@ -45,7 +45,7 @@ func buildTemplateListOutput(templates []*service.Template) string {
 // writeTemplateTable: creates header and separator
 func writeTemplateTable(w io.Writer, templates []*service.Template) error {
 	const colSep = "  |  "
-	if _, err := fmt.Fprintf(w, "%-20s%s%s\n", "TEMPLATE", colSep, "STARTUP SCRIPT"); err != nil {
+	if _, err := fmt.Fprintf(w, "%-20s%s%s\n", "TEMPLATE NAME", colSep, "STARTUP SCRIPT"); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintln(w, strings.Repeat("-", 60)); err != nil {
@@ -118,21 +118,9 @@ func formatTemplateScript(s string) string {
 	return s
 }
 
-// notes: check valid template id, name cannot start with --,
-// -- from should be valid string and should have a snapshot ami id
-
-// this is to create a new box with templates
-func CreateTemplate(args []string) {
-
-	// -args wont have --template flag
-
-	templateRefs, name, fromSnapshot, err := helper.ParseCreateTemplateArgs(args)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		fmt.Fprintln(os.Stderr, "usage: devbox create --template <template> [<template>...] <name> [--from <amiId|name>]")
-		os.Exit(1)
-	}
-
+// createFromTemplates creates a new box applying one or more templates' startup scripts.
+// name and templateRefs are already validated by helper.ParseCreateArgs.
+func createFromTemplates(name string, templateRefs []string, fromSnapshot string) {
 	pubKey := ""
 	if pk, err := readPublicKey(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: %v; box will be created without your public key\n", err)

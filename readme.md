@@ -45,7 +45,7 @@ If that worked, you're done — skip the sections below. They're optional altern
 RELEASE_TAG=v0.7.0 curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash
 ```
 
-#### Install system-wide — To install to `/usr/local/bin` (requires `sudo`, no shell config changes):
+#### Install once for every user on this machine — Use on a shared Mac or Linux desktop, or if you prefer `/usr/local/bin` over `~/.local/bin`. Installs to `/usr/local/bin` for all accounts (each user still has their own `~/.devbox` config). Requires `sudo`; skips shell config changes because `/usr/local/bin` is already on PATH:
 
 ```bash
 INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | sudo bash
@@ -69,13 +69,7 @@ Credentials are stored locally in your home directory.
 go build -o devbox .
 ```
 
-This produces a `devbox` binary.
-
-To install it to your `$GOPATH/bin`:
-
-```bash
-go install .
-```
+This produces a `devbox` binary in the current directory.
 
 To run the binary:
 ```bash
@@ -135,8 +129,7 @@ Run `devbox help` to print usage, or see the table below.
 
 | Command | Notes |
 | --- | --- |
-| `create <name> [--from <amiId\|name>]` | Create a new box (optionally restore from a snapshot) |
-| `create --template <template> [<template>...] <name> [--from <amiId\|name>]` | Create a box from one or more templates (optionally from snapshot) |
+| `create <name> [--template <templateName>...] [--from <amiId\|name>]` | Create a new box, optionally from one or more templates, optionally restoring from a snapshot |
 | `ls` | List all boxes |
 | `status <id-or-name>` | Show details for a box |
 | `rename <id-or-name> <new-name>` | Rename a box |
@@ -152,7 +145,7 @@ Run `devbox help` to print usage, or see the table below.
 | --- | --- |
 | `ssh [-i key] <id-or-name> [-- <ssh-option>...]` | Open an SSH session to a box (`-i` path to private key; default `~/.ssh/id_ed25519`; `--` passes native ssh options before the target, e.g. `-v`, `-A`, `-L 8080:localhost:8080`; for one-off remote commands use `exec`) |
 | `cp [-i key] <source> <dest>` | Copy a file to or from a box (e.g. `devbox cp ./main.go mybox:/home/ec2-user/app/`) |
-| `sync [-i key] [--delete] <source> <dest>` | Sync files or directories to or from a box (`--delete` removes destination files missing from source) |
+| `sync [-i key] [--delete] <source> <dest>` | Incremental directory sync via rsync over SSH (same path syntax as `cp`: one local path, one `box:/path`). Only **dest** is modified — copies new/changed files from source; source is never changed. `--delete` also removes files on dest that are not in source |
 | `exec [-i key] [-s] [-t] <id-or-name> -- <command>` | Run a one-off command on a running box (`-s` run as a shell snippet via `sh -lc`; `-t` allocate a pseudo-TTY for sudo or interactive commands) |
 | `forward <id-or-name> <port>` | Forward a port from a box |
 
@@ -174,9 +167,9 @@ Templates let you create boxes preloaded with libs, tools, and other setup.
 | Command | Notes |
 | --- | --- |
 | `template` | List available templates |
-| `template new <name> [command string]` | Create a template with optional startup command |
-| `template delete <name>` | Delete a template |
-| `template rename <name> <new-name>` | Rename a template |
+| `template new <templateName> [command string]` | Create a template with optional startup command |
+| `template delete <templateName>` | Delete a template |
+| `template rename <templateName> <new-templateName>` | Rename a template |
 | `template search <query>` | Search templates by name (returns partial matches) |
 
 ### Idle stop

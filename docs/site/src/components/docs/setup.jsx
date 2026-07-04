@@ -1,24 +1,23 @@
+import DocOutline from './doc-outline'
 import DocPage from './doc-page'
+
+const sections = [
+  { id: 'aws-credentials', label: 'AWS credentials' },
+  { id: 'wizard', label: 'Setup on devbox CLI' },
+  { id: 'local-config', label: 'Local config' },
+  { id: 'related-commands', label: 'Related commands' },
+]
 
 export default function SetupDoc() {
   return (
     <DocPage title="Setup">
-      <div className="card">
-        <h2>Interactive wizard</h2>
-        <p className="note">
-          Run once after install to save AWS credentials and region locally.
-        </p>
-        <pre>
-          <code>devbox setup</code>
-        </pre>
-        <p className="note">
-          Credentials are stored in <code>~/.devbox/config.json</code> (mode 0600).
-          Use a dedicated IAM user — see the steps below.
-        </p>
-      </div>
+      <DocOutline items={sections} />
 
       <div className="card">
-        <h2>AWS setup</h2>
+        <h2 id="aws-credentials">AWS setup — get access key and secret access key</h2>
+        <p className="note">
+          Create a dedicated IAM user before running the setup wizard.
+        </p>
         <ol>
           <li>
             IAM console → <strong>Users</strong> → <strong>Create user</strong> (e.g.{' '}
@@ -31,15 +30,27 @@ export default function SetupDoc() {
             Open the user → <strong>Security credentials</strong> → create an access key
             (choose <strong>Local code</strong>)
           </li>
-          <li>Copy the access key ID and secret (secret shown only once)</li>
           <li>
-            Save in devbox: <code>devbox setup</code>
+            Copy the access key and secret access key (secret access key shown only once)
           </li>
         </ol>
       </div>
 
       <div className="card">
-        <h2>Local config</h2>
+        <h2 id="wizard">Setup on devbox CLI</h2>
+        <p className="note">
+          Run once after install to save AWS credentials and region locally.
+        </p>
+        <pre>
+          <code>devbox setup</code>
+        </pre>
+        <p className="note">
+          Enter the access key, secret, and preferred AWS region when prompted. 
+        </p>
+      </div>
+
+      <div className="card">
+        <h2 id="local-config">Local config details</h2>
         <p className="note">
           Credentials and tokens live in <code>~/.devbox/config.json</code> (mode 0600).
         </p>
@@ -50,11 +61,12 @@ export default function SetupDoc() {
             Run <code>devbox health</code> to verify config, credentials, region, and
             database
           </li>
+          <li>You can run <code>devbox setup</code> again to update the config and credentials.</li>
         </ul>
       </div>
 
       <div className="card">
-        <h2>Related commands</h2>
+        <h2 id="related-commands">Related commands</h2>
         <ul>
           <li>
             <code>devbox health</code> — check config, credentials, region, and database

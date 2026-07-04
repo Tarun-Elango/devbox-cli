@@ -24,9 +24,9 @@ func newTestRuntime(t *testing.T) *service.Runtime {
 	return rt
 }
 
-// ParseNameAndFromFlag test cases
+// ParseCreateArgs test cases
 // used in boxes when creating a new box
-// return name and from snapshot
+// return name, template refs, and from snapshot
 func TestValidatePort(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -67,97 +67,52 @@ func TestValidatePort(t *testing.T) {
 	}
 }
 
-func TestParseNameAndFromFlag(t *testing.T) {
-	tests := []struct {
-		name             string
-		args             []string
-		wantName         string
-		wantFromSnapshot string
-		wantErr          bool
-	}{
-		{name: "no name or from", args: []string{}, wantName: "", wantFromSnapshot: "", wantErr: true},
-		{name: "name only", args: []string{"mybox"}, wantName: "mybox", wantFromSnapshot: "", wantErr: false},
-		{name: "name and from", args: []string{"mybox", "--from", "ami-1234567890"}, wantName: "mybox", wantFromSnapshot: "ami-1234567890"},
-		{name: "name and from by snapshot name", args: []string{"mybox", "--from", "before-upgrade"}, wantName: "mybox", wantFromSnapshot: "before-upgrade"},
-		{name: "--from before name", args: []string{"--from", "ami-1234567890", "mybox"}, wantErr: true},
-		// --from with nothing after it
-		{name: "--from missing value", args: []string{"mybox", "--from"}, wantErr: true},
-		// snapshot refs are resolved later; non-ami strings are valid names at parse time
-		{name: "from snapshot name", args: []string{"mybox", "--from", "not-an-ami"}, wantName: "mybox", wantFromSnapshot: "not-an-ami"},
-		// empty / whitespace-only ref
-		{name: "empty ref", args: []string{"mybox", "--from", ""}, wantErr: true},
-		{name: "whitespace ref", args: []string{"mybox", "--from", "   "}, wantErr: true},
-		// next token is another flag
-		{name: "ami is a flag", args: []string{"mybox", "--from", "--other"}, wantErr: true},
-		{name: "unknown flag", args: []string{"mybox", "--foo"}, wantErr: true},
-		{name: "typo suggests --from", args: []string{"mybox", "--fro"}, wantErr: true},
-		{name: "name with surrounding spaces", args: []string{"  mybox  "}, wantName: "mybox", wantErr: false},
-		{name: "ami with surrounding spaces", args: []string{"mybox", "--from", "  ami-1234567890  "}, wantName: "mybox", wantFromSnapshot: "ami-1234567890"},
-		{name: "whitespace-only name", args: []string{"   "}, wantErr: true}, // becomes empty → "missing box name"
-		{name: "name contains space", args: []string{"my box"}, wantName: "my box", wantErr: false},
-		{name: "two positional args", args: []string{"my", "box"}, wantErr: true},
-		{name: "uppercase ami", args: []string{"mybox", "--from", "AMI-1234567890"}, wantName: "mybox", wantFromSnapshot: "AMI-1234567890"},
-		{name: "ami min length", args: []string{"mybox", "--from", "ami-12345678"}, wantName: "mybox", wantFromSnapshot: "ami-12345678"},
-		{name: "ami max length", args: []string{"mybox", "--from", "ami-12345678901234567"}, wantName: "mybox", wantFromSnapshot: "ami-12345678901234567"},
-		{name: "ami too long accepted as name ref", args: []string{"mybox", "--from", "ami-123456789012345678"}, wantName: "mybox", wantFromSnapshot: "ami-123456789012345678"},
-		{name: "ami non-hex accepted as name ref", args: []string{"mybox", "--from", "ami-1234567g"}, wantName: "mybox", wantFromSnapshot: "ami-1234567g"},
-		{name: "whitespace name before from", args: []string{"   ", "--from", "ami-12345678"}, wantErr: true},
-		{name: "typo --f suggests from", args: []string{"mybox", "--f"}, wantErr: true},
-		{name: "typo --fo suggests from", args: []string{"mybox", "--fo"}, wantErr: true},
-		{name: "trailing extra positional", args: []string{"mybox", "--from", "ami-12345678", "extra"}, wantErr: true},
-		{name: "duplicate from", args: []string{"mybox", "--from", "ami-12345678", "--from", "ami-87654321"}, wantErr: true},
-		{name: "three positional args", args: []string{"mybox", "othername", "third"}, wantErr: true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) { // run each test case
-			gotName, gotFromSnapshot, err := ParseNameAndFromFlag(tt.args)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if gotName != tt.wantName || gotFromSnapshot != tt.wantFromSnapshot {
-				t.Fatalf("gotName = %v, gotFromSnapshot = %v, wantName = %v, wantFromSnapshot = %v", gotName, gotFromSnapshot, tt.wantName, tt.wantFromSnapshot)
-			}
-		})
-	}
-}
-
-func TestParseCreateTemplateArgs(t *testing.T) {
+func TestParseCreateArgs(t *testing.T) {
 	const ami = "ami-12345678"
 	tests := []struct {
 		name             string
 		args             []string
-		wantTemplates    []string
 		wantName         string
+		wantTemplates    []string
 		wantFromSnapshot string
 		wantErr          bool
 		wantSubstr       string
 	}{
-		{name: "one template and name", args: []string{"web", "mybox"}, wantTemplates: []string{"web"}, wantName: "mybox"},
-		{name: "two templates and name", args: []string{"web", "db", "mybox"}, wantTemplates: []string{"web", "db"}, wantName: "mybox"},
-		{name: "with from at end", args: []string{"web", "mybox", "--from", ami}, wantTemplates: []string{"web"}, wantName: "mybox", wantFromSnapshot: ami},
-		{name: "with from snapshot name", args: []string{"web", "mybox", "--from", "before-upgrade"}, wantTemplates: []string{"web"}, wantName: "mybox", wantFromSnapshot: "before-upgrade"},
-		{name: "from in middle rejected", args: []string{"web", "--from", ami, "mybox"}, wantErr: true, wantSubstr: "unexpected extra arguments"},
-		{name: "missing template and name", args: []string{}, wantErr: true, wantSubstr: "at least one template"},
-		{name: "only template", args: []string{"web"}, wantErr: true, wantSubstr: "at least one template"},
-		{name: "only from", args: []string{"--from", ami}, wantErr: true, wantSubstr: "at least one template"},
-		{name: "from missing value", args: []string{"web", "mybox", "--from"}, wantErr: true, wantSubstr: "--from requires a snapshot ami id or name"},
-		{name: "extra after from", args: []string{"web", "mybox", "--from", ami, "extra"}, wantErr: true, wantSubstr: "unexpected extra arguments"},
-		{name: "duplicate from", args: []string{"web", "mybox", "--from", ami, "--from", ami}, wantErr: true, wantSubstr: "unexpected extra arguments"},
-		{name: "unknown flag", args: []string{"web", "mybox", "--foo"}, wantErr: true, wantSubstr: "unknown flag"},
-		{name: "flag-like template", args: []string{"web", "--bad"}, wantErr: true, wantSubstr: "unknown flag"},
-		{name: "invalid ref flag", args: []string{"web", "mybox", "--from", "--other"}, wantErr: true, wantSubstr: "got flag"},
-		{name: "from snapshot name accepted", args: []string{"web", "mybox", "--from", "not-an-ami"}, wantTemplates: []string{"web"}, wantName: "mybox", wantFromSnapshot: "not-an-ami"},
-		{name: "empty template", args: []string{"", "mybox"}, wantErr: true, wantSubstr: "template name is required"},
+		{name: "no args", args: []string{}, wantErr: true},
+		{name: "name only", args: []string{"mybox"}, wantName: "mybox"},
+		{name: "name and from", args: []string{"mybox", "--from", "ami-1234567890"}, wantName: "mybox", wantFromSnapshot: "ami-1234567890"},
+		{name: "name and from by snapshot name", args: []string{"mybox", "--from", "before-upgrade"}, wantName: "mybox", wantFromSnapshot: "before-upgrade"},
+		{name: "--from before name", args: []string{"--from", "ami-1234567890", "mybox"}, wantErr: true},
+		{name: "--from missing value", args: []string{"mybox", "--from"}, wantErr: true},
+		{name: "from snapshot name", args: []string{"mybox", "--from", "not-an-ami"}, wantName: "mybox", wantFromSnapshot: "not-an-ami"},
+		{name: "empty ref", args: []string{"mybox", "--from", ""}, wantErr: true},
+		{name: "whitespace ref", args: []string{"mybox", "--from", "   "}, wantErr: true},
+		{name: "ami is a flag", args: []string{"mybox", "--from", "--other"}, wantErr: true},
+		{name: "unknown flag", args: []string{"mybox", "--foo"}, wantErr: true},
+		{name: "typo suggests --from", args: []string{"mybox", "--fro"}, wantErr: true},
+		{name: "name with surrounding spaces", args: []string{"  mybox  "}, wantName: "mybox"},
+		{name: "ami with surrounding spaces", args: []string{"mybox", "--from", "  ami-1234567890  "}, wantName: "mybox", wantFromSnapshot: "ami-1234567890"},
+		{name: "whitespace-only name", args: []string{"   "}, wantErr: true},
+		{name: "name contains space", args: []string{"my box"}, wantName: "my box"},
+		{name: "two positional args", args: []string{"my", "box"}, wantErr: true},
+		{name: "uppercase ami", args: []string{"mybox", "--from", "AMI-1234567890"}, wantName: "mybox", wantFromSnapshot: "AMI-1234567890"},
+		{name: "trailing extra positional", args: []string{"mybox", "--from", "ami-12345678", "extra"}, wantErr: true},
+		{name: "duplicate from", args: []string{"mybox", "--from", "ami-12345678", "--from", "ami-87654321"}, wantErr: true},
+		{name: "three positional args", args: []string{"mybox", "othername", "third"}, wantErr: true},
+		// --template
+		{name: "one template", args: []string{"mybox", "--template", "web"}, wantName: "mybox", wantTemplates: []string{"web"}},
+		{name: "two templates", args: []string{"mybox", "--template", "web", "db"}, wantName: "mybox", wantTemplates: []string{"web", "db"}},
+		{name: "template then from", args: []string{"mybox", "--template", "web", "--from", ami}, wantName: "mybox", wantTemplates: []string{"web"}, wantFromSnapshot: ami},
+		{name: "from then template", args: []string{"mybox", "--from", ami, "--template", "web", "db"}, wantName: "mybox", wantTemplates: []string{"web", "db"}, wantFromSnapshot: ami},
+		{name: "template missing value", args: []string{"mybox", "--template"}, wantErr: true, wantSubstr: "--template requires at least one template name"},
+		{name: "template flag first rejected", args: []string{"--template", "web", "mybox"}, wantErr: true},
+		{name: "duplicate template flag", args: []string{"mybox", "--template", "web", "--template", "db"}, wantErr: true, wantSubstr: "unexpected extra arguments"},
+		{name: "empty template value", args: []string{"mybox", "--template", ""}, wantErr: true, wantSubstr: "template name is required"},
+		{name: "unknown flag suggests template", args: []string{"mybox", "--temp"}, wantErr: true, wantSubstr: "did you mean --template?"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotTemplates, gotName, gotFromSnapshot, err := ParseCreateTemplateArgs(tt.args)
+			gotName, gotTemplates, gotFromSnapshot, err := ParseCreateArgs(tt.args)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -171,7 +126,7 @@ func TestParseCreateTemplateArgs(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 			if gotName != tt.wantName || gotFromSnapshot != tt.wantFromSnapshot {
-				t.Fatalf("got name=%q from=%q, want name=%q from=%q", gotName, gotFromSnapshot, tt.wantName, tt.wantFromSnapshot)
+				t.Fatalf("gotName = %v, gotFromSnapshot = %v, wantName = %v, wantFromSnapshot = %v", gotName, gotFromSnapshot, tt.wantName, tt.wantFromSnapshot)
 			}
 			if len(gotTemplates) != len(tt.wantTemplates) {
 				t.Fatalf("got templates %v, want %v", gotTemplates, tt.wantTemplates)

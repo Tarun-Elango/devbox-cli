@@ -3,7 +3,12 @@ import { Link } from 'react-router-dom'
 export default function AboutPage() {
     return (
       <>
-        <h1>devbox CLI</h1>
+        <div className="page-title">
+          <h1>devbox CLI</h1>
+          <a href="https://github.com/Tarun-Elango" className="byline">
+            by Tarun-Elango
+          </a>
+        </div>
         <p className="tagline">
           Manage remote dev boxes from the terminal — provision, connect, sync, and
           destroy them with your own cloud account (BYOK).
@@ -307,7 +312,7 @@ export default function AboutPage() {
             </li>
             <li>
               <strong>Secure by default</strong> — AWS credentials and config stored
-              locally on your machine
+              locally on your machine, and the code is open source and available on GitHub.
             </li>
           </ul>
         </div>

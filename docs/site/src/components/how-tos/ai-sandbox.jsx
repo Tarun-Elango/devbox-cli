@@ -43,7 +43,7 @@ export default function AiSandboxHowTo() {
       <div className="card">
         <h2>2. Create the box</h2>
         <pre>
-          <code>devbox create --template codex22 sandbox</code>
+          <code>devbox create sandbox --template codex22</code>
         </pre>
         <p>
           devbox launches an EC2 instance, adds <code>devbox-sandbox</code> to{' '}
@@ -113,7 +113,7 @@ codex`}</code>
         <p>
           Snapshot a box you want to reuse later:{' '}
           <code>devbox snapshot create sandbox my-snapshot</code>, then restore with{' '}
-          <code>devbox create --template codex22 newbox --from my-snapshot</code>.
+          <code>devbox create newbox --template codex22 --from my-snapshot</code>.
         </p>
       </div>
     </HowToPage>

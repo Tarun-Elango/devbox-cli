@@ -13,7 +13,33 @@ body {
     url("data:image/svg+xml,%3Csvg width='4' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='2' height='2' fill='%23787878'/%3E%3Crect x='2' y='2' width='2' height='2' fill='%23787878'/%3E%3C/svg%3E");
 }
 
+ .planet-decoration {
+  position: fixed;
+  left: -8rem;
+  bottom: -8rem;
+  width: 16rem;
+  height: 16rem;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.92;
+}
+
+.planet-decoration__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.25));
+}
+
+@media (max-width: 720px) {
+  .planet-decoration {
+    display: none;
+  }
+}
+
 .shell {
+  position: relative;
+  z-index: 1;
   max-width: 640px;
   margin: 0 auto;
 }
@@ -57,6 +83,24 @@ body {
   border: 3px ridge #b8b8b8;
 }
 
+.page-title {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  margin: 0 0 0.25rem;
+}
+
+.page-title h1 {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: bold;
+  text-align: center;
+  color: #000080;
+  text-decoration: underline;
+}
+
 h1 {
   margin: 0 0 0.25rem;
   font-size: 2.25rem;
@@ -66,6 +110,25 @@ h1 {
   text-decoration: underline;
 }
 
+.byline {
+  font-size: 0.85rem;
+  font-weight: normal;
+  font-style: italic;
+  text-decoration: none;
+}
+
+a.byline:link {
+  color: #0000ee;
+}
+
+a.byline:visited {
+  color: #551a8b;
+}
+
+a.byline:hover {
+  color: #ff0000;
+}
+
 .tagline {
   margin: 0 0 1.5rem;
   text-align: center;
@@ -73,11 +136,49 @@ h1 {
   color: #333;
 }
 
+.page-outline {
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  background: #f4f4f4;
+  border: 1px solid #ccc;
+}
+
+.page-outline-label {
+  font-style: italic;
+  color: #333;
+}
+
+.page-outline ul {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.page-outline li {
+  display: inline;
+  margin: 0;
+}
+
+.page-outline li + li::before {
+  content: " · ";
+  color: #666;
+}
+
+.page-outline a {
+  white-space: nowrap;
+}
+
 .card {
   margin-bottom: 1.25rem;
   padding: 0.75rem 1rem 1rem;
   background: #ffffcc;
   border: 2px inset #9a9a9a;
+}
+
+.card :target {
+  scroll-margin-top: 0.5rem;
 }
 
 .card-purpose {
@@ -194,8 +295,94 @@ li {
   color: #333;
 }
 
+.cmd-variant {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+}
+
+.cmd-variant + .cmd-variant {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #ddd;
+}
+
+.cmd-variant dt {
+  margin: 0 0 0.25rem;
+  color: #000080;
+}
+
+.cmd-variant dd {
+  margin: 0 0 0.35rem;
+}
+
+.cmd-variant dd:last-child {
+  margin-bottom: 0;
+}
+
+.cmd-variant dd code {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  background: #eee;
+  border: 1px solid #ccc;
+  overflow-x: auto;
+}
+
+.cmd-variant dd.example {
+  font-style: italic;
+  color: #333;
+}
+
+.cmd-variant dd.example code {
+  display: inline;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
 .go-top {
   margin: 1.5rem 0 0;
   text-align: center;
   font-size: 0.9rem;
+}
+
+.cmd-table {
+  width: 100%;
+  margin: 0.5rem 0 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.cmd-table th,
+.cmd-table td {
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+  border: 1px solid #ccc;
+}
+
+.cmd-table th {
+  background: #e8e8e8;
+  font-weight: bold;
+  color: #000080;
+}
+
+.cmd-table td:first-child {
+  width: 42%;
+}
+
+.cmd-table td code {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.card h2 + .note {
+  margin-top: 0;
+}
+
+@media (max-width: 520px) {
+  .cmd-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }

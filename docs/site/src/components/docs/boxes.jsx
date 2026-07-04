@@ -1,73 +1,131 @@
+import DocOutline from './doc-outline'
 import DocPage from './doc-page'
+
+const sections = [
+  { id: 'create-box', label: 'Create a box' },
+  { id: 'power-lifecycle', label: 'Power & lifecycle' },
+  { id: 'idle-stop', label: 'Idle stop' },
+]
 
 export default function BoxesDoc() {
   return (
     <DocPage title="Managing boxes">
+      <DocOutline items={sections} />
+
       <div className="card">
-        <h2>Create &amp; list</h2>
+        <h2 id="create-box">Create a box</h2>
+        <pre>
+          <code>devbox create mybox</code>
+        </pre>
+        <p className="note">
+          Launches an interactive wizard. You will be asked to choose an instance type
+          (↑/↓, Enter to confirm) and a root disk size in GB (press Enter to accept the
+          default). Press Ctrl+C at any prompt to cancel.
+        </p>
+        <dl className="cmd-variant">
+          <dt>Restore from a snapshot</dt>
+          <dd>
+            <code>devbox create {'<name>'} [--from {'<amiId|name>'}]</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox create mybox --from my-snapshot</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Preload templates ( 1 upto n templates)</dt>
+          <dd>
+            <code>
+              devbox create {'<name>'} [--template {'<templateName>'}...] 
+            </code>
+          </dd>
+          <dd className="example">
+            Example:{' '}
+            <code>devbox create mybox --template node go opencode</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Templates and snapshot together</dt>
+          <dd>
+            <code>
+              devbox create {'<name>'}[--template {'<templateName>'}...] [--from {'<amiId|name>'}]
+            </code>
+          </dd>
+          <dd className="example">
+            Example:{' '}
+            <code>
+              devbox create mybox --template java claude-code --from my-snapshot
+            </code>
+          </dd>
+        </dl>
+
+        <h3>List &amp; inspect</h3>
         <ul>
-          <li>
-            <code>devbox create {'<name>'}</code> — create a new box
-          </li>
-          <li>
-            <code>devbox create --template {'<template>'} {'<name>'}</code> — create
-            from a template
-          </li>
-          <li>
-            <code>devbox create {'<name>'} --from {'<amiId|name>'}</code> — restore
-            from a snapshot
-          </li>
           <li>
             <code>devbox ls</code> — list all boxes
           </li>
           <li>
-            <code>devbox status {'<id-or-name>'}</code> — show box details
+            <code>devbox status mybox</code> — show details for a box
           </li>
           <li>
-            <code>devbox rename {'<id-or-name>'} {'<new-name>'}</code> — rename a box
-          </li>
-        </ul>
-      </div>
-
-      <div className="card">
-        <h2>Power &amp; lifecycle</h2>
-        <ul>
-          <li>
-            <code>devbox start {'<id-or-name>'}</code> — start a stopped box
-          </li>
-          <li>
-            <code>devbox stop {'<id-or-name>'}</code> — stop a running box
-          </li>
-          <li>
-            <code>devbox restart {'<id-or-name>'}</code> — reboot a running box
-          </li>
-          <li>
-            <code>devbox delete {'<id-or-name>'}</code> — delete a box
-          </li>
-          <li>
-            <code>devbox resize {'<id-or-name>'}</code> — resize instance type or
-            root disk (box must be stopped)
+            <code>devbox rename mybox new-name</code> — rename a box
           </li>
         </ul>
       </div>
 
       <div className="card">
-        <h2>Idle stop</h2>
+        <h2 id="power-lifecycle">Power &amp; lifecycle</h2>
         <ul>
           <li>
-            <code>devbox idle-stop set {'<id-or-name>'} {'<minutes>'}</code> — stop
-            after inactivity
+            <code>devbox stop mybox</code> — stop a running box
           </li>
           <li>
-            <code>devbox idle-stop show {'<id-or-name>'}</code> — show idle-stop
-            settings
+            <code>devbox start mybox</code> — start a stopped box
           </li>
           <li>
-            <code>devbox idle-stop update {'<id-or-name>'} {'<minutes>'}</code> — change
-            timeout
+            <code>devbox restart mybox</code> — reboot a running box (
+            <code>reboot</code> is an alias)
           </li>
           <li>
-            <code>devbox idle-stop delete {'<id-or-name>'}</code> — remove idle-stop
+            <code>devbox delete mybox</code> — delete a box
+          </li>
+        </ul>
+
+        <h3>Resize</h3>
+        <pre>
+          <code>
+            devbox stop mybox{'\n'}devbox resize mybox
+          </code>
+        </pre>
+        <p className="note">
+          The box must be stopped first. <code>upgrade</code> is an alias for{' '}
+          <code>resize</code>. You will be asked whether to change the instance type
+          and root disk size — answer <code>n</code> to keep either one the same. Disk
+          size can only be increased, not decreased.
+        </p>
+      </div>
+
+      <div className="card">
+        <h2 id="idle-stop">Idle stop</h2>
+        <p className="note">
+          Automatically stop a box after a period with no activity — useful when you
+          forget to shut down and want to save cost.
+        </p>
+        <pre>
+          <code>devbox idle-stop set mybox 30</code>
+        </pre>
+        <p className="note">
+          Stops <code>mybox</code> after 30 minutes of inactivity. The box must be
+          running and SSH-ready.
+        </p>
+        <ul>
+          <li>
+            <code>devbox idle-stop show mybox</code> — show the current timeout
+          </li>
+          <li>
+            <code>devbox idle-stop update mybox 60</code> — change the timeout
+          </li>
+          <li>
+            <code>devbox idle-stop delete mybox</code> — remove idle-stop from a box
           </li>
         </ul>
       </div>
