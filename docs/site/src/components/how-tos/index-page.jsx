@@ -16,15 +16,15 @@ const guides = [
     title: 'Sync GitHub account',
     description: 'use the GitHub account from your local machine on your box',
   },
-  {
-    to: '/how-tos/remote-desktop',
-    title: 'Remote desktop–like UI',
-    description: 'work on your box with a desktop-style experience',
-  },
+  // {
+  //   to: '/how-tos/remote-desktop',
+  //   title: 'Remote desktop–like UI',
+  //   description: 'work on your box with a desktop-style experience',
+  // },
   {
     to: '/how-tos/vscode-ssh',
-    title: 'VS Code & SSH without the CLI',
-    description: 'use the SSH config devbox writes to connect with ssh or VS Code',
+    title: 'VS Code & SSH without the devbox CLI',
+    description: 'using regular ssh config, connect using VS Code, and differences between devbox ssh and regular ssh',
   },
   {
     to: '/how-tos/ai-sandbox',

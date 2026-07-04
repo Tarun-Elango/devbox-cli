@@ -7,7 +7,7 @@ export default function AiSandboxHowTo() {
       <div className="card">
         <p>
           Spin up a remote box with Codex, Cursor Agent, Claude Code, or another AI coding
-          tool pre-installed. Experiment on AWS instead of your laptop — isolated from
+          tool pre-installed. Experiment on your devbox instead of your laptop — isolated from
           local projects, easy to stop when you are done, and simple to snapshot if you
           want to keep the setup.
         </p>
@@ -34,6 +34,10 @@ export default function AiSandboxHowTo() {
             <code>opencode</code> — OpenCode agent CLI
           </li>
         </ul>
+        <p>
+          You can also create your own template with a startup command:{' '}
+          <code>devbox template new {'<name>'} [command]</code>
+        </p>
         <p className="note">
           Search by name: <code>devbox template search codex</code>. Combine templates
           when creating a box, e.g. <code>go codex22</code> for Go plus Codex.
@@ -43,11 +47,10 @@ export default function AiSandboxHowTo() {
       <div className="card">
         <h2>2. Create the box</h2>
         <pre>
-          <code>devbox create sandbox --template codex22</code>
+          <code>devbox create sandbox --template opencode claude-code</code>
         </pre>
         <p>
-          devbox launches an EC2 instance, adds <code>devbox-sandbox</code> to{' '}
-          <code>~/.ssh/config</code>, and runs the template install scripts on first boot.
+          devbox launches an EC2 instance, and runs the template install scripts on first boot.
         </p>
         <p className="note">
           New to devbox? See <Link to="/docs/install">Installation</Link> and{' '}
@@ -65,7 +68,7 @@ devbox ssh sandbox`}</code>
           <code>devbox ssh</code> waits until the instance is ready and templates have
           finished. After the first successful login, you can also use plain SSH or VS
           Code — see{' '}
-          <Link to="/how-tos/vscode-ssh">VS Code &amp; SSH without the CLI</Link>.
+          <Link to="/how-tos/vscode-ssh">VS Code &amp; SSH without the devbox CLI</Link>.
         </p>
         <p className="note">
           Template scripts run at boot; verify your tools are installed (

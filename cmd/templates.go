@@ -87,11 +87,48 @@ func TemplateSearch(args []string) { // args should be a string of the query
 		return
 	}
 
-	fmt.Printf("Templates matching %q:\n", query)
-	if err := writeTemplateTable(os.Stdout, templates); err != nil {
+	output := fmt.Sprintf("Templates matching %q:\n", query)
+	output += buildTemplateSearchOutput(templates)
+	if err := helper.WriteStdoutMaybePaged(output); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func buildTemplateSearchOutput(templates []*service.Template) string {
+	var b strings.Builder
+	_ = writeTemplateSearchOutput(&b, templates)
+	return b.String()
+}
+
+func writeTemplateSearchOutput(w io.Writer, templates []*service.Template) error {
+	for i, t := range templates {
+		if i > 0 {
+			if _, err := fmt.Fprintln(w); err != nil {
+				return err
+			}
+		}
+		ref := t.Name
+		if ref == "" {
+			ref = t.ID
+		}
+		if _, err := fmt.Fprintf(w, "%s\n  startup script:\n", ref); err != nil {
+			return err
+		}
+		script := formatTemplateScriptFull(t.StartupScript)
+		if script == "-" {
+			if _, err := fmt.Fprintf(w, "    -\n"); err != nil {
+				return err
+			}
+			continue
+		}
+		for _, line := range strings.Split(script, "\n") {
+			if _, err := fmt.Fprintf(w, "    %s\n", line); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // writeTemplateRow: writes one row per template
@@ -105,17 +142,26 @@ func writeTemplateRow(w io.Writer, t *service.Template, colSep string) error {
 }
 
 func formatTemplateScript(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "-"
+	s = formatTemplateScriptFull(s)
+	if s == "-" {
+		return s
 	}
-	s = strings.ReplaceAll(s, "\r\n", "\n")
 	s = strings.ReplaceAll(s, "\n", " ")
 	const maxLen = 72
 	if len(s) > maxLen {
 		s = s[:maxLen-3] + "..."
 	}
 	return s
+}
+
+func formatTemplateScriptFull(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "-"
+	}
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+	return strings.TrimRight(s, "\n")
 }
 
 // createFromTemplates creates a new box applying one or more templates' startup scripts.
