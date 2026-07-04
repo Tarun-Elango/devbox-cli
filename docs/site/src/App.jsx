@@ -1,4 +1,5 @@
-import { Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import './index.css'
 import SiteHeader from './components/header'
 import AboutPage from './components/about'
@@ -17,11 +18,22 @@ import SetupDoc from './components/docs/setup'
 import BoxesDoc from './components/docs/boxes'
 import ConnectDoc from './components/docs/connect'
 import SnapshotsDoc from './components/docs/snapshots'
-import ConfigDoc from './components/docs/config'
+import CommandsDoc from './components/docs/commands'
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  return null
+}
 
 function App() {
   return (
     <div className="shell">
+      <ScrollToTop />
       <SiteHeader />
       <div className="wrap">
         <Routes>
@@ -43,7 +55,7 @@ function App() {
             <Route path="boxes" element={<BoxesDoc />} />
             <Route path="connect" element={<ConnectDoc />} />
             <Route path="snapshots" element={<SnapshotsDoc />} />
-            <Route path="config" element={<ConfigDoc />} />
+            <Route path="commands" element={<CommandsDoc />} />
           </Route>
         </Routes>
       </div>

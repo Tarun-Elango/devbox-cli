@@ -1,4 +1,6 @@
-  export default function AboutPage() {
+import { Link } from 'react-router-dom'
+
+export default function AboutPage() {
     return (
       <>
         <h1>devbox CLI</h1>
@@ -325,31 +327,49 @@
 
         <div className="card">
           <h2>Quick install</h2>
-          <pre>
-            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/main/scripts/install.sh | bash`}</code>
-          </pre>
           <p className="note">
-            Detects your OS and CPU, downloads the matching binary, installs to{' '}
-            <code>~/.local/bin</code>, and adds that directory to your shell config if
-            needed. Restart your shell, then verify:
+            Every push to <code>main</code> publishes binaries to the{' '}
+            <a href="https://github.com/Tarun-Elango/devbox-cli/releases/tag/latest">
+              latest release
+            </a>, run the following command:
+            .
           </p>
           <pre>
-            <code>devbox ls</code>
+            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash`}</code>
           </pre>
           <p className="note">
-            System-wide install (<code>/usr/local/bin</code>, requires <code>sudo</code>,
-            no shell config changes):
+            Verify with the command <code>devbox ls</code>.
           </p>
+          <p className="note">
+            If that worked, you&apos;re done — skip the sections below. They&apos;re
+            optional alternatives for pinning a version or installing system-wide.
+          </p>
+
+          <h3>
+            Pin a specific version — To install a particular release instead of{' '}
+            <code>latest</code>, set <code>RELEASE_TAG</code>:
+          </h3>
           <pre>
-            <code>{`INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/main/scripts/install.sh | sudo bash`}</code>
+            <code>{`RELEASE_TAG=v0.7.0 curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash`}</code>
           </pre>
+
+          <h3>
+            Install system-wide — To install to <code>/usr/local/bin</code> (requires{' '}
+            <code>sudo</code>, no shell config changes):
+          </h3>
+          <pre>
+            <code>{`INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | sudo bash`}</code>
+          </pre>
+
+         
         </div>
 
         <div className="card">
           <h2>Common commands</h2>
           <ul>
             <li>
-              <code>devbox setup</code> — configure AWS credentials
+              <code>devbox setup</code> — configure AWS credentials{' '}
+              <Link to="/docs/setup">(see how to get AWS credentials)</Link>
             </li>
             <li>
               <code>devbox create {'<name>'}</code> — create a box
@@ -362,9 +382,7 @@
             </li>
           </ul>
           <p className="note">
-            <a href="https://github.com/Tarun-Elango/devbox-cli#common-commands">
-              See all commands
-            </a>
+            <Link to="/docs/commands">See all commands</Link>
           </p>
         </div>
 

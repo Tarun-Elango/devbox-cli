@@ -29,20 +29,27 @@ A **box** is a personal dev machine on AWS — an EC2 instance running Amazon Li
 
 ## Download and Install (from GitHub release)
 
-Every push to `main` publishes Linux and macOS binaries to the [`latest` release](https://github.com/Tarun-Elango/devbox-cli/releases/tag/latest).
+Every push to `main` publishes Linux and macOS binaries to the [latest release](https://github.com/Tarun-Elango/devbox-cli/releases/tag/latest). Run the following command:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash
 ```
 
-Don't want to install the latest version? Pin a version with `RELEASE_TAG`, or install system-wide to `/usr/local/bin` (requires `sudo`, no shell config changes):
+Verify with the command `devbox ls`.
+
+If that worked, you're done — skip the sections below. They're optional alternatives for pinning a version or installing system-wide.
+
+#### Pin a specific version — To install a particular release instead of `latest`, set `RELEASE_TAG`:
 
 ```bash
 RELEASE_TAG=v0.7.0 curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash
-INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | sudo bash
 ```
 
-Verify with `devbox ls`.
+#### Install system-wide — To install to `/usr/local/bin` (requires `sudo`, no shell config changes):
+
+```bash
+INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | sudo bash
+```
 
 ## Setup
 
@@ -112,7 +119,7 @@ devbox ls
 
 ## Common commands
 
-Run `devbox` with no arguments to print usage, or see the table below.
+Run `devbox help` to print usage, or see the table below.
 
 ### Config and health
 

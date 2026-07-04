@@ -9,7 +9,8 @@ const topics = [
   {
     to: '/docs/setup',
     title: 'Setup',
-    description: 'configure AWS credentials with devbox setup',
+    description:
+      'configure AWS credentials with devbox setup, IAM setup, ~/.devbox, health checks',
   },
   {
     to: '/docs/boxes',
@@ -27,9 +28,9 @@ const topics = [
     description: 'save images, restore boxes, custom templates',
   },
   {
-    to: '/docs/config',
-    title: 'AWS & local config',
-    description: 'IAM setup, ~/.devbox, health checks',
+    to: '/docs/commands',
+    title: 'See all commands',
+    description: 'full CLI command reference',
   },
 ]
 

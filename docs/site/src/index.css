@@ -9,8 +9,8 @@ body {
   font-size: 16px;
   line-height: 1.5;
   color: #000;
-  background: #c0c0c0
-    url("data:image/svg+xml,%3Csvg width='4' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='2' height='2' fill='%23a8a8a8'/%3E%3Crect x='2' y='2' width='2' height='2' fill='%23a8a8a8'/%3E%3C/svg%3E");
+  background: #9a9a9a
+    url("data:image/svg+xml,%3Csvg width='4' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='2' height='2' fill='%23787878'/%3E%3Crect x='2' y='2' width='2' height='2' fill='%23787878'/%3E%3C/svg%3E");
 }
 
 .shell {
@@ -23,16 +23,19 @@ body {
   gap: 0;
   margin: 0;
   padding: 0;
+  width: 100%;
 }
 
 .site-header a {
+  flex: 1;
+  text-align: center;
   font-family: inherit;
   font-size: 0.8rem;
   line-height: 1;
   padding: 0.25rem 0.65rem;
   margin: 0;
-  background: #c0c0c0;
-  border: 2px outset #dfdfdf;
+  background: #9a9a9a;
+  border: 2px outset #b8b8b8;
   border-bottom: none;
   cursor: pointer;
   color: #000;
@@ -51,7 +54,7 @@ body {
 .wrap {
   padding: 1.5rem;
   background: #fff;
-  border: 3px ridge #dfdfdf;
+  border: 3px ridge #b8b8b8;
 }
 
 h1 {
@@ -74,7 +77,7 @@ h1 {
   margin-bottom: 1.25rem;
   padding: 0.75rem 1rem 1rem;
   background: #ffffcc;
-  border: 2px inset #c0c0c0;
+  border: 2px inset #9a9a9a;
 }
 
 .card-purpose {
@@ -136,6 +139,17 @@ h2 {
   color: #000080;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+h3 {
+  margin: 1rem 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #000080;
+}
+
+.card h3:first-of-type {
+  margin-top: 0.75rem;
 }
 
 pre {
