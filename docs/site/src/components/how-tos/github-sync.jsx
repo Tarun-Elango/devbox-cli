@@ -25,7 +25,7 @@ export default function GithubSyncHowTo() {
         <h2 id="how-to-use">How to use git-sync</h2>
 
         <p>
-          First, set up GitHub SSH login on your laptop: generate an SSH key, add the
+          First, set up GitHub SSH login on your laptop: generate an SSH key (default path is <code>~/.ssh/id_ed25519</code>), add the
           public key under{' '}
           <a href="https://github.com/settings/keys" rel="noreferrer" target="_blank">
             GitHub → Settings → SSH and GPG keys

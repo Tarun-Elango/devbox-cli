@@ -322,6 +322,11 @@ export default function AboutPage() {
           <ul>
             <li>macOS or Linux</li>
             <li>Your own AWS account (BYOK)</li>
+            <li>
+              On <code>PATH</code> you might need: <code>ssh</code> for SSH commands, <code>scp</code> for
+              copy, <code>rsync</code> for folder sync, and <code>ssh-agent</code> for
+              GitHub sync between your machine and a box
+            </li>
           </ul>
           <p className="note">
             devbox runs on your machine and uses your AWS account — no shared cloud,
@@ -337,7 +342,7 @@ export default function AboutPage() {
             <a href="https://github.com/Tarun-Elango/devbox-cli/releases/tag/latest">
               latest release
             </a>, run the following command:
-            .
+
           </p>
           <pre>
             <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash`}</code>

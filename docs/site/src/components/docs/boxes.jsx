@@ -12,6 +12,13 @@ export default function BoxesDoc() {
     <DocPage title="Managing boxes">
       <DocOutline items={sections} />
 
+      <p className="note">
+        A box is an EC2 instance running <strong>Amazon Linux 2023</strong> — you
+        provision, connect to, and tear it down from your laptop. Templates and
+        startup scripts use <code>dnf</code> and the default login user is{' '}
+        <code>ec2-user</code>.
+      </p>
+
       <div className="card">
         <h2 id="create-box">Create a box</h2>
         <pre>
@@ -47,7 +54,7 @@ export default function BoxesDoc() {
           <dt>Templates and snapshot together</dt>
           <dd>
             <code>
-              devbox create {'<name>'}[--template {'<templateName>'}...] [--from {'<amiId|name>'}]
+              devbox create {'<name>'} [--template {'<templateName>'}...] [--from {'<amiId|name>'}]
             </code>
           </dd>
           <dd className="example">

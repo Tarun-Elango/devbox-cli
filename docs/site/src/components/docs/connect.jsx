@@ -42,7 +42,7 @@ export default function ConnectDoc() {
             <code>devbox ssh [-i key] {'<id-or-name>'}</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox ssh mybox -i path/to/key</code>
+            Example: <code>devbox ssh -i path/to/key mybox</code>
           </dd>
         </dl>
         <dl className="cmd-variant">

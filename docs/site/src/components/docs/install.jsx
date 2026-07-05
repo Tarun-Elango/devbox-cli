@@ -16,7 +16,7 @@ export default function InstallDoc() {
       <div className="card">
         <h2 id="quick-install">Quick install</h2>
         <pre>
-          <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/main/scripts/install.sh | bash`}</code>
+          <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash`}</code>
         </pre>
         <p className="note">
           Detects your OS and CPU, downloads the matching binary, installs to{' '}

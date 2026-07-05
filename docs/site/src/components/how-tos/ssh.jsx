@@ -36,7 +36,7 @@ export default function SshHowTo() {
           key. Pass <code>-i</code> to use a different one:
         </p>
         <pre>
-          <code>devbox ssh mybox -i path/to/key</code>
+          <code>devbox ssh -i path/to/key mybox</code>
         </pre>
 
         <p>
