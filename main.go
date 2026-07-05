@@ -8,7 +8,7 @@ import (
 	"devbox-cli/internal/backup"
 )
 
-const helpTopics = "create, box, ssh, snapshot, template, idle-stop, git-sync"
+const helpTopics = "create, box, ssh, snapshot, template, idle-stop, git-sync, budget"
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Usage: devbox <command> [args]
@@ -23,6 +23,11 @@ Commands:
   setup               Configure AWS credentials and region (stored in ~/.devbox/config.json)
   clear-creds         Clear saved AWS credentials from ~/.devbox/config.json
   health              Check config, AWS credentials, region, and database
+
+  budget [ls] [--refresh]
+                      List AWS account budgets (name, period, limit, spend,
+                      forecast, %% of budget)
+                      Results are cached under ~/.devbox/ for 12h.
 
   create <name> [--template <templateName>...] [--from <amiId|name>]
                       Create a new box (optionally from one or more templates,
@@ -186,6 +191,18 @@ func helpGitSync() {
 `)
 }
 
+func helpBudget() {
+	fmt.Fprintf(os.Stderr, `Usage: devbox budget [ls] [--refresh]
+
+  budget                List all AWS account budgets
+  budget ls             Same as above
+  budget --refresh      Bypass the local cache and refetch from AWS
+
+Requires the budgets:ViewBudget IAM permission. Results are cached under
+~/.devbox/ for 12h since repeated calls aren't necessary (Budgets API is free).
+`)
+}
+
 func helpCommand(args []string) {
 	if len(args) == 0 {
 		usage()
@@ -207,6 +224,8 @@ func helpCommand(args []string) {
 		helpIdleStop()
 	case "git-sync":
 		helpGitSync()
+	case "budget":
+		helpBudget()
 	default:
 		fmt.Fprintf(os.Stderr, "devbox: unknown help topic %q\n\n", args[0])
 		fmt.Fprintf(os.Stderr, "Topics: %s\n", helpTopics)
@@ -241,6 +260,8 @@ func main() {
 		cmd.ClearCreds(args)
 	case "health":
 		cmd.Health(args)
+	case "budget":
+		cmd.Budget(args)
 	case "create":
 		cmd.Create(args)
 	case "ls":
