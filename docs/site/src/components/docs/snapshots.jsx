@@ -1,54 +1,134 @@
+import DocOutline from './doc-outline'
 import DocPage from './doc-page'
+
+const sections = [
+  { id: 'snapshots', label: 'Snapshots' },
+  { id: 'templates', label: 'Templates' },
+]
 
 export default function SnapshotsDoc() {
   return (
     <DocPage title="Snapshots & templates">
+      <DocOutline items={sections} />
+
       <div className="card">
-        <h2>Snapshots</h2>
-        <ul>
-          <li>
-            <code>devbox snapshot</code> — list all snapshots
-          </li>
-          <li>
-            <code>devbox snapshot create {'<id-or-name>'} {'<name>'}</code> — snapshot a
-            box
-          </li>
-          <li>
-            <code>devbox snapshot ls {'<amiId-or-name>'}</code> — show snapshot details
-          </li>
-          <li>
-            <code>devbox snapshot delete {'<amiId-or-name>'}</code> — delete a snapshot
-          </li>
-        </ul>
+        <h2 id="snapshots">Snapshots</h2>
         <p className="note">
-          Restore when creating a box:{' '}
-          <code>devbox create {'<name>'} --from {'<amiId|name>'}</code>
+          A snapshot is a saved disk image of a box — restore one when creating a new box
+          with <code>--from</code>.
         </p>
+
+        <dl className="cmd-variant">
+          <dt>List all snapshots</dt>
+          <dd>
+            <code>devbox snapshot</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox snapshot</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Create a snapshot</dt>
+          <dd>
+            <code>devbox snapshot create {'<id-or-name>'} {'<name>'}</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox snapshot create mybox pre-upgrade</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Show snapshot details</dt>
+          <dd>
+            <code>devbox snapshot ls {'<amiId-or-name>'}</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox snapshot ls pre-upgrade</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Delete a snapshot</dt>
+          <dd>
+            <code>devbox snapshot delete {'<amiId-or-name>'}</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox snapshot delete pre-upgrade</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Restore when creating a box</dt>
+          <dd>
+            <code>devbox create {'<name>'} --from {'<amiId|name>'}</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox create mybox --from pre-upgrade</code>
+          </dd>
+        </dl>
       </div>
 
       <div className="card">
-        <h2>Templates</h2>
-        <ul>
-          <li>
-            <code>devbox template</code> — list available templates
-          </li>
-          <li>
-            <code>devbox template new {'<name>'} [command]</code> — create a template
-          </li>
-          <li>
-            <code>devbox template search {'<query>'}</code> — search by name
-          </li>
-          <li>
-            <code>devbox template rename {'<name>'} {'<new-name>'}</code> — rename
-          </li>
-          <li>
-            <code>devbox template delete {'<name>'}</code> — delete a template
-          </li>
-        </ul>
+        <h2 id="templates">Templates</h2>
         <p className="note">
-          Use templates at create time:{' '}
-          <code>devbox create --template {'<template>'} {'<name>'}</code>
+          A template preloads a box with libraries, tools, and other setup when you create
+          it.
         </p>
+
+        <dl className="cmd-variant">
+          <dt>List available templates</dt>
+          <dd>
+            <code>devbox template</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox template</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Create a template</dt>
+          <dd>
+            <code>devbox template new {'<templateName>'} [command]</code>
+          </dd>
+          <dd className="example">
+            Example:{' '}
+            <code>devbox template new my-stack &quot;npm install -g pnpm&quot;</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Search templates by name</dt>
+          <dd>
+            <code>devbox template search {'<query>'}</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox template search node</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Rename a template</dt>
+          <dd>
+            <code>
+              devbox template rename {'<templateName>'} {'<new-templateName>'}
+            </code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox template rename my-stack my-stack-v2</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Delete a template</dt>
+          <dd>
+            <code>devbox template delete {'<templateName>'}</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox template delete my-stack</code>
+          </dd>
+        </dl>
+        <dl className="cmd-variant">
+          <dt>Use templates when creating a box</dt>
+          <dd>
+            <code>devbox create {'<name>'} [--template {'<templateName>'}...]</code>
+          </dd>
+          <dd className="example">
+            Example: <code>devbox create mybox --template node go</code>
+          </dd>
+        </dl>
       </div>
     </DocPage>
   )

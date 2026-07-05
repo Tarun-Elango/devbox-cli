@@ -1,4 +1,5 @@
-import { Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import './index.css'
 import SiteHeader from './components/header'
 import AboutPage from './components/about'
@@ -17,37 +18,52 @@ import SetupDoc from './components/docs/setup'
 import BoxesDoc from './components/docs/boxes'
 import ConnectDoc from './components/docs/connect'
 import SnapshotsDoc from './components/docs/snapshots'
-import ConfigDoc from './components/docs/config'
+import CommandsDoc from './components/docs/commands'
+import PlanetDecoration from './components/planet-decoration'
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  return null
+}
 
 function App() {
   return (
-    <div className="shell">
-      <SiteHeader />
-      <div className="wrap">
-        <Routes>
-          <Route path="/" element={<AboutPage />} />
-          <Route path="/how-tos" element={<HowTosLayout />}>
-            <Route index element={<HowTosIndexPage />} />
-            <Route path="ssh" element={<SshHowTo />} />
-            <Route path="transfer" element={<TransferHowTo />} />
-            <Route path="github-sync" element={<GithubSyncHowTo />} />
-            <Route path="remote-desktop" element={<RemoteDesktopHowTo />} />
-            <Route path="vscode-ssh" element={<VscodeSshHowTo />} />
-            <Route path="ai-sandbox" element={<AiSandboxHowTo />} />
-          </Route>
-          <Route path="/docs" element={<DocsLayout />}>
-          {/* below are the routes for the docs page, so docs/children */}
-            <Route index element={<DocsIndexPage />} />
-            <Route path="install" element={<InstallDoc />} />
-            <Route path="setup" element={<SetupDoc />} />
-            <Route path="boxes" element={<BoxesDoc />} />
-            <Route path="connect" element={<ConnectDoc />} />
-            <Route path="snapshots" element={<SnapshotsDoc />} />
-            <Route path="config" element={<ConfigDoc />} />
-          </Route>
-        </Routes>
+    <>
+      <PlanetDecoration />
+      <div className="shell">
+        <ScrollToTop />
+        <SiteHeader />
+        <div className="wrap">
+          <Routes>
+            <Route path="/" element={<AboutPage />} />
+            <Route path="/how-tos" element={<HowTosLayout />}>
+              <Route index element={<HowTosIndexPage />} />
+              <Route path="ssh" element={<SshHowTo />} />
+              <Route path="transfer" element={<TransferHowTo />} />
+              <Route path="github-sync" element={<GithubSyncHowTo />} />
+              <Route path="remote-desktop" element={<RemoteDesktopHowTo />} />
+              <Route path="vscode-ssh" element={<VscodeSshHowTo />} />
+              <Route path="ai-sandbox" element={<AiSandboxHowTo />} />
+            </Route>
+            <Route path="/docs" element={<DocsLayout />}>
+              {/* below are the routes for the docs page, so docs/children */}
+              <Route index element={<DocsIndexPage />} />
+              <Route path="install" element={<InstallDoc />} />
+              <Route path="setup" element={<SetupDoc />} />
+              <Route path="boxes" element={<BoxesDoc />} />
+              <Route path="connect" element={<ConnectDoc />} />
+              <Route path="snapshots" element={<SnapshotsDoc />} />
+              <Route path="commands" element={<CommandsDoc />} />
+            </Route>
+          </Routes>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 

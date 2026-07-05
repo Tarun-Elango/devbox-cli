@@ -153,36 +153,8 @@ func TestSetup(t *testing.T) {
 		}
 	})
 
-	t.Run("secret_read_error", func(t *testing.T) {
-		withSetupStdin(t, "")
-
-		stderr := captureStderr(t, func() {
-			code, exited := withSetupExit(t, func() { Setup(nil) })
-			if !exited || code != 1 {
-				t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
-			}
-		})
-		if !strings.Contains(stderr, "error reading secret:") { // should have error
-			t.Fatalf("stderr = %q, want secret read error", stderr)
-		}
-	})
-
-	t.Run("empty_secret", func(t *testing.T) {
-		withSetupStdin(t, "\n")
-
-		stderr := captureStderr(t, func() {
-			code, exited := withSetupExit(t, func() { Setup(nil) })
-			if !exited || code != 1 {
-				t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
-			}
-		})
-		if !strings.Contains(stderr, "setup failed: secret is required") { // should have error
-			t.Fatalf("stderr = %q, want secret required error", stderr)
-		}
-	})
-
 	t.Run("access_key_read_error", func(t *testing.T) {
-		withSetupStdin(t, "secret-key\n")
+		withSetupStdin(t, "")
 
 		stderr := captureStderr(t, func() {
 			code, exited := withSetupExit(t, func() { Setup(nil) })
@@ -196,7 +168,7 @@ func TestSetup(t *testing.T) {
 	})
 
 	t.Run("empty_access_key", func(t *testing.T) {
-		withSetupStdin(t, "secret-key\n\n")
+		withSetupStdin(t, "\n")
 
 		stderr := captureStderr(t, func() {
 			code, exited := withSetupExit(t, func() { Setup(nil) })
@@ -209,8 +181,36 @@ func TestSetup(t *testing.T) {
 		}
 	})
 
+	t.Run("secret_read_error", func(t *testing.T) {
+		withSetupStdin(t, "access-key\n")
+
+		stderr := captureStderr(t, func() {
+			code, exited := withSetupExit(t, func() { Setup(nil) })
+			if !exited || code != 1 {
+				t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
+			}
+		})
+		if !strings.Contains(stderr, "error reading secret:") { // should have error
+			t.Fatalf("stderr = %q, want secret read error", stderr)
+		}
+	})
+
+	t.Run("empty_secret", func(t *testing.T) {
+		withSetupStdin(t, "access-key\n\n")
+
+		stderr := captureStderr(t, func() {
+			code, exited := withSetupExit(t, func() { Setup(nil) })
+			if !exited || code != 1 {
+				t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
+			}
+		})
+		if !strings.Contains(stderr, "setup failed: secret is required") { // should have error
+			t.Fatalf("stderr = %q, want secret required error", stderr)
+		}
+	})
+
 	t.Run("invalid_region", func(t *testing.T) {
-		withSetupStdin(t, "secret-key\naccess-key\nnot-a-region\n") // input invalid region
+		withSetupStdin(t, "access-key\nsecret-key\nnot-a-region\n") // input invalid region
 
 		stderr := captureStderr(t, func() {
 			code, exited := withSetupExit(t, func() { Setup(nil) })
@@ -230,7 +230,7 @@ func TestSetup(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Setenv("HOME", home)
-		withSetupStdin(t, "secret-key\naccess-key\n1\n")
+		withSetupStdin(t, "access-key\nsecret-key\n1\n")
 
 		stderr := captureStderr(t, func() {
 			code, exited := withSetupExit(t, func() { Setup(nil) })
@@ -245,7 +245,7 @@ func TestSetup(t *testing.T) {
 
 	t.Run("success_by_region_number", func(t *testing.T) {
 		withTestHome(t)
-		withSetupStdin(t, "my-secret\nmy-access\n1\n")
+		withSetupStdin(t, "my-access\nmy-secret\n1\n")
 
 		out := captureStdout(t, func() {
 			code, exited := withSetupExit(t, func() { Setup(nil) })
@@ -265,7 +265,7 @@ func TestSetup(t *testing.T) {
 
 	t.Run("success_by_region_id", func(t *testing.T) {
 		withTestHome(t)
-		withSetupStdin(t, "other-secret\nother-access\nus-west-2\n")
+		withSetupStdin(t, "other-access\nother-secret\nus-west-2\n")
 
 		captureStdout(t, func() {
 			code, exited := withSetupExit(t, func() { Setup(nil) })

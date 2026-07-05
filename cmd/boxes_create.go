@@ -8,19 +8,20 @@ import (
 	"devbox-cli/service"
 )
 
-// Create creates a new box with an optional name and returns as soon as EC2 accepts the launch.
+// Create creates a new box with a name and returns as soon as EC2 accepts the launch.
+// Pass --template <templateName>... to apply one or more templates' startup scripts.
 // Pass --from <amiId|name> to restore from a previously saved snapshot.
 func Create(args []string) {
-	if len(args) > 0 && args[0] == "--template" {
-		CreateTemplate(args[1:])
-		return
-	}
-
-	name, fromSnapshot, err := helper.ParseNameAndFromFlag(args)
+	name, templateRefs, fromSnapshot, err := helper.ParseCreateArgs(args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--from <amiId|name>]")
+		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--template <templateName>...] [--from <amiId|name>]")
 		os.Exit(1)
+	}
+
+	if len(templateRefs) > 0 {
+		createFromTemplates(name, templateRefs, fromSnapshot)
+		return
 	}
 
 	pubKey := ""

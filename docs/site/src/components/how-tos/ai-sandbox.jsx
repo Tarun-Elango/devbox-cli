@@ -1,20 +1,31 @@
 import { Link } from 'react-router-dom'
+import DocOutline from '../docs/doc-outline'
 import HowToPage from './how-to-page'
+
+const sections = [
+  { id: 'pick-template', label: 'Pick a template' },
+  { id: 'create-box', label: 'Create the box' },
+  { id: 'connect', label: 'Wait for setup, then connect' },
+  { id: 'work-remotely', label: 'Work remotely' },
+  { id: 'save-money', label: 'Save money when idle' },
+]
 
 export default function AiSandboxHowTo() {
   return (
     <HowToPage title="AI sandbox box">
+      <DocOutline items={sections} />
+
       <div className="card">
         <p>
           Spin up a remote box with Codex, Cursor Agent, Claude Code, or another AI coding
-          tool pre-installed. Experiment on AWS instead of your laptop — isolated from
+          tool pre-installed. Experiment on your devbox instead of your laptop — isolated from
           local projects, easy to stop when you are done, and simple to snapshot if you
           want to keep the setup.
         </p>
       </div>
 
       <div className="card">
-        <h2>1. Pick a template</h2>
+        <h2 id="pick-template">1. Pick a template</h2>
         <p>List built-in templates (includes several AI agents):</p>
         <pre>
           <code>devbox template</code>
@@ -34,6 +45,10 @@ export default function AiSandboxHowTo() {
             <code>opencode</code> — OpenCode agent CLI
           </li>
         </ul>
+        <p>
+          You can also create your own template with a startup command:{' '}
+          <code>devbox template new {'<name>'} [command]</code>
+        </p>
         <p className="note">
           Search by name: <code>devbox template search codex</code>. Combine templates
           when creating a box, e.g. <code>go codex22</code> for Go plus Codex.
@@ -41,13 +56,12 @@ export default function AiSandboxHowTo() {
       </div>
 
       <div className="card">
-        <h2>2. Create the box</h2>
+        <h2 id="create-box">2. Create the box</h2>
         <pre>
-          <code>devbox create --template codex22 sandbox</code>
+          <code>devbox create sandbox --template opencode claude-code</code>
         </pre>
         <p>
-          devbox launches an EC2 instance, adds <code>devbox-sandbox</code> to{' '}
-          <code>~/.ssh/config</code>, and runs the template install scripts on first boot.
+          devbox launches an EC2 instance, and runs the template install scripts on first boot.
         </p>
         <p className="note">
           New to devbox? See <Link to="/docs/install">Installation</Link> and{' '}
@@ -56,7 +70,7 @@ export default function AiSandboxHowTo() {
       </div>
 
       <div className="card">
-        <h2>3. Wait for setup, then connect</h2>
+        <h2 id="connect">3. Wait for setup, then connect</h2>
         <pre>
           <code>{`devbox status sandbox
 devbox ssh sandbox`}</code>
@@ -65,7 +79,7 @@ devbox ssh sandbox`}</code>
           <code>devbox ssh</code> waits until the instance is ready and templates have
           finished. After the first successful login, you can also use plain SSH or VS
           Code — see{' '}
-          <Link to="/how-tos/vscode-ssh">VS Code &amp; SSH without the CLI</Link>.
+          <Link to="/how-tos/vscode-ssh">VS Code &amp; SSH without the devbox CLI</Link>.
         </p>
         <p className="note">
           Template scripts run at boot; verify your tools are installed (
@@ -76,7 +90,7 @@ devbox ssh sandbox`}</code>
       </div>
 
       <div className="card">
-        <h2>4. Work remotely</h2>
+        <h2 id="work-remotely">4. Work remotely</h2>
         <p>Typical workflow on the box:</p>
         <pre>
           <code>{`mkdir -p ~/experiments && cd ~/experiments
@@ -101,7 +115,7 @@ codex`}</code>
       </div>
 
       <div className="card">
-        <h2>5. Save money when idle</h2>
+        <h2 id="save-money">5. Save money when idle</h2>
         <p>Stop the box when you are not using it:</p>
         <pre>
           <code>devbox stop sandbox</code>
@@ -113,7 +127,7 @@ codex`}</code>
         <p>
           Snapshot a box you want to reuse later:{' '}
           <code>devbox snapshot create sandbox my-snapshot</code>, then restore with{' '}
-          <code>devbox create --template codex22 newbox --from my-snapshot</code>.
+          <code>devbox create newbox --template codex22 --from my-snapshot</code>.
         </p>
       </div>
     </HowToPage>

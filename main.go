@@ -24,10 +24,9 @@ Commands:
   clear-creds         Clear saved AWS credentials from ~/.devbox/config.json
   health              Check config, AWS credentials, region, and database
 
-  create <name> [--from <amiId|name>]
-                      Create a new box (optionally restore from a snapshot)
-  create --template <template> [<template>...] <name> [--from <amiId|name>]
-                      Create a box from one or more templates (optionally from snapshot)
+  create <name> [--template <templateName>...] [--from <amiId|name>]
+                      Create a new box (optionally from one or more templates,
+                      and optionally restore from a snapshot)
 
   ls                  List all boxes
   status <id|name>    Show details for a box
@@ -51,8 +50,9 @@ Commands:
                         devbox cp ./main.go mybox:/home/ec2-user/app/
                         devbox cp mybox:/home/ec2-user/app/main.go ./
   sync [-i key] [--delete] <source> <dest>
-                      Sync files or directories to or from a box
-                        --delete  Remove destination files missing from source
+                      Sync directories via rsync over SSH (one local path, one box:/path)
+                        Only dest is modified; source is read-only.
+                        --delete also removes files on dest that are not in source
                         devbox sync ./project mybox:/home/ec2-user/project
                         devbox sync mybox:/home/ec2-user/project ./project
   exec [-i key] [-s] [-t] <id|name> -- <command>
@@ -68,9 +68,9 @@ Commands:
   snapshot delete <amiId|name>          Delete a snapshot
 
   template                              List available templates
-  template new <name> [command string]  Create a template with optional startup command
-  template delete <name>                Delete a template
-  template rename <name> <new-name>     Rename a template
+  template new <templateName> [command string]  Create a template with optional startup command
+  template delete <templateName>                Delete a template
+  template rename <templateName> <new-templateName>     Rename a template
   template search <query>               Search templates by name ( returns partial matches )
 
   idle-stop set <id|name> <minutes>     Stop the box after inactivity
@@ -85,13 +85,16 @@ Commands:
 }
 
 func helpCreate() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox create <name> [--from <amiId|name>]
-       devbox create --template <template> [<template>...] <name> [--from <amiId|name>]
+	fmt.Fprintf(os.Stderr, `Usage: devbox create <name> [--template <templateName>...] [--from <amiId|name>]
 
+  create <name>
+                      Create a new box
+  create <name> --template <templateName> [<templateName>...]
+                      Create a box from one or more templates
   create <name> [--from <amiId|name>]
-                      Create a new box (optionally restore from a snapshot)
-  create --template <template> [<template>...] <name> [--from <amiId|name>]
-                      Create a box from one or more templates (optionally from snapshot)
+                      Restore a box from a previously saved snapshot
+  create <name> --template <templateName> [<templateName>...] --from <amiId|name>
+                      Create a box from templates, restoring from a snapshot
 `)
 }
 
@@ -125,8 +128,9 @@ func helpSSH() {
                         devbox cp ./main.go mybox:/home/ec2-user/app/
                         devbox cp mybox:/home/ec2-user/app/main.go ./
   sync [-i key] [--delete] <source> <dest>
-                      Sync files or directories to or from a box
-                        --delete  Remove destination files missing from source
+                      Sync directories via rsync over SSH (one local path, one box:/path)
+                        Only dest is modified; source is read-only
+                        --delete  Also remove files on dest that are not in source
                         devbox sync ./project mybox:/home/ec2-user/project
                         devbox sync mybox:/home/ec2-user/project ./project
   exec [-i key] [-s] [-t] <id|name> -- <command>
@@ -156,9 +160,9 @@ func helpTemplate() {
 Templates let you create boxes preloaded with libs, tools, and other setup.
 
   template                              List available templates
-  template new <name> [command string]  Create a template with optional startup command
-  template delete <name>                Delete a template
-  template rename <name> <new-name>     Rename a template
+  template new <templateName> [command string]  Create a template with optional startup command
+  template delete <templateName>                Delete a template
+  template rename <templateName> <new-templateName>     Rename a template
   template search <query>               Search templates by name ( returns partial matches )
 `)
 }

@@ -1,24 +1,28 @@
 import { Link } from 'react-router-dom'
+import DocOutline from '../docs/doc-outline'
 import HowToPage from './how-to-page'
+
+const sections = [
+  { id: 'plain-ssh', label: 'Connect with plain SSH' },
+  { id: 'vscode', label: 'Connect with VS Code' },
+  { id: 'devbox-ssh', label: 'devbox ssh vs regular ssh' },
+]
 
 export default function VscodeSshHowTo() {
   return (
-    <HowToPage title="VS Code & SSH without the CLI">
-      <div className="card">
-        <p>
-          You can manage boxes with devbox and still connect with plain <code>ssh</code> or
-          VS Code Remote-SSH. Every time you create, start, or rename a box, devbox writes
-          a host entry to <code>~/.ssh/config</code> so standard SSH tools work without
-          calling <code>devbox ssh</code>.
-        </p>
-      </div>
+    <HowToPage title="VS Code & SSH without the devbox CLI">
+      <DocOutline items={sections} />
 
       <div className="card">
-        <h2>What devbox adds to your SSH config</h2>
         <p>
-          After <code>devbox create mybox</code>, look for a block named{' '}
-          <code>devbox-mybox</code>:
+          You can manage boxes with devbox cli and still connect with plain <code>ssh</code> or
+          VS Code Remote-SSH. Every time you create, start, or rename a box, devbox cli writes
+          a host entry to <code>~/.ssh/config</code> so standard SSH tools work without
+          calling <code>devbox ssh</code>. After <code>devbox create mybox</code>, look for a
+          block named <code>devbox-mybox</code>:
         </p>
+
+        <p>Devbox cli adds a block to your <code>~/.ssh/config</code> file:</p>
         <pre>
           <code>{`Host devbox-mybox
     HostName 203.0.113.42
@@ -34,24 +38,9 @@ export default function VscodeSshHowTo() {
       </div>
 
       <div className="card">
-        <h2>Prerequisites</h2>
-        <ol>
-          <li>
-            An SSH key at <code>~/.ssh/id_ed25519</code> (devbox uses this when creating
-            boxes). Generate one with <code>ssh-keygen -t ed25519</code> if needed.
-          </li>
-          <li>
-            A running box — use <code>devbox start {'<name>'}</code> if it is stopped.
-          </li>
-          <li>
-            The box finished provisioning. Run <code>devbox status {'<name>'}</code> or
-            connect once with <code>devbox ssh {'<name>'}</code> to wait for setup.
-          </li>
-        </ol>
-      </div>
+        <h2 id="plain-ssh">Connect with plain SSH</h2>
 
-      <div className="card">
-        <h2>Connect with plain SSH</h2>
+        <p>Make sure the box is running and ready to connect to. Then run:</p>
         <pre>
           <code>ssh devbox-mybox</code>
         </pre>
@@ -70,7 +59,7 @@ ssh devbox-mybox -L 8080:localhost:8080`}</code>
       </div>
 
       <div className="card">
-        <h2>Connect with VS Code</h2>
+        <h2 id="vscode">Connect with VS Code</h2>
         <ol>
           <li>
             Install the{' '}
@@ -84,7 +73,7 @@ ssh devbox-mybox -L 8080:localhost:8080`}</code>
             extension.
           </li>
           <li>
-            Open the Command Palette (<kbd>F1</kbd> or <kbd>Ctrl+Shift+P</kbd>) →{' '}
+            Open the Command Palette (<kbd>CMD+Shift+P</kbd> or <kbd>Ctrl+Shift+P</kbd>) →{' '}
             <strong>Remote-SSH: Connect to Host…</strong>
           </li>
           <li>
@@ -103,7 +92,20 @@ ssh devbox-mybox -L 8080:localhost:8080`}</code>
       </div>
 
       <div className="card">
-        <h2>When to use <code>devbox ssh</code> instead</h2>
+        <h2 id="devbox-ssh">
+          <code>devbox ssh</code> vs regular <code>ssh</code>
+        </h2>
+        <p>
+          Both open the same interactive session on the box. Port forwarding, remote
+          commands, and the rest of your SSH client&apos;s options work either way —{' '}
+          <code>devbox ssh mybox -- -L 8080:localhost:8080</code> and{' '}
+          <code>ssh devbox-mybox -L 8080:localhost:8080</code> do the same thing.
+        </p>
+        <p>
+          Use <code>ssh devbox-mybox</code> (or VS Code Remote-SSH) for day-to-day work
+          once the box is running. Reach for <code>devbox ssh</code> when you want
+          devbox to handle a bit more:
+        </p>
         <ul>
           <li>
             First connection while the box is still provisioning —{' '}

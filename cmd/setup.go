@@ -11,11 +11,21 @@ import (
 // setupExit is os.Exit by default; tests replace it to capture exit codes.
 var setupExit = os.Exit
 
-// Setup prompts for AWS secret, access key, and region, then saves to ~/.devbox/.
+// Setup prompts for AWS access key, secret, and region, then saves to ~/.devbox/.
 func Setup(args []string) {
 	helper.RejectExtraArgs(args, "usage: devbox setup")
 
 	fmt.Println("Setup AWS credentials, if you have already done this, doing this will overwrite your existing credentials, CTRL+C to cancel.")
+
+	accessKey, err := helper.ReadPassword("AWS access key: ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading access key: %v\n", err)
+		setupExit(1)
+	}
+	if accessKey == "" {
+		fmt.Fprintln(os.Stderr, "setup failed: access key is required")
+		setupExit(1)
+	}
 
 	secret, err := helper.ReadPassword("AWS secret access key: ")
 	if err != nil {
@@ -24,16 +34,6 @@ func Setup(args []string) {
 	}
 	if secret == "" {
 		fmt.Fprintln(os.Stderr, "setup failed: secret is required")
-		setupExit(1)
-	}
-
-	accessKey, err := helper.ReadPassword("AWS access key ID: ")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading access key: %v\n", err)
-		setupExit(1)
-	}
-	if accessKey == "" {
-		fmt.Fprintln(os.Stderr, "setup failed: access key is required")
 		setupExit(1)
 	}
 

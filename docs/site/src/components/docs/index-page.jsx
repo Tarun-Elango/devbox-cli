@@ -4,22 +4,23 @@ const topics = [
   {
     to: '/docs/install',
     title: 'Installation',
-    description: 'curl script, verify install, system-wide install',
+    description: 'Quick install, install with specific version or shared machine, github repo build.',
   },
   {
     to: '/docs/setup',
     title: 'Setup',
-    description: 'configure AWS credentials with devbox setup',
+    description:
+      'configure AWS credentials with devbox setup, IAM setup on AWS console',
   },
   {
     to: '/docs/boxes',
     title: 'Managing boxes',
-    description: 'create, list, start, stop, delete, resize',
+    description: 'create, list, start, stop, delete, resize, and add an idle stop timer',
   },
   {
     to: '/docs/connect',
     title: 'Connect & transfer',
-    description: 'ssh, cp, sync, exec, port forwarding',
+    description: 'ssh, cp, sync, exec, port forwarding, and sync local git ssh to remote box',
   },
   {
     to: '/docs/snapshots',
@@ -27,9 +28,9 @@ const topics = [
     description: 'save images, restore boxes, custom templates',
   },
   {
-    to: '/docs/config',
-    title: 'AWS & local config',
-    description: 'IAM setup, ~/.devbox, health checks',
+    to: '/docs/commands',
+    title: 'See all commands',
+    description: 'full CLI command reference',
   },
 ]
 

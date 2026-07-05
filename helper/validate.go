@@ -112,108 +112,79 @@ func ValidateSnapshotAmiID(id string) error {
 }
 
 func UnknownCreateFlagError(flag string) error {
-	// --from is the only supported flag in create parsing; suggest it for typos and partial flags.
+	// --from and --template are the only supported flags in create parsing;
+	// suggest them for typos and partial flags.
 	if strings.HasPrefix("--from", flag) || strings.HasPrefix(flag, "--f") {
 		return fmt.Errorf("unknown flag %q (did you mean --from?)", flag)
+	}
+	if strings.HasPrefix("--template", flag) || strings.HasPrefix(flag, "--t") {
+		return fmt.Errorf("unknown flag %q (did you mean --template?)", flag)
 	}
 	return fmt.Errorf("unknown flag %q", flag)
 }
 
-// ParseNameAndFromFlag parses a box name and optional --from <amiId|name> from args.
-// The name must appear before --from (see: devbox create <name> [--from <amiId|name>]).
-func ParseNameAndFromFlag(args []string) (name, fromSnapshot string, err error) {
+// ParseCreateArgs parses args for the unified create command:
+// <name> [--template <templateName> [<templateName>...]] [--from <amiId|name>]
+// The box name must be the first argument; --template and --from may follow in any order.
+func ParseCreateArgs(args []string) (name string, templateRefs []string, fromSnapshot string, err error) {
+	if len(args) == 0 {
+		return "", nil, "", fmt.Errorf("missing box name")
+	}
+	if strings.HasPrefix(args[0], "--") {
+		return "", nil, "", fmt.Errorf("box name must come first")
+	}
+	name = strings.TrimSpace(args[0])
+	if name == "" {
+		return "", nil, "", fmt.Errorf("missing box name")
+	}
+
+	templateSeen := false
 	fromSeen := false
-	for i := 0; i < len(args); i++ {
+
+	for i := 1; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
-		case "--from":
-			if name == "" {
-				return "", "", fmt.Errorf("box name must come before --from")
+		case "--template":
+			if templateSeen {
+				return "", nil, "", fmt.Errorf("unexpected extra arguments: %s", strings.Join(args[i:], " "))
 			}
+			templateSeen = true
+			start := i + 1
+			j := start
+			for j < len(args) && !strings.HasPrefix(args[j], "--") {
+				j++
+			}
+			if j == start {
+				return "", nil, "", fmt.Errorf("--template requires at least one template name")
+			}
+			for _, t := range args[start:j] {
+				t = strings.TrimSpace(t)
+				if t == "" {
+					return "", nil, "", fmt.Errorf("template name is required")
+				}
+				templateRefs = append(templateRefs, t)
+			}
+			i = j - 1
+		case "--from":
 			if fromSeen {
-				return "", "", fmt.Errorf("unexpected extra arguments: %s", strings.Join(args[i:], " "))
+				return "", nil, "", fmt.Errorf("unexpected extra arguments: %s", strings.Join(args[i:], " "))
 			}
 			fromSeen = true
 			if i+1 >= len(args) {
-				return "", "", fmt.Errorf("--from requires a snapshot ami id or name")
+				return "", nil, "", fmt.Errorf("--from requires a snapshot ami id or name")
 			}
 			i++
 			if err := ValidateSnapshotRef(args[i]); err != nil {
-				return "", "", err
+				return "", nil, "", err
 			}
 			fromSnapshot = strings.TrimSpace(args[i])
 		default:
 			if strings.HasPrefix(arg, "--") {
-				return "", "", UnknownCreateFlagError(arg)
+				return "", nil, "", UnknownCreateFlagError(arg)
 			}
-			if name != "" {
-				return "", "", fmt.Errorf("unexpected extra arguments: %s", strings.Join(args[i:], " "))
-			}
-			name = strings.TrimSpace(arg)
-		}
-	}
-	if name == "" {
-		return "", "", fmt.Errorf("missing box name")
-	}
-	return name, fromSnapshot, nil
-}
-
-// ParseCreateTemplateArgs parses args after the --template flag:
-// <template> [<template>...] <name> [--from <amiId|name>]
-// The last positional is the box name; --from, if present, must be final with no trailing args.
-func ParseCreateTemplateArgs(args []string) (templateRefs []string, name, fromSnapshot string, err error) {
-	fromIdx := -1
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch {
-		case arg == "--from":
-			if fromIdx >= 0 {
-				return nil, "", "", fmt.Errorf("unexpected extra arguments: %s", strings.Join(args[i:], " "))
-			}
-			fromIdx = i
-			if i+1 < len(args) {
-				i++ // skip --from value during flag scan
-			}
-		case strings.HasPrefix(arg, "--"):
-			return nil, "", "", UnknownCreateFlagError(arg)
+			return "", nil, "", fmt.Errorf("unexpected extra arguments: %s", strings.Join(args[i:], " "))
 		}
 	}
 
-	positionalArgs := args
-	if fromIdx >= 0 {
-		tail := args[fromIdx:]
-		if len(tail) == 1 {
-			return nil, "", "", fmt.Errorf("--from requires a snapshot ami id or name")
-		}
-		if len(tail) > 2 {
-			return nil, "", "", fmt.Errorf("unexpected extra arguments: %s", strings.Join(tail[2:], " "))
-		}
-		if err := ValidateSnapshotRef(tail[1]); err != nil {
-			return nil, "", "", err
-		}
-		fromSnapshot = strings.TrimSpace(tail[1])
-		positionalArgs = args[:fromIdx]
-	}
-
-	if len(positionalArgs) < 2 {
-		return nil, "", "", fmt.Errorf("at least one template and a box name are required")
-	}
-
-	trimmed := make([]string, 0, len(positionalArgs))
-	for _, arg := range positionalArgs {
-		arg = strings.TrimSpace(arg)
-		if arg == "" {
-			return nil, "", "", fmt.Errorf("template name is required")
-		}
-		trimmed = append(trimmed, arg)
-	}
-
-	name = trimmed[len(trimmed)-1]
-	templateRefs = trimmed[:len(trimmed)-1]
-
-	if strings.HasPrefix(name, "--") {
-		return nil, "", "", fmt.Errorf("box name cannot start with --")
-	}
-
-	return templateRefs, name, fromSnapshot, nil
+	return name, templateRefs, fromSnapshot, nil
 }

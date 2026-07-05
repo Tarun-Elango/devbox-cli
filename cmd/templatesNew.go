@@ -108,10 +108,10 @@ func TemplateNew(args []string) {
 		fmt.Printf("  Description: %s\n", created.Description)
 	}
 	if startupScript != "" {
-		fmt.Printf("\n  Use: devbox create --template %s <box-name>\n", created.Name)
+		fmt.Printf("\n  Use: devbox create <box-name> --template %s\n", created.Name)
 	} else {
 		fmt.Printf("\n  Add a startup command later or use as-is with:\n")
-		fmt.Printf("  devbox create --template %s <box-name>\n", created.Name)
+		fmt.Printf("  devbox create <box-name> --template %s\n", created.Name)
 	}
 }
 
