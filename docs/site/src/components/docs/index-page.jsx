@@ -7,6 +7,11 @@ const topics = [
     description: 'Quick install, install with specific version or shared machine, github repo build.',
   },
   {
+    to: '/docs/uninstall',
+    title: 'Uninstall',
+    description: 'remove devbox, local data, and PATH entries added by install.',
+  },
+  {
     to: '/docs/setup',
     title: 'Setup',
     description:
@@ -26,6 +31,11 @@ const topics = [
     to: '/docs/snapshots',
     title: 'Snapshots & templates',
     description: 'save images, restore boxes, custom templates',
+  },
+  {
+    to: '/docs/budgets',
+    title: 'Budgets',
+    description: 'list, create, update, and delete AWS cost budgets',
   },
   {
     to: '/docs/commands',

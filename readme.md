@@ -111,6 +111,17 @@ Use your local GitHub SSH key on a box (for `git push`, `git clone`, etc.) witho
 | --- | --- |
 | `git-sync <id-or-name>` | Toggle GitHub SSH agent forwarding for a box |
 
+### Budgets
+
+List and manage AWS account cost budgets. Results are cached under `~/.devbox/` for 12 hours. Requires the `AWSBudgetsActionsWithAWSResourceControlAccess` IAM policy.
+
+| Command | Notes |
+| --- | --- |
+| `budget [ls] [--refresh]` | List AWS account budgets (name, period, limit, spend, forecast, % of budget). `--refresh` bypasses the local cache |
+| `budget create <name> <limit> <email>` | Create a monthly cost budget for all AWS services. Alerts at 85% actual, 100% actual, and 100% forecasted spend |
+| `budget update <name>` | Interactively update name, limit, or alert email (Enter keeps each current value) |
+| `budget delete <name>` | Delete a budget by exact name (quote names with spaces) |
+
 ## Setup
 
 ***Note***: the aws access key and secret are stored in the `~/.devbox/` file, locally on your machine. No cloud storage or syncing is done.

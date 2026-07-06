@@ -75,6 +75,7 @@ Commands:
 
   version             Show the devbox CLI version
   update              Check for a newer release and install it (asks for confirmation)
+  uninstall           Remove devbox, local data, and PATH entries (asks for confirmation)
 
   setup               Configure AWS credentials and region (stored in ~/.devbox/config.json)
   clear-creds         Clear saved AWS credentials from ~/.devbox/config.json
@@ -294,7 +295,9 @@ func showHelpTopic(topic string) {
 }
 
 func main() {
-	backup.MaybeDaily()
+	if len(os.Args) < 2 || os.Args[1] != "uninstall" {
+		backup.MaybeDaily()
+	}
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(1)
@@ -317,6 +320,8 @@ func main() {
 		cmd.Version(args)
 	case "update":
 		cmd.Update(args)
+	case "uninstall":
+		cmd.Uninstall(args)
 	case "setup":
 		cmd.Setup(args)
 	case "clear-creds":
