@@ -294,9 +294,9 @@ func showHelpTopic(topic string) {
 }
 
 func main() {
-	if len(os.Args) < 2 || os.Args[1] != "uninstall" {
-		// backup.MaybeDaily()
-	}
+	// if len(os.Args) < 2 || os.Args[1] != "uninstall" {
+	// 	// backup.MaybeDaily()
+	// }
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(1)
