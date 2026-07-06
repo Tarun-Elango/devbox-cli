@@ -102,14 +102,14 @@ export default function CommandsDoc() {
         <p className="note">Save and restore box disk images.</p>
         <CmdTable
           rows={[
-            ['devbox snapshot', 'List all snapshots'],
-            [
-              'devbox snapshot create <id-or-name> <name>',
-              'Create a snapshot of a box',
-            ],
+            ['devbox snapshot [ls]', 'List all snapshots'],
             [
               'devbox snapshot ls <amiId-or-name>',
               'Show details for a snapshot',
+            ],
+            [
+              'devbox snapshot create <id-or-name> <name>',
+              'Create a snapshot of a box',
             ],
             [
               'devbox snapshot delete <amiId-or-name>',
@@ -124,7 +124,7 @@ export default function CommandsDoc() {
         <p className="note">Reusable box setups with preinstalled tools.</p>
         <CmdTable
           rows={[
-            ['devbox template', 'List available templates'],
+            ['devbox template [ls]', 'List available templates'],
             [
               'devbox template new <name> [command]',
               'Create a template with optional startup command',

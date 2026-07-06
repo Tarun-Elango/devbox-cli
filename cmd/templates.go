@@ -11,7 +11,7 @@ import (
 )
 
 func TemplateList(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox template")
+	helper.RejectExtraArgs(args, "usage: devbox template [ls]")
 
 	var templates []*service.Template
 

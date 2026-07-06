@@ -21,10 +21,10 @@ export default function SnapshotsDoc() {
         <dl className="cmd-variant">
           <dt>List all snapshots</dt>
           <dd>
-            <code>devbox snapshot</code>
+            <code>devbox snapshot [ls]</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox snapshot</code>
+            Example: <code>devbox snapshot ls</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
@@ -75,10 +75,10 @@ export default function SnapshotsDoc() {
         <dl className="cmd-variant">
           <dt>List available templates</dt>
           <dd>
-            <code>devbox template</code>
+            <code>devbox template [ls]</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox template</code>
+            Example: <code>devbox template ls</code>
           </dd>
         </dl>
         <dl className="cmd-variant">

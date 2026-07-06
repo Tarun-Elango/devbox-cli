@@ -1,28 +1,22 @@
-# devbox-cli
+# Devbox CLI
 
-Manage remote dev boxes from the CLI — provision, connect, sync, and destroy them with your own cloud account (BYOK).
-
-- **Requirements:** An AWS account, Linux or macOS computer.
+Manage remote dev boxes from the CLI — provision, connect, sync, and destroy them using your own cloud account (BYOK - AWS only for now). CLI supports linux and macos.
 
 ## What is a box?
 
-A **box** is a personal dev machine on AWS — an EC2 instance running Amazon Linux that you provision, connect to, and tear down from your laptop.
+A **box** is a personal dev machine on AWS — an EC2 instance running Amazon Linux that you provision, connect to, and tear down from your local machine.
 
-- **Dedicated dev machine on the cloud** — your own EC2 instance, separate from production and your daily driver
-- **Smaller blast radius** — experiments, tooling, and dependencies stay off your main machine
-- **Fast lifecycle** — create, use, and tear down boxes in minutes
-- **Reproducible setups** — spin up consistent environments from templates
-- **Build in commands for common tasks** — ssh, sync, idle-stop, git-sync
-- **Secure** — AWS credentials and config stored locally on your machine
+## Why was this created?
+The idea of keeping your dev environment away from your machine, keeps the blast radius small when installing any new packages or dependencies. Having a seperate environment for AI agents to do their thing, without having to worry about our computer. All while staying in the terminal, and keeping credentials secure locally.
+
+The tool has since been extended with commands for box management, snapshots (save a copy of your box so you can restore it later), templates (spin up a box with pre-installed software), ssh, sync, idle-stop to save on costs, git-sync to use your local git credentials on the box, budget tracking, and more.
+
+see the docs for more details: https://devbox.tarunelango.com
 
 ## Table of Contents
 - [Download and Install (from GitHub release)](#download-and-install-from-github-release)
-- [Setup](#setup)
-- [Build using github repo](#build-using-github-repo)
-- [Install (system-wide) using github repo](#install-system-wide-using-github-repo)
 - [Common commands](#common-commands)
-- [Local config](#notes-on-local-config-devbox)
-- [AWS setup](#aws-setup)
+- [Setup](#setup)
 
 ## Download and Install (from GitHub release)
 
@@ -36,77 +30,9 @@ Verify with the command `devbox ls`.
 
 If that worked, you're done — skip the sections below. They're optional alternatives for pinning a version or installing system-wide.
 
-#### Pin a specific version — To install a particular release instead of `latest`, set `RELEASE_TAG`:
+Note: if you want to pin a specific version, or install it for every user on this machine, see here https://devbox.tarunelango.com/docs/install
 
-```bash
-RELEASE_TAG=v0.7.0 curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash
-```
-
-#### Install once for every user on this machine — Use on a shared Mac or Linux desktop, or if you prefer `/usr/local/bin` over `~/.local/bin`. Installs to `/usr/local/bin` for all accounts (each user still has their own `~/.devbox` config). Requires `sudo`; skips shell config changes because `/usr/local/bin` is already on PATH:
-
-```bash
-INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | sudo bash
-```
-
-## Setup
-
-Run the interactive setup wizard to configure AWS credentials and local config, then create and connect to your first box:
-
-```bash
-devbox setup
-devbox create mybox
-devbox ssh mybox
-```
-
-Credentials are stored locally in your home directory.
-
-## Build using github repo
-
-```bash
-go build -o devbox .
-```
-
-This produces a `devbox` binary in the current directory.
-
-To run the binary:
-```bash
-./devbox <command> [args]
-```
-
-
-## Install (system-wide) using github repo
-
-To install as `devbox` so you can run it from anywhere:
-
-```bash
-go build -o "$(go env GOPATH)/bin/devbox" .
-```
-
-Ensure `$GOPATH/bin` is on your PATH (default `~/go/bin`):
-
-```bash
-# telling shell to also look in the go path for the devbox binary
-export GOPATH="${GOPATH:-$HOME/go}"
-export PATH="$GOPATH/bin:$PATH"
-```
-
-Add those lines to `~/.bashrc` (or `~/.zshrc`) so they persist across sessions, then reload your shell:
-
-```bash
-# reload the shell
-source ~/.bashrc
-```
-
-Verify:
-
-```bash
-which devbox
-devbox ls
-```
-
-> **Note:** `go install .` also works but installs the binary as `devbox-cli` (from the module name), not `devbox`.
-
----
+If you want to clone the repo and build it yourself, see here https://devbox.tarunelango.com/docs/install#build-from-source
 
 ## Common commands
 
@@ -152,9 +78,8 @@ A snapshot is a saved disk image of a box; restore one with `create --from`.
 
 | Command | Notes |
 | --- | --- |
-| `snapshot` | List all snapshots |
+| `snapshot [ls] [<amiId-or-name>]` | List all snapshots, or show details for one |
 | `snapshot create <id-or-name> <name>` | Create a snapshot of a box |
-| `snapshot ls <amiId-or-name>` | Show details for a snapshot |
 | `snapshot delete <amiId-or-name>` | Delete a snapshot |
 
 ### Templates
@@ -163,7 +88,7 @@ Templates let you create boxes preloaded with libs, tools, and other setup.
 
 | Command | Notes |
 | --- | --- |
-| `template` | List available templates |
+| `template [ls]` | List available templates |
 | `template new <templateName> [command string]` | Create a template with optional startup command |
 | `template delete <templateName>` | Delete a template |
 | `template rename <templateName> <new-templateName>` | Rename a template |
@@ -186,34 +111,36 @@ Use your local GitHub SSH key on a box (for `git push`, `git clone`, etc.) witho
 | --- | --- |
 | `git-sync <id-or-name>` | Toggle GitHub SSH agent forwarding for a box |
 
-## Notes on local config (`~/.devbox`)
+### Budgets
 
-Credentials and tokens are stored in `~/.devbox/config.json` (mode 0600).
-**Do not sync this folder** — not via dotfiles, iCloud, Dropbox, or Git.
-Use a dedicated IAM user for AWS keys.
+List and manage AWS account cost budgets. Results are cached under `~/.devbox/` for 12 hours. Requires the `AWSBudgetsActionsWithAWSResourceControlAccess` IAM policy.
 
----
+| Command | Notes |
+| --- | --- |
+| `budget [ls] [--refresh]` | List AWS account budgets (name, period, limit, spend, forecast, % of budget). `--refresh` bypasses the local cache |
+| `budget create <name> <limit> <email>` | Create a monthly cost budget for all AWS services. Alerts at 85% actual, 100% actual, and 100% forecasted spend |
+| `budget update <name>` | Interactively update name, limit, or alert email (Enter keeps each current value) |
+| `budget delete <name>` | Delete a budget by exact name (quote names with spaces) |
 
-## AWS setup
+## Setup
 
-Create a dedicated IAM user for devbox.
+***Note***: the aws access key and secret are stored in the `~/.devbox/` file, locally on your machine. No cloud storage or syncing is done.
 
-### 1. Create an IAM user
+Go to your AWS console 
 
-1. Open the IAM console → **Users** → **Create user**.
-2. Enter a name (for example `devbox-cli`).
-3. Choose **Attach policies directly**, search for `AmazonEC2FullAccess`, select it, and create the user.
+1. **create an IAM user**
+Go to the IAM console → **Users** → **Create user**. Name it (e.g. `devbox-cli`), choose **Attach policies directly**, search for `AmazonEC2FullAccess` and `AWSBudgetsActionsWithAWSResourceControlAccess`, select it, and create the user.
 
-### 2. Create access keys
+2. **Access keys** 
+Open the user → **Security credentials** → **Access keys** → **Create access key**. Select **Local code**, confirm, then copy the **Access key ID** and **Secret access key** (the secret is shown only once).
 
-1. Open the user → **Security credentials** → **Access keys** → **Create access key**.
-2. Choose **Local code** and confirm.
-3. Copy the **Access key ID** and **Secret access key** (the secret is shown only once).
-
-### 3. Save credentials in devbox
+3. **Configure devbox**
+Run the steps below to create your first box:
 
 ```bash
-devbox setup
+devbox setup    # enter access key, secret, region → ~/.devbox/config.json
+devbox create mybox  # create a simple box
+devbox ssh mybox  # ssh into the box
 ```
 
-Enter the access key, secret, and your preferred AWS region when prompted ( this will be stored in `~/.devbox/config.json` locally in your computer).
+for detailed instructions, see here https://devbox.tarunelango.com/docs/setup

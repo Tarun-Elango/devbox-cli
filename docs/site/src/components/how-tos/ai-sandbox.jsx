@@ -28,7 +28,7 @@ export default function AiSandboxHowTo() {
         <h2 id="pick-template">1. Pick a template</h2>
         <p>List built-in templates (includes several AI agents):</p>
         <pre>
-          <code>devbox template</code>
+          <code>devbox template ls</code>
         </pre>
         <p>Common choices:</p>
         <ul>

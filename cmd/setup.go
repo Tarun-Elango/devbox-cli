@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"devbox-cli/helper"
+	"devbox-cli/internal/config"
 	"devbox-cli/service"
 )
 
@@ -15,26 +16,50 @@ var setupExit = os.Exit
 func Setup(args []string) {
 	helper.RejectExtraArgs(args, "usage: devbox setup")
 
-	fmt.Println("Setup AWS credentials, if you have already done this, doing this will overwrite your existing credentials, CTRL+C to cancel.")
+	existing, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "load config: %v\n", err)
+		setupExit(1)
+	}
 
-	accessKey, err := helper.ReadPassword("AWS access key: ")
+	intro := "Setup AWS credentials. Enter access key and secret. CTRL+C to cancel."
+	if existing.AwsAccessKey != "" || existing.AwsSecret != "" {
+		intro = "Setup AWS credentials. Press Enter on access key or secret to keep existing values. CTRL+C to cancel."
+	}
+	fmt.Println(intro)
+
+	accessKeyPrompt := "AWS access key: "
+	if existing.AwsAccessKey != "" {
+		accessKeyPrompt = "AWS access key (Enter to keep current): "
+	}
+	accessKey, err := helper.ReadPassword(accessKeyPrompt)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error reading access key: %v\n", err)
 		setupExit(1)
 	}
 	if accessKey == "" {
-		fmt.Fprintln(os.Stderr, "setup failed: access key is required")
-		setupExit(1)
+		if existing.AwsAccessKey == "" {
+			fmt.Fprintln(os.Stderr, "setup failed: access key is required")
+			setupExit(1)
+		}
+		accessKey = existing.AwsAccessKey // if the access key is empty, use the existing access key
 	}
 
-	secret, err := helper.ReadPassword("AWS secret access key: ")
+	secretPrompt := "AWS secret access key: "
+	if existing.AwsSecret != "" {
+		secretPrompt = "AWS secret access key (Enter to keep current): "
+	}
+	secret, err := helper.ReadPassword(secretPrompt)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error reading secret: %v\n", err)
 		setupExit(1)
 	}
 	if secret == "" {
-		fmt.Fprintln(os.Stderr, "setup failed: secret is required")
-		setupExit(1)
+		if existing.AwsSecret == "" {
+			fmt.Fprintln(os.Stderr, "setup failed: secret is required")
+			setupExit(1)
+		}
+		secret = existing.AwsSecret // if the secret is empty, use the existing secret
 	}
 
 	regions := service.AllRegions() // get all regions

@@ -60,7 +60,7 @@ func Load() (*Config, error) {
 
 // Save writes cfg to ~/.devbox/config.json, creating the directory if needed.
 func Save(cfg *Config) error {
-	backup.BeforeConfigSave()
+	// backup.BeforeConfigSave()
 	path, err := ConfigPath()
 	if err != nil {
 		return err

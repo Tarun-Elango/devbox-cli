@@ -24,7 +24,7 @@ export default function SetupDoc() {
             <code>devbox-cli</code>)
           </li>
           <li>
-            Attach <code>AmazonEC2FullAccess</code> directly and create the user
+            Attach <code>AmazonEC2FullAccess</code> and <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> directly and create the user
           </li>
           <li>
             Open the user → <strong>Security credentials</strong> → create an access key

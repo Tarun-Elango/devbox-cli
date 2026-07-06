@@ -14,10 +14,12 @@ import AiSandboxHowTo from './components/how-tos/ai-sandbox'
 import DocsLayout from './components/docs'
 import DocsIndexPage from './components/docs/index-page'
 import InstallDoc from './components/docs/install'
+import UninstallDoc from './components/docs/uninstall'
 import SetupDoc from './components/docs/setup'
 import BoxesDoc from './components/docs/boxes'
 import ConnectDoc from './components/docs/connect'
 import SnapshotsDoc from './components/docs/snapshots'
+import BudgetsDoc from './components/docs/budgets'
 import CommandsDoc from './components/docs/commands'
 import PlanetDecoration from './components/planet-decoration'
 
@@ -54,10 +56,12 @@ function App() {
               {/* below are the routes for the docs page, so docs/children */}
               <Route index element={<DocsIndexPage />} />
               <Route path="install" element={<InstallDoc />} />
+              <Route path="uninstall" element={<UninstallDoc />} />
               <Route path="setup" element={<SetupDoc />} />
               <Route path="boxes" element={<BoxesDoc />} />
               <Route path="connect" element={<ConnectDoc />} />
               <Route path="snapshots" element={<SnapshotsDoc />} />
+              <Route path="budgets" element={<BudgetsDoc />} />
               <Route path="commands" element={<CommandsDoc />} />
             </Route>
           </Routes>

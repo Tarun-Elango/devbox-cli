@@ -9,7 +9,7 @@ import (
 	"devbox-cli/service"
 )
 
-const snapshotUsage = "usage: devbox snapshot [create <id|name> <name> | ls <amiId|name> | delete <amiId|name>]"
+const snapshotUsage = "usage: devbox snapshot [ls [<amiId|name>]] | create <id|name> <name> | delete <amiId|name>"
 
 // snapshotItem represents a snapshot as returned by the API.
 type snapshotItem struct {
@@ -23,10 +23,10 @@ type snapshotItem struct {
 
 // Snapshot dispatches snapshot sub-commands.
 //
-//	devbox snapshot                         → list all user snapshots
+//	devbox snapshot [ls]                    → list all user snapshots
+//	devbox snapshot ls <amiId|name>         → show details for a specific snapshot
 //	devbox snapshot create <id|name> <name> → create a snapshot
-//	devbox snapshot ls <amiId|name>              → show details for a specific snapshot
-//	devbox snapshot delete <amiId|name>          → delete a snapshot
+//	devbox snapshot delete <amiId|name>     → delete a snapshot
 func Snapshot(args []string) {
 	if len(args) == 0 {
 		snapshotsList(args)
@@ -37,11 +37,15 @@ func Snapshot(args []string) {
 	subArgs := args[1:]
 
 	switch sub {
+	case "ls":
+		if len(subArgs) == 0 {
+			snapshotsList(subArgs)
+		} else {
+			ref := helper.ParseSingleSnapshotRefArg(subArgs, "usage: devbox snapshot ls [<amiId|name>]")
+			snapshotShowByRef(ref)
+		}
 	case "create":
 		snapshotCreate(subArgs)
-	case "ls":
-		ref := helper.ParseSingleSnapshotRefArg(subArgs, "usage: devbox snapshot ls <amiId|name>")
-		snapshotShowByRef(ref)
 	case "delete":
 		ref := helper.ParseSingleSnapshotRefArg(subArgs, "usage: devbox snapshot delete <amiId|name>")
 		snapshotDeleteByRef(ref)
@@ -109,7 +113,7 @@ func snapshotDeleteByRef(ref string) {
 }
 
 func snapshotsList(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox snapshot")
+	helper.RejectExtraArgs(args, "usage: devbox snapshot [ls]")
 
 	var items []snapshotItem
 	rt := helper.MustOpenRuntime()

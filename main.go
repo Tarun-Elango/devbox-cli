@@ -5,10 +5,65 @@ import (
 	"os"
 
 	"devbox-cli/cmd"
-	"devbox-cli/internal/backup"
 )
 
-const helpTopics = "create, box, ssh, snapshot, template, idle-stop, git-sync"
+const helpTopics = "create, box, ssh, snapshot, template, idle-stop, git-sync, budget"
+
+var commandHelpTopics = map[string]string{
+	"create":    "create",
+	"box":       "box",
+	"ls":        "box",
+	"status":    "box",
+	"rename":    "box",
+	"resize":    "box",
+	"upgrade":   "box",
+	"stop":      "box",
+	"start":     "box",
+	"restart":   "box",
+	"reboot":    "box",
+	"delete":    "box",
+	"ssh":       "ssh",
+	"cp":        "ssh",
+	"sync":      "ssh",
+	"exec":      "ssh",
+	"forward":   "ssh",
+	"snapshot":  "snapshot",
+	"template":  "template",
+	"idle-stop": "idle-stop",
+	"git-sync":  "git-sync",
+	"budget":    "budget",
+	"cost":      "budget",
+	"bill":      "budget",
+}
+
+func isHelpFlag(s string) bool {
+	return s == "help" || s == "-h" || s == "--help"
+}
+
+// resolveHelpTopic handles help anywhere in the invocation, e.g.
+// "devbox help box", "devbox box help", or "devbox snapshot create help".
+func resolveHelpTopic(command string, args []string) (topic string, showGeneral bool, ok bool) {
+	if command == "help" || isHelpFlag(command) {
+		for _, arg := range args {
+			if !isHelpFlag(arg) {
+				return arg, false, true
+			}
+		}
+		return "", true, true
+	}
+
+	for _, arg := range args {
+		// if the argument is a help flag, return the topic from the map
+		if isHelpFlag(arg) {
+			if t, exists := commandHelpTopics[command]; exists {
+				return t, false, true
+			}
+			return "", true, true
+		}
+	}
+
+	return "", false, false
+}
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Usage: devbox <command> [args]
@@ -19,6 +74,7 @@ Commands:
 
   version             Show the devbox CLI version
   update              Check for a newer release and install it (asks for confirmation)
+  uninstall           Remove devbox, local data, and PATH entries (asks for confirmation)
 
   setup               Configure AWS credentials and region (stored in ~/.devbox/config.json)
   clear-creds         Clear saved AWS credentials from ~/.devbox/config.json
@@ -62,12 +118,11 @@ Commands:
   forward <id|name> <port>
                       Forward a port from a box
 
-  snapshot                              List all snapshots
+  snapshot [ls] [<amiId|name>]          List all snapshots, or show details for one
   snapshot create <id|name> <name>      Create a snapshot of a box
-  snapshot ls <amiId|name>              Show details for a snapshot
   snapshot delete <amiId|name>          Delete a snapshot
 
-  template                              List available templates
+  template [ls]                         List available templates
   template new <templateName> [command string]  Create a template with optional startup command
   template delete <templateName>                Delete a template
   template rename <templateName> <new-templateName>     Rename a template
@@ -81,6 +136,16 @@ Commands:
   git-sync <id|name>  Toggle GitHub SSH access for a box: adds the local key
                       to ssh-agent and enables agent forwarding (-A) in the
                       box's SSH config; run again to undo both.
+
+  budget [ls] [--refresh]
+                      List AWS account budgets (name, period, limit, spend,
+                      forecast, %% of budget)
+                      Results are cached under ~/.devbox/ for 12h.
+  budget create <name> <limit> <email>
+                      Create a monthly cost budget for all AWS services.
+                      Alerts at 85%% actual, 100%% actual, and 100%% forecasted spend.
+  budget update <name>  Interactively update name, limit, or alert email
+  budget delete <name>  Delete a budget by exact name (quote names with spaces)
 `, helpTopics)
 }
 
@@ -147,9 +212,8 @@ func helpSnapshot() {
 
 A snapshot is a saved disk image of a box; restore one with create --from.
 
-  snapshot                              List all snapshots
+  snapshot [ls] [<amiId|name>]          List all snapshots, or show details for one
   snapshot create <id|name> <name>      Create a snapshot of a box
-  snapshot ls <amiId|name>              Show details for a snapshot
   snapshot delete <amiId|name>          Delete a snapshot
 `)
 }
@@ -159,7 +223,7 @@ func helpTemplate() {
 
 Templates let you create boxes preloaded with libs, tools, and other setup.
 
-  template                              List available templates
+  template [ls]                         List available templates
   template new <templateName> [command string]  Create a template with optional startup command
   template delete <templateName>                Delete a template
   template rename <templateName> <new-templateName>     Rename a template
@@ -186,13 +250,26 @@ func helpGitSync() {
 `)
 }
 
-func helpCommand(args []string) {
-	if len(args) == 0 {
-		usage()
-		return
-	}
+func helpBudget() {
+	fmt.Fprintf(os.Stderr, `Usage: devbox budget [ls] [--refresh] | create <name> <limit> <email> | update <name> | delete <name>
 
-	switch args[0] {
+  budget                List all AWS account budgets
+  budget ls             Same as above
+  budget --refresh      Bypass the local cache and refetch from AWS
+  budget create <name> <limit> <email>
+                        Create a monthly cost budget for all AWS services.
+                        Alerts at 85%% actual, 100%% actual, and 100%% forecasted spend.
+  budget update <name>  Interactively update name, limit, or alert email
+                        (Enter keeps each current value)
+  budget delete <name>  Delete a budget by exact name (quote names with spaces)
+
+Budgets require AWSBudgetsActionsWithAWSResourceControlAccess permission policy to the IAM user
+Results are cached under ~/.devbox/ for 12h since repeated calls aren't necessary (Budgets API is free).
+`)
+}
+
+func showHelpTopic(topic string) {
+	switch topic {
 	case "create":
 		helpCreate()
 	case "box":
@@ -207,15 +284,19 @@ func helpCommand(args []string) {
 		helpIdleStop()
 	case "git-sync":
 		helpGitSync()
+	case "budget", "cost", "bill":
+		helpBudget()
 	default:
-		fmt.Fprintf(os.Stderr, "devbox: unknown help topic %q\n\n", args[0])
+		fmt.Fprintf(os.Stderr, "devbox: unknown help topic %q\n\n", topic)
 		fmt.Fprintf(os.Stderr, "Topics: %s\n", helpTopics)
 		os.Exit(1)
 	}
 }
 
 func main() {
-	backup.MaybeDaily()
+	// if len(os.Args) < 2 || os.Args[1] != "uninstall" {
+	// 	// backup.MaybeDaily()
+	// }
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(1)
@@ -224,23 +305,30 @@ func main() {
 	command := os.Args[1]
 	args := os.Args[2:]
 
+	if topic, general, ok := resolveHelpTopic(command, args); ok {
+		if general {
+			usage()
+		} else {
+			showHelpTopic(topic)
+		}
+		os.Exit(0)
+	}
+
 	switch command {
-	case "help":
-		helpCommand(args)
-		os.Exit(0)
-	case "-h", "--help":
-		usage()
-		os.Exit(0)
 	case "version":
 		cmd.Version(args)
 	case "update":
 		cmd.Update(args)
+	case "uninstall":
+		cmd.Uninstall(args)
 	case "setup":
 		cmd.Setup(args)
 	case "clear-creds":
 		cmd.ClearCreds(args)
 	case "health":
 		cmd.Health(args)
+	case "budget":
+		cmd.Budget(args)
 	case "create":
 		cmd.Create(args)
 	case "ls":
