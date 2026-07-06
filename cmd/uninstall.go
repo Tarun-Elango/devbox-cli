@@ -218,6 +218,12 @@ func cleanShellRCFile(path, installDir, home string) (bool, error) {
 	return true, nil
 }
 
+// cleanShellRCContent removes only the PATH block that install.sh itself
+// wrote: the "# devbox" marker comment together with the PATH export line
+// immediately following it. Lines are never matched by content alone (e.g.
+// any line that happens to mention ~/.local/bin), since that would risk
+// deleting unrelated PATH entries added by other tools (pipx, cargo, npm,
+// etc.) that share the same directory.
 func cleanShellRCContent(content, installDir, home string) string {
 	lines := strings.Split(content, "\n")
 	out := make([]string, 0, len(lines))
@@ -225,15 +231,9 @@ func cleanShellRCContent(content, installDir, home string) string {
 
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
-		if strings.TrimSpace(line) == devboxPathMarker {
+		if strings.TrimSpace(line) == devboxPathMarker && i+1 < len(lines) && isDevboxPathExport(lines[i+1], installDir, home) {
 			changed = true
-			if i+1 < len(lines) && isDevboxPathExport(lines[i+1], installDir, home) {
-				i++
-			}
-			continue
-		}
-		if isDevboxPathExport(line, installDir, home) {
-			changed = true
+			i++ // also skip the PATH export line right after the marker
 			continue
 		}
 		out = append(out, line)

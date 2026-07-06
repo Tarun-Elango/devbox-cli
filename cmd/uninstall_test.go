@@ -74,11 +74,33 @@ func TestCleanShellRCContentRemovesDevboxBlock(t *testing.T) {
 func TestCleanShellRCContentRemovesHomePathVariant(t *testing.T) {
 	home := "/home/user"
 	installDir := filepath.Join(home, ".local", "bin")
-	input := `export PATH="$HOME/.local/bin:$PATH"` + "\n"
+	input := strings.Join([]string{
+		"# devbox",
+		`export PATH="$HOME/.local/bin:$PATH"`,
+	}, "\n") + "\n"
 
 	got := cleanShellRCContent(input, installDir, home)
 	if got != "" && got != "\n" {
 		t.Fatalf("got %q, want empty shell config", got)
+	}
+}
+
+// TestCleanShellRCContentIgnoresUnmarkedPathLines guards against removing
+// PATH lines added by other tools (e.g. pipx, cargo) that happen to
+// reference the same directory as devbox's default install dir, but were
+// never written by install.sh (i.e. have no preceding "# devbox" marker).
+func TestCleanShellRCContentIgnoresUnmarkedPathLines(t *testing.T) {
+	home := "/home/user"
+	installDir := filepath.Join(home, ".local", "bin")
+	input := strings.Join([]string{
+		"export EDITOR=vim",
+		`export PATH="$HOME/.local/bin:$PATH"`,
+		`export PATH="` + installDir + `:$PATH"`,
+	}, "\n") + "\n"
+
+	got := cleanShellRCContent(input, installDir, home)
+	if got != input {
+		t.Fatalf("got %q, want unchanged %q", got, input)
 	}
 }
 
