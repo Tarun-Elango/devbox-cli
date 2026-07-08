@@ -232,21 +232,40 @@ fi
 	{
 		ID:          "00000000-0000-0000-0001-000000000023",
 		Name:        "pi",
-		Description: "Pi coding agent for ec2-user (pi.dev)",
+		Description: "Pi coding agent for ec2-user (installs Node.js 22.19+ if needed)",
 		CreatedAt:   "1970-01-01 00:00:23",
-		Script: `if ! runuser -u ec2-user -- bash -lc 'command -v pi >/dev/null 2>&1'; then
-  runuser -u ec2-user -- bash -lc 'curl -fsSL https://pi.dev/install.sh | sh'
-  grep -q '\.local/bin' /home/ec2-user/.bashrc 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/ec2-user/.bashrc
+		Script: `command -v xz >/dev/null 2>&1 || dnf install -y xz
+if ! runuser -u ec2-user -- bash -lc 'command -v pi >/dev/null 2>&1'; then
+  runuser -u ec2-user -- bash -lc 'set -e
+NODE_BASE="$HOME/.local/share/pi-node"
+NODE_BIN="$NODE_BASE/current/bin"
+if ! "$NODE_BIN/node" -e "const v=process.versions.node.split(\".\").map(Number);process.exit(v[0]>22||(v[0]===22&&(v[1]>19||(v[1]===19&&v[2]>=0)))?0:1)" 2>/dev/null; then
+  case "$(uname -m)" in x86_64) ARCH=x64;; aarch64|arm64) ARCH=arm64;; *) echo "unsupported arch for pi"; exit 1;; esac
+  DIST=https://nodejs.org/dist/latest-v22.x
+  TMP=$(mktemp -d)
+  curl -fsSL "$DIST/SHASUMS256.txt" -o "$TMP/sums"
+  NODE_FILE=$(awk -v s="-linux-$ARCH.tar.xz" "index(\$2,\"node-v\")&&substr(\$2,length(\$2)-length(s)+1)==s{print \$2;exit}" "$TMP/sums")
+  curl -fsSL "$DIST/$NODE_FILE" -o "$TMP/$NODE_FILE"
+  mkdir -p "$NODE_BASE"
+  tar -xf "$TMP/$NODE_FILE" -C "$NODE_BASE"
+  rm -f "$NODE_BASE/current"
+  ln -s "$NODE_BASE/${NODE_FILE%.tar.xz}" "$NODE_BASE/current"
+  rm -rf "$TMP"
+fi
+export PATH="$NODE_BIN:$HOME/.local/bin:$PATH"
+npm install -g --ignore-scripts --prefix "$HOME/.local" @earendil-works/pi-coding-agent'
+  grep -q 'pi-node/current/bin' /home/ec2-user/.bashrc 2>/dev/null || echo 'export PATH="$HOME/.local/share/pi-node/current/bin:$HOME/.local/bin:$PATH"' >> /home/ec2-user/.bashrc
 fi
 `,
 	},
 	{
 		ID:          "00000000-0000-0000-0001-000000000024",
 		Name:        "opencode",
-		Description: "OpenCode AI agent CLI (system-wide install)",
+		Description: "OpenCode AI agent CLI for ec2-user",
 		CreatedAt:   "1970-01-01 00:00:24",
-		Script: `if ! command -v opencode >/dev/null 2>&1; then
-  OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
+		Script: `if ! runuser -u ec2-user -- bash -lc 'command -v opencode >/dev/null 2>&1'; then
+  runuser -u ec2-user -- bash -lc 'curl -fsSL https://opencode.ai/install | bash'
+  grep -q '\.opencode/bin' /home/ec2-user/.bashrc 2>/dev/null || echo 'export PATH="$HOME/.opencode/bin:$PATH"' >> /home/ec2-user/.bashrc
 fi
 `,
 	},

@@ -357,10 +357,11 @@ export default function AboutPage() {
 
           <h3>
             Pin a specific version — To install a particular release instead of{' '}
-            <code>latest</code>, set <code>RELEASE_TAG</code>:
+            <code>latest</code>, set <code>RELEASE_TAG</code> on <code>bash</code> (not
+            on <code>curl</code>):
           </h3>
           <pre>
-            <code>{`RELEASE_TAG=v0.7.0 curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash`}</code>
+            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | RELEASE_TAG=v0.7.0 bash`}</code>
           </pre>
 
           <h3>

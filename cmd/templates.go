@@ -236,8 +236,8 @@ func createFromTemplates(name string, templateRefs []string, fromSnapshot string
 	}
 	if b.PublicIP != "" {
 		fmt.Printf("  Public IP: %s\n", b.PublicIP)
-		fmt.Printf("\n  Connect:   devbox ssh %s\n", b.ID)
+		fmt.Printf("\n  Connect:   devbox ssh %s\n", b.Name)
 	} else {
-		fmt.Printf("\n  Provisioning — check status: devbox status %s\n", b.ID)
+		fmt.Printf("\n  Provisioning — check status: devbox status %s\n", b.Name)
 	}
 }

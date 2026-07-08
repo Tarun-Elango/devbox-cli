@@ -61,7 +61,9 @@ case "$(uname -m)" in
 esac
 
 # --- Download ---
-# Fetch the release binary for this OS and CPU (override with RELEASE_TAG=...)
+# Fetch the release binary for this OS and CPU.
+# Pin a version: curl -fsSL .../install.sh | RELEASE_TAG=v0.7.0 bash
+# (RELEASE_TAG must be on bash, not curl — a pipe does not pass env vars across.)
 release_tag="${RELEASE_TAG:-latest}"
 asset_name="devbox-${os}-${arch}"
 url="https://github.com/${repo}/releases/download/${release_tag}/${asset_name}"
@@ -70,7 +72,7 @@ tmp="$(mktemp)"
 tmp_checksums="$(mktemp)"
 trap 'rm -f "$tmp" "$tmp_checksums"' EXIT
 
-echo "Downloading ${asset_name}..."
+echo "Installing release ${release_tag} (${asset_name})..."
 curl -fsSL "$url" -o "$tmp"
 chmod +x "$tmp"
 

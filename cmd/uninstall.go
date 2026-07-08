@@ -61,13 +61,16 @@ func Uninstall(args []string) {
 	}
 	fmt.Println("Removed ~/.devbox")
 
-	// delete the ~/.devbox-backup directory
-	if err := removeDataDir(filepath.Join(home, devboxBackupDir)); err != nil {
-		fmt.Fprintf(os.Stderr, "remove ~/.devbox-backup: %v\n", err)
-		setupExit(1)
-		return
+	// delete the ~/.devbox-backup directory if it exists
+	backupDir := filepath.Join(home, devboxBackupDir)
+	if fileExists(backupDir) {
+		if err := removeDataDir(backupDir); err != nil {
+			fmt.Fprintf(os.Stderr, "remove ~/.devbox-backup: %v\n", err)
+			setupExit(1)
+			return
+		}
+		fmt.Println("Removed ~/.devbox-backup")
 	}
-	fmt.Println("Removed ~/.devbox-backup")
 
 	// clear the PATH entries from the shell config
 	updated, err := clearDevboxPath(home, installDir)
