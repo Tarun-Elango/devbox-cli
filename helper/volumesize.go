@@ -25,7 +25,7 @@ func SelectVolumeSizeGBWithDefault(defaultSizeGB, minSizeGB int) (int, error) {
 		return defaultSizeGB, nil
 	}
 
-	fmt.Printf("Volume size in GB [%d]: ", defaultSizeGB)
+	fmt.Printf("Volume size in GB (min %d, max %d; Enter to use %d): ", minSizeGB, service.MaxVolumeSizeGB, defaultSizeGB)
 
 	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')

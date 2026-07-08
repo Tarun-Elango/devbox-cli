@@ -32,10 +32,11 @@ export default function InstallDoc() {
         <h2 id="pin-version">In case you want to pin a specific version</h2>
         <p className="note">
           To install a particular release instead of <code>latest</code>, set{' '}
-          <code>RELEASE_TAG</code>:
+          <code>RELEASE_TAG</code> on <code>bash</code> (not on <code>curl</code> — a
+          pipe does not pass env vars to the right-hand command):
         </p>
         <pre>
-          <code>{`RELEASE_TAG=v0.7.0 curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash`}</code>
+          <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | RELEASE_TAG=v0.7.0 bash`}</code>
         </pre>
       </div>
 

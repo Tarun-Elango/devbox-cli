@@ -53,7 +53,10 @@ devbox ssh mybox -- -L 8080:localhost:8080
 devbox ssh mybox -- -A
 
 # Verbose connection debug
-devbox ssh mybox -- -v`}</code>
+devbox ssh mybox -- -v
+
+# Set remote TERM (e.g. Ghostty)
+devbox ssh mybox -- -o SetEnv=TERM=xterm-256color`}</code>
         </pre>
 
         <p>

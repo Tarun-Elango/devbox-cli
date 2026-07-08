@@ -99,10 +99,10 @@ func Create(args []string) {
 	}
 
 	fmt.Printf("\nRecommended next steps:\n")
-	fmt.Printf("  1. Check box status: devbox status %s\n", b.ID)
-	fmt.Printf("  2. Wait for SSH and template setup: devbox ssh %s\n", b.ID)
+	fmt.Printf("  1. Check box status: devbox status %s\n", b.Name)
+	fmt.Printf("  2. Wait for SSH and template setup: devbox ssh %s\n", b.Name)
 	fmt.Printf("     Use this command to check SSH/template readiness and connect once the box is ready.\n")
-	fmt.Printf("  3. After devbox ssh %s succeeds, you can also connect outside this CLI with:\n", b.ID)
+	fmt.Printf("  3. After devbox ssh %s succeeds, you can also connect outside this CLI with:\n", b.Name)
 	fmt.Printf("     ssh devbox-%s\n", b.Name)
 	fmt.Printf("     VS Code Remote-SSH -> devbox-%s\n", b.Name)
 }
