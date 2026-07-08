@@ -246,6 +246,8 @@ if ! "$NODE_BIN/node" -e "const v=process.versions.node.split(\".\").map(Number)
   curl -fsSL "$DIST/SHASUMS256.txt" -o "$TMP/sums"
   NODE_FILE=$(awk -v s="-linux-$ARCH.tar.xz" "index(\$2,\"node-v\")&&substr(\$2,length(\$2)-length(s)+1)==s{print \$2;exit}" "$TMP/sums")
   curl -fsSL "$DIST/$NODE_FILE" -o "$TMP/$NODE_FILE"
+  grep -q " $NODE_FILE$" "$TMP/sums" || { echo "checksum entry not found for $NODE_FILE"; exit 1; }
+  grep " $NODE_FILE$" "$TMP/sums" | (cd "$TMP" && sha256sum -c -)
   mkdir -p "$NODE_BASE"
   tar -xf "$TMP/$NODE_FILE" -C "$NODE_BASE"
   rm -f "$NODE_BASE/current"
