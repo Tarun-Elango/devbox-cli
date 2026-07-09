@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -195,6 +196,30 @@ func TestSetup(t *testing.T) {
 		if !strings.Contains(out, "keep existing values") {
 			t.Fatalf("stdout = %q, want intro for keeping existing credentials", out)
 		}
+		if !strings.Contains(out, "AWS access key (Enter to keep current):") {
+			t.Fatalf("stdout = %q, want keep-current access key prompt", out)
+		}
+		if !strings.Contains(out, "AWS secret access key (Enter to keep current):") {
+			t.Fatalf("stdout = %q, want keep-current secret prompt", out)
+		}
+	})
+
+	t.Run("load_config_error", func(t *testing.T) {
+		home := t.TempDir()
+		if err := os.WriteFile(filepath.Join(home, ".devbox"), []byte("not-a-dir"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("HOME", home)
+
+		stderr := captureStderr(t, func() {
+			code, exited := withSetupExit(t, func() { Setup(nil) })
+			if !exited || code != 1 {
+				t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
+			}
+		})
+		if !strings.Contains(stderr, "load config:") {
+			t.Fatalf("stderr = %q, want load config error", stderr)
+		}
 	})
 
 	t.Run("empty_access_key", func(t *testing.T) {
@@ -332,7 +357,7 @@ func TestSetup(t *testing.T) {
 		}
 	})
 
-	t.Run("updates_one_credential_keeps_other", func(t *testing.T) {
+	t.Run("updates_access_keeps_secret", func(t *testing.T) {
 		withTestHome(t)
 		if err := service.SaveAWSCredentials("existing-secret", "existing-access", "us-east-1"); err != nil {
 			t.Fatalf("seed config: %v", err)
@@ -349,6 +374,50 @@ func TestSetup(t *testing.T) {
 		cfg := loadTestConfig(t)
 		if cfg.AwsAccessKey != "new-access" || cfg.AwsSecret != "existing-secret" {
 			t.Fatalf("config = %+v, want updated access key with preserved secret", cfg)
+		}
+	})
+
+	t.Run("updates_secret_keeps_access", func(t *testing.T) {
+		withTestHome(t)
+		if err := service.SaveAWSCredentials("existing-secret", "existing-access", "us-east-1"); err != nil {
+			t.Fatalf("seed config: %v", err)
+		}
+		withSetupStdin(t, "\nnew-secret\n1\n")
+
+		captureStdout(t, func() {
+			code, exited := withSetupExit(t, func() { Setup(nil) })
+			if exited {
+				t.Fatalf("unexpected exit %d", code)
+			}
+		})
+
+		cfg := loadTestConfig(t)
+		if cfg.AwsAccessKey != "existing-access" || cfg.AwsSecret != "new-secret" {
+			t.Fatalf("config = %+v, want preserved access key with updated secret", cfg)
+		}
+	})
+}
+
+func TestSelectRegion(t *testing.T) {
+	regions := service.AllRegions()
+
+	// Piped stdin is not a TTY, so selectRegion must use the numbered fallback.
+	t.Run("non_tty_uses_fallback", func(t *testing.T) {
+		withSetupStdin(t, "us-west-2\n")
+		got, err := selectRegion(regions)
+		if err != nil {
+			t.Fatalf("selectRegion: %v", err)
+		}
+		if got != "us-west-2" {
+			t.Fatalf("got %q, want us-west-2", got)
+		}
+	})
+
+	t.Run("non_tty_invalid_region", func(t *testing.T) {
+		withSetupStdin(t, "not-a-region\n")
+		_, err := selectRegion(regions)
+		if err == nil || !strings.Contains(err.Error(), `invalid region "not-a-region"`) {
+			t.Fatalf("got %v, want invalid region error", err)
 		}
 	})
 }
@@ -375,6 +444,26 @@ func TestSelectRegionFallback(t *testing.T) {
 		}
 		if got != "eu-west-1" {
 			t.Fatalf("got %q, want eu-west-1", got)
+		}
+	})
+
+	t.Run("select_last_by_number", func(t *testing.T) {
+		last := len(regions)
+		withSetupStdin(t, fmt.Sprintf("%d\n", last))
+		got, err := selectRegionFallback(regions)
+		if err != nil {
+			t.Fatalf("selectRegionFallback: %v", err)
+		}
+		if got != regions[last-1].ID {
+			t.Fatalf("got %q, want %q", got, regions[last-1].ID)
+		}
+	})
+
+	t.Run("unknown_region_id", func(t *testing.T) {
+		withSetupStdin(t, "not-a-real-region\n")
+		_, err := selectRegionFallback(regions)
+		if err == nil || !strings.Contains(err.Error(), `invalid region "not-a-real-region"`) {
+			t.Fatalf("got %v, want invalid region error", err)
 		}
 	})
 
@@ -434,6 +523,9 @@ func TestClearCreds(t *testing.T) {
 				t.Fatalf("unexpected exit %d", code)
 			}
 		})
+		if !strings.Contains(out, "Are you sure you want to clear saved AWS credentials? [y/N]") {
+			t.Fatalf("stdout = %q, want confirmation prompt", out)
+		}
 		if !strings.Contains(out, "Aborted.") {
 			t.Fatalf("stdout = %q, want Aborted message", out)
 		}

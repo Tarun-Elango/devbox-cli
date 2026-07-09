@@ -243,6 +243,7 @@ func budgetUpdate(args []string) {
 	printBudgetTable(result.Budgets)
 }
 
+// helper: printBudgetTable prints a table of budget summaries.
 func printBudgetTable(budgets []service.BudgetSummary) {
 	fmt.Printf("%-28s  %-8s  %-10s  %-14s  %-14s  %-14s  %s\n",
 		"NAME", "TYPE", "PERIOD", "LIMIT", "SPENT", "FORECAST", "% BUDGET")
@@ -257,6 +258,7 @@ func printBudgetTable(budgets []service.BudgetSummary) {
 	}
 }
 
+// helper: orDash returns a dash if the string is empty, otherwise the string itself.
 func orDash(s string) string {
 	if s == "" {
 		return "—"

@@ -52,6 +52,7 @@ func cpDefaultKeyPath() string {
 	return ""
 }
 
+// helper: parseCPLocation parses a raw location string and returns a cpLocation struct
 func parseCPLocation(raw string) (cpLocation, error) {
 	raw = helper.StripSurroundingQuotes(strings.TrimSpace(raw))
 	if raw == "" {
@@ -114,6 +115,7 @@ func parseCPTransfer(sourceArg, destArg string) (cpTransfer, error) {
 	}
 }
 
+// helper: cpSCPBaseArgs builds the base arguments for the scp command
 func cpSCPBaseArgs(identity, portArg string) []string {
 	argv := []string{
 		"-P", portArg,
@@ -136,6 +138,17 @@ func buildSCPArgs(identity string, transfer cpTransfer, user, host, portArg stri
 	return append(argv, remote, transfer.Local)
 }
 
+// helper: cpStatusFromSSH maps an SSH status response into the cp command's status shape
+func cpStatusFromSSH(sshStatus *service.SshStatus) *cpStatusResponse {
+	status := &cpStatusResponse{Ready: sshStatus.Ready}
+	if sshStatus.Instance != nil {
+		box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
+		status.Instance = &box
+	}
+	return status
+}
+
+// helper: cpStatusForBox looks up the status of a box and returns a cpStatusResponse struct
 func cpStatusForBox(ref string) (*cpStatusResponse, error) {
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
@@ -150,12 +163,7 @@ func cpStatusForBox(ref string) (*cpStatusResponse, error) {
 		return nil, err
 	}
 
-	status := &cpStatusResponse{Ready: sshStatus.Ready}
-	if sshStatus.Instance != nil {
-		box := instancesToBoxes([]*service.Instance{sshStatus.Instance})[0]
-		status.Instance = &box
-	}
-	return status, nil
+	return cpStatusFromSSH(sshStatus), nil
 }
 
 // CP copies one file between the local machine and a devbox using scp.

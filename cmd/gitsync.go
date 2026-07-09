@@ -76,6 +76,7 @@ func GitSync(args []string) {
 	fmt.Println("git-sync: on the box, verify with: ssh -T git@github.com")
 }
 
+// helper: keyFingerprint returns the fingerprint of the key at the given path
 func keyFingerprint(keyPath string) (string, error) {
 	sshKeygen, err := exec.LookPath("ssh-keygen")
 	if err != nil {
@@ -98,7 +99,7 @@ func keyFingerprint(keyPath string) (string, error) {
 	return fields[1], nil
 }
 
-// check if the key is in the ssh-agent
+// helper: keyInSSHAgent checks if the key is in the ssh-agent
 func keyInSSHAgent(keyPath string) (bool, error) {
 	fingerprint, err := keyFingerprint(keyPath)
 	if err != nil {
@@ -135,7 +136,7 @@ func keyInSSHAgent(keyPath string) (bool, error) {
 	return false, nil
 }
 
-// add the key to the ssh-agent
+// helper: sshAgentAdd adds the key to the ssh-agent
 func sshAgentAdd(keyPath string) error {
 	sshAdd, err := exec.LookPath("ssh-add")
 	if err != nil {
@@ -151,7 +152,7 @@ func sshAgentAdd(keyPath string) error {
 	return nil
 }
 
-// remove the key from the ssh-agent
+// helper: sshAgentRemove removes the key from the ssh-agent
 func sshAgentRemove(keyPath string) error {
 	loaded, err := keyInSSHAgent(keyPath)
 	if err != nil {

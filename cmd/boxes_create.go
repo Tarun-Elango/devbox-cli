@@ -24,11 +24,10 @@ func Create(args []string) {
 		return
 	}
 
-	pubKey := ""
-	if pk, err := readPublicKey(); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: %v; box will be created without your public key\n", err)
-	} else {
-		pubKey = pk
+	pubKey, err := readPublicKey()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
 
 	volumeSizeGB := service.DefaultVolumeSizeGB

@@ -167,11 +167,10 @@ func formatTemplateScriptFull(s string) string {
 // createFromTemplates creates a new box applying one or more templates' startup scripts.
 // name and templateRefs are already validated by helper.ParseCreateArgs.
 func createFromTemplates(name string, templateRefs []string, fromSnapshot string) {
-	pubKey := ""
-	if pk, err := readPublicKey(); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: %v; box will be created without your public key\n", err)
-	} else {
-		pubKey = pk
+	pubKey, err := readPublicKey()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
 
 	volumeSizeGB := service.DefaultVolumeSizeGB

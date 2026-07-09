@@ -65,6 +65,7 @@ func IdleRouter(args []string) {
 	}
 }
 
+// set
 func idleSet(ref, minutesStr string) {
 	minutesInt, err := strconv.Atoi(minutesStr)
 	if err != nil {
@@ -145,58 +146,6 @@ func idleSet(ref, minutesStr string) {
 	}
 
 	fmt.Printf("idle-stop set to %d minutes for %s\n", minutesInt, inst.Name)
-}
-
-/*
-mkdir -p /var/lib/devbox
-Writes minutesInt to /var/lib/devbox/idle-stop-minutes
-Writes current timestamp to /var/lib/devbox/last-activity
-Installs check.bash → /usr/local/bin/devbox-idle-stop (chmod +x)
-Installs the 3 systemd unit files under /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now devbox-idle-stop.timer
-systemctl enable + systemctl start devbox-idle-stop-boot.service
-*/
-func installIdleStop(sshBin, identity, user, host string, minutes int) error {
-
-	// covert the byte[] into base64 string
-	checkB64 := base64.StdEncoding.EncodeToString(scripts.CheckBash)
-	serviceB64 := base64.StdEncoding.EncodeToString(scripts.IdleStopService)
-	timerB64 := base64.StdEncoding.EncodeToString(scripts.IdleStopTimer)
-	bootB64 := base64.StdEncoding.EncodeToString(scripts.IdleStopBootService)
-
-	script := fmt.Sprintf(`set -euo pipefail
-mkdir -p /var/lib/devbox
-echo %d > /var/lib/devbox/idle-stop-minutes
-date +%%s > /var/lib/devbox/last-activity
-echo %q | base64 -d > /usr/local/bin/devbox-idle-stop
-chmod +x /usr/local/bin/devbox-idle-stop
-echo %q | base64 -d > /etc/systemd/system/devbox-idle-stop.service
-echo %q | base64 -d > /etc/systemd/system/devbox-idle-stop.timer
-echo %q | base64 -d > /etc/systemd/system/devbox-idle-stop-boot.service
-systemctl daemon-reload
-systemctl enable --now devbox-idle-stop.timer
-systemctl enable devbox-idle-stop-boot.service
-systemctl start devbox-idle-stop-boot.service
-`, minutes, checkB64, serviceB64, timerB64, bootB64)
-
-	target := fmt.Sprintf("%s@%s", user, host)
-	argv := append([]string{sshBin}, sshBaseArgs(identity, "22")...)
-	argv = append(argv, target, "sudo", "bash", "-s")
-
-	cmd := execCommand(sshBin, argv[1:]...)
-	cmd.Stdin = strings.NewReader(script)
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			msg = err.Error()
-		}
-		return fmt.Errorf("idle-stop install failed: %s", msg)
-	}
-	return nil
 }
 
 // delete for a specific instance
@@ -299,39 +248,28 @@ func deleteIdleStop(ref string) {
 	fmt.Printf("idle-stop removed for %s\n", inst.Name)
 }
 
-func uninstallIdleStop(sshBin, identity, user, host string) error {
-	script := `set -euo pipefail
-systemctl disable --now devbox-idle-stop.timer 2>/dev/null || true
-systemctl disable --now devbox-idle-stop-boot.service 2>/dev/null || true
-systemctl daemon-reload
-rm -f /etc/systemd/system/devbox-idle-stop.timer
-rm -f /etc/systemd/system/devbox-idle-stop.service
-rm -f /etc/systemd/system/devbox-idle-stop-boot.service
-rm -f /usr/local/bin/devbox-idle-stop
-rm -f /var/lib/devbox/idle-stop-minutes
-rm -f /var/lib/devbox/last-activity
-systemctl daemon-reload
-systemctl reset-failed devbox-idle-stop.service 2>/dev/null || true
-systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
-`
-
-	target := fmt.Sprintf("%s@%s", user, host)
-	argv := append([]string{sshBin}, sshBaseArgs(identity, "22")...)
-	argv = append(argv, target, "sudo", "bash", "-s")
-
-	cmd := execCommand(sshBin, argv[1:]...)
-	cmd.Stdin = strings.NewReader(script)
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			msg = err.Error()
-		}
-		return fmt.Errorf("idle-stop uninstall failed: %s", msg)
+// show for a specific instance
+func showIdleStop(ref string) {
+	rt := helper.MustOpenRuntime()
+	defer func() { _ = rt.Close() }()
+	target, err := helper.ResolveBoxTarget(rt, ref)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
-	return nil
+	db := rt.DB()
+
+	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(target.ID, service.LocalUserID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if !inst.IdleStopMinutes.Valid {
+		fmt.Println("no idle stop set")
+		return
+	}
+	fmt.Printf("idle-stop is set to %d minutes for %s\n", inst.IdleStopMinutes.Int64, inst.Name)
 }
 
 // update for a specific instance
@@ -420,6 +358,96 @@ func updateIdleStop(ref, minutesStr string) {
 	fmt.Printf("idle-stop updated to %d minutes for %s\n", minutesInt, inst.Name)
 }
 
+// helper: installIdleStop installs the idle stop service on the host ( needs ssh)
+/*
+mkdir -p /var/lib/devbox
+Writes minutesInt to /var/lib/devbox/idle-stop-minutes
+Writes current timestamp to /var/lib/devbox/last-activity
+Installs check.bash → /usr/local/bin/devbox-idle-stop (chmod +x)
+Installs the 3 systemd unit files under /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now devbox-idle-stop.timer
+systemctl enable + systemctl start devbox-idle-stop-boot.service
+*/
+func installIdleStop(sshBin, identity, user, host string, minutes int) error {
+
+	// covert the byte[] into base64 string
+	checkB64 := base64.StdEncoding.EncodeToString(scripts.CheckBash)
+	serviceB64 := base64.StdEncoding.EncodeToString(scripts.IdleStopService)
+	timerB64 := base64.StdEncoding.EncodeToString(scripts.IdleStopTimer)
+	bootB64 := base64.StdEncoding.EncodeToString(scripts.IdleStopBootService)
+
+	script := fmt.Sprintf(`set -euo pipefail
+mkdir -p /var/lib/devbox
+echo %d > /var/lib/devbox/idle-stop-minutes
+date +%%s > /var/lib/devbox/last-activity
+echo %q | base64 -d > /usr/local/bin/devbox-idle-stop
+chmod +x /usr/local/bin/devbox-idle-stop
+echo %q | base64 -d > /etc/systemd/system/devbox-idle-stop.service
+echo %q | base64 -d > /etc/systemd/system/devbox-idle-stop.timer
+echo %q | base64 -d > /etc/systemd/system/devbox-idle-stop-boot.service
+systemctl daemon-reload
+systemctl enable --now devbox-idle-stop.timer
+systemctl enable devbox-idle-stop-boot.service
+systemctl start devbox-idle-stop-boot.service
+`, minutes, checkB64, serviceB64, timerB64, bootB64)
+
+	target := fmt.Sprintf("%s@%s", user, host)
+	argv := append([]string{sshBin}, sshBaseArgs(identity, "22")...)
+	argv = append(argv, target, "sudo", "bash", "-s")
+
+	cmd := execCommand(sshBin, argv[1:]...)
+	cmd.Stdin = strings.NewReader(script)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = err.Error()
+		}
+		return fmt.Errorf("idle-stop install failed: %s", msg)
+	}
+	return nil
+}
+
+// helper: uninstallIdleStop uninstalls the idle stop service on the host ( needs ssh)
+func uninstallIdleStop(sshBin, identity, user, host string) error {
+	script := `set -euo pipefail
+systemctl disable --now devbox-idle-stop.timer 2>/dev/null || true
+systemctl disable --now devbox-idle-stop-boot.service 2>/dev/null || true
+systemctl daemon-reload
+rm -f /etc/systemd/system/devbox-idle-stop.timer
+rm -f /etc/systemd/system/devbox-idle-stop.service
+rm -f /etc/systemd/system/devbox-idle-stop-boot.service
+rm -f /usr/local/bin/devbox-idle-stop
+rm -f /var/lib/devbox/idle-stop-minutes
+rm -f /var/lib/devbox/last-activity
+systemctl daemon-reload
+systemctl reset-failed devbox-idle-stop.service 2>/dev/null || true
+systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
+`
+
+	target := fmt.Sprintf("%s@%s", user, host)
+	argv := append([]string{sshBin}, sshBaseArgs(identity, "22")...)
+	argv = append(argv, target, "sudo", "bash", "-s")
+
+	cmd := execCommand(sshBin, argv[1:]...)
+	cmd.Stdin = strings.NewReader(script)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = err.Error()
+		}
+		return fmt.Errorf("idle-stop uninstall failed: %s", msg)
+	}
+	return nil
+}
+
+// helper: updateIdleStopOnHost updates the idle stop service on the host ( needs ssh)
 func updateIdleStopOnHost(sshBin, identity, user, host string, minutes int) error {
 	script := fmt.Sprintf(`set -euo pipefail
 echo %d > /var/lib/devbox/idle-stop-minutes
@@ -443,28 +471,4 @@ date +%%s > /var/lib/devbox/last-activity
 		return fmt.Errorf("idle-stop update failed: %s", msg)
 	}
 	return nil
-}
-
-// show for a specific instance
-func showIdleStop(ref string) {
-	rt := helper.MustOpenRuntime()
-	defer func() { _ = rt.Close() }()
-	target, err := helper.ResolveBoxTarget(rt, ref)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	db := rt.DB()
-
-	inst, err := db.GetInstanceByAwsInstanceIDAndUserID(target.ID, service.LocalUserID)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-
-	if !inst.IdleStopMinutes.Valid {
-		fmt.Println("no idle stop set")
-		return
-	}
-	fmt.Printf("idle-stop is set to %d minutes for %s\n", inst.IdleStopMinutes.Int64, inst.Name)
 }
