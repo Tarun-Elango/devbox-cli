@@ -253,6 +253,7 @@ func UpdateBudget(ctx context.Context, opts UpdateBudgetOptions) error {
 			return err
 		}
 		if err := deleteBudgetWithClient(ctx, budgetsClient, accountID, details.Name); err != nil {
+			clearBudgetCache()
 			return fmt.Errorf("renamed budget to %q but failed to delete %q: %w\nhint: delete the old budget manually with `devbox budget delete %q`", newName, details.Name, err, details.Name)
 		}
 		clearBudgetCache()
@@ -270,6 +271,7 @@ func UpdateBudget(ctx context.Context, opts UpdateBudgetOptions) error {
 	if emailChanged {
 		if err := updateBudgetEmail(ctx, budgetsClient, accountID, details.Name, details.Email, newEmail); err != nil {
 			if limitChanged {
+				clearBudgetCache()
 				return fmt.Errorf("updated budget limit but failed to update alert email: %w\nhint: retry the email change, or set the email manually in the AWS Budgets console — the monthly limit is already %g USD", err, newLimit)
 			}
 			return err

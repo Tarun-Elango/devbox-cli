@@ -246,21 +246,22 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 	if err != nil {
 		return "", awsclient.WrapError("describe security groups", err)
 	}
-	if len(existing.SecurityGroups) > 0 { // if security group exists, return it
-		return aws.ToString(existing.SecurityGroups[0].GroupId), nil
+	var sgID string
+	if len(existing.SecurityGroups) > 0 {
+		sgID = aws.ToString(existing.SecurityGroups[0].GroupId)
+	} else {
+		createResp, err := ec2Client.CreateSecurityGroup(ctx, &ec2.CreateSecurityGroupInput{
+			GroupName:   aws.String(isolatedSecurityGroupName),
+			Description: aws.String("Devbox isolated: SSH inbound only"),
+			VpcId:       aws.String(vpcID),
+		})
+		if err != nil {
+			return "", awsclient.WrapError("create security group", err)
+		}
+		sgID = aws.ToString(createResp.GroupId)
 	}
 
-	// create security group
-	createResp, err := ec2Client.CreateSecurityGroup(ctx, &ec2.CreateSecurityGroupInput{
-		GroupName:   aws.String(isolatedSecurityGroupName),
-		Description: aws.String("Devbox isolated: SSH inbound only"),
-		VpcId:       aws.String(vpcID),
-	})
-	if err != nil {
-		return "", awsclient.WrapError("create security group", err)
-	}
-	sgID := aws.ToString(createResp.GroupId)
-
+	// Always ensure SSH ingress exists (existing groups may have had the rule removed).
 	_, err = ec2Client.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
 		GroupId: aws.String(sgID),
 		IpPermissions: []types.IpPermission{
@@ -277,7 +278,7 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 			},
 		},
 	})
-	if err != nil {
+	if err != nil && !awsclient.HasErrorCode(err, "InvalidPermission.Duplicate") {
 		return "", awsclient.WrapError("authorize security group ingress", err)
 	}
 
