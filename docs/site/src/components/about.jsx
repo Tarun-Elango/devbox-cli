@@ -339,13 +339,13 @@ export default function AboutPage() {
           <h2>Quick install</h2>
           <p className="note">
             Every push to <code>main</code> publishes binaries to the{' '}
-            <a href="https://github.com/Tarun-Elango/outpost/releases/tag/latest">
+            <a href="https://github.com/Tarun-Elango/Outpost/releases/tag/latest">
               latest release
             </a>, run the following command:
 
           </p>
           <pre>
-            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | bash`}</code>
+            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/Outpost/latest/scripts/install.sh | bash`}</code>
           </pre>
           <p className="note">
             Verify with the command <code>outpost ls</code>.
@@ -361,7 +361,7 @@ export default function AboutPage() {
             on <code>curl</code>):
           </h3>
           <pre>
-            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | RELEASE_TAG=v0.7.0 bash`}</code>
+            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/Outpost/latest/scripts/install.sh | RELEASE_TAG=v0.7.0 bash`}</code>
           </pre>
 
           <h3>
@@ -369,7 +369,7 @@ export default function AboutPage() {
             <code>sudo</code>, no shell config changes):
           </h3>
           <pre>
-            <code>{`INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | sudo bash`}</code>
+            <code>{`INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/Outpost/latest/scripts/install.sh | sudo bash`}</code>
           </pre>
 
          
@@ -401,10 +401,10 @@ export default function AboutPage() {
           <h2>Links</h2>
           <ul>
             <li>
-              <a href="https://github.com/Tarun-Elango/outpost">GitHub repository</a>
+              <a href="https://github.com/Tarun-Elango/Outpost">GitHub repository</a>
             </li>
             <li>
-              <a href="https://github.com/Tarun-Elango/outpost/releases">Releases</a>
+              <a href="https://github.com/Tarun-Elango/Outpost/releases">Releases</a>
             </li>
             <li>
               <a href="https://github.com/Tarun-Elango/outpost/blob/main/readme.md">

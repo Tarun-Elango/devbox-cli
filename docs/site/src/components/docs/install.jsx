@@ -83,7 +83,7 @@ sudo apt install golang-go`}</code>
 
         <p className="note">Clone the repo — all build steps below run from inside it:</p>
         <pre>
-          <code>{`git clone https://github.com/Tarun-Elango/outpost.git
+          <code>{`git clone https://github.com/Tarun-Elango/Outpost.git
 cd outpost`}</code>
         </pre>
 

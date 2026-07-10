@@ -20,7 +20,7 @@ see the docs for more details: https://outpost.tarunelango.com
 
 ## Download and Install (from GitHub release)
 
-Every push to `main` publishes Linux and macOS binaries to the [latest release](https://github.com/Tarun-Elango/outpost/releases/tag/latest). Run the following command:
+Every push to `main` publishes Linux and macOS binaries to the [latest release](https://github.com/Tarun-Elango/Outpost/releases/tag/latest). Run the following command:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | bash
