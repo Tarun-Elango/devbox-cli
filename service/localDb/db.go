@@ -103,6 +103,15 @@ func OpenExisting(path string) (*DB, error) {
 	return db, nil
 }
 
+// CountInstances returns the number of rows in the instances table.
+func (db *DB) CountInstances() (int, error) {
+	var n int
+	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM instances`).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count instances: %w", err)
+	}
+	return n, nil
+}
+
 // CountTemplates returns the number of rows in the templates table.
 func (db *DB) CountTemplates() (int, error) {
 	var n int

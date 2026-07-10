@@ -192,6 +192,9 @@ func writeEmptyOutpostDB(t *testing.T, home string) string {
 	}
 	defer func() { _ = conn.Close() }()
 	for _, stmt := range []string{
+		`CREATE TABLE instances (
+  id TEXT PRIMARY KEY, aws_instance_id TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+  user_id TEXT NOT NULL, status TEXT, instance_type TEXT, region TEXT, provider TEXT)`,
 		`CREATE TABLE templates (
   id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,
   description TEXT, startup_script TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -208,14 +211,14 @@ func writeEmptyOutpostDB(t *testing.T, home string) string {
 	return path
 }
 
-func TestUninstallBlockedWhenTemplatesRemain(t *testing.T) {
+func TestUninstallBlockedWhenInstancesRemain(t *testing.T) {
 	home := t.TempDir()
 	path := writeEmptyOutpostDB(t, home)
 	conn, err := sqliteutil.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := conn.Exec(`INSERT INTO templates (id, user_id, name) VALUES ('t1', 'local', 'python3')`); err != nil {
+	if _, err := conn.Exec(`INSERT INTO instances (id, aws_instance_id, name, user_id) VALUES ('i1', 'i-abc', 'box', 'local')`); err != nil {
 		t.Fatal(err)
 	}
 	_ = conn.Close()
@@ -228,8 +231,8 @@ func TestUninstallBlockedWhenTemplatesRemain(t *testing.T) {
 			t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
 		}
 	})
-	if !strings.Contains(stderr, "cannot uninstall") || !strings.Contains(stderr, "template") {
-		t.Fatalf("stderr = %q, want blocked for templates", stderr)
+	if !strings.Contains(stderr, "cannot uninstall") || !strings.Contains(stderr, "instance") {
+		t.Fatalf("stderr = %q, want blocked for instances", stderr)
 	}
 }
 
@@ -263,5 +266,22 @@ func TestEnsureUninstallAllowedEmptyDB(t *testing.T) {
 	writeEmptyOutpostDB(t, home)
 	if err := ensureUninstallAllowed(home); err != nil {
 		t.Fatalf("ensureUninstallAllowed() = %v, want nil", err)
+	}
+}
+
+func TestEnsureUninstallAllowedWithTemplates(t *testing.T) {
+	home := t.TempDir()
+	path := writeEmptyOutpostDB(t, home)
+	conn, err := sqliteutil.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(`INSERT INTO templates (id, user_id, name) VALUES ('t1', 'local', 'python3')`); err != nil {
+		t.Fatal(err)
+	}
+	_ = conn.Close()
+
+	if err := ensureUninstallAllowed(home); err != nil {
+		t.Fatalf("ensureUninstallAllowed() = %v, want nil when only templates remain", err)
 	}
 }

@@ -115,7 +115,7 @@ func Uninstall(args []string) {
 	fmt.Println("outpost uninstalled. Restart your shell if PATH was updated.")
 }
 
-// ensureUninstallAllowed blocks uninstall while templates or snapshots remain in
+// ensureUninstallAllowed blocks uninstall while instances or snapshots remain in
 // the local database, so wiping ~/.outpost cannot orphan those records.
 func ensureUninstallAllowed(home string) error {
 	dbPath := filepath.Join(home, outpostDataDir, "outpost.db") // get the path to the local database
@@ -128,26 +128,26 @@ func ensureUninstallAllowed(home string) error {
 	}
 	defer func() { _ = db.Close() }()
 
-	templates, err := db.CountTemplates() // count the number of templates in the local database
+	instances, err := db.CountInstances() // count the number of instances in the local database
 	if err != nil {
-		return fmt.Errorf("check templates: %w", err)
+		return fmt.Errorf("check instances: %w", err)
 	}
 	snapshots, err := db.CountSnapshots() // count the number of snapshots in the local database
 	if err != nil {
 		return fmt.Errorf("check snapshots: %w", err)
 	}
-	if templates == 0 && snapshots == 0 {
+	if instances == 0 && snapshots == 0 {
 		return nil
 	}
 
 	var parts []string
-	if templates > 0 {
-		parts = append(parts, fmt.Sprintf("%d template(s)", templates))
+	if instances > 0 {
+		parts = append(parts, fmt.Sprintf("%d instance(s)", instances))
 	}
 	if snapshots > 0 {
 		parts = append(parts, fmt.Sprintf("%d snapshot(s)", snapshots))
 	}
-	return fmt.Errorf("cannot uninstall: database still has %s; delete them first (outpost template delete / outpost snapshot delete)", strings.Join(parts, " and "))
+	return fmt.Errorf("cannot uninstall: database still has %s; delete them first (outpost box delete / outpost snapshot delete)", strings.Join(parts, " and "))
 }
 
 func removeDataDir(path string) error {

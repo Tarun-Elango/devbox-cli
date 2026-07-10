@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# steps
-# figure out where to install the binary
-# figure out the os and architecture
-# download the binary
-# verify the checksum
-# install the binary and put it in the install directory
-# add the binary to the path
+# Steps:
+# 1. Choose the installation directory.
+# 2. Detect the operating system and CPU architecture.
+# 3. Download and verify the matching release binary.
+# 4. Install the binary.
+# 5. Add the installation directory to PATH when needed.
 
 # --- Config ---
 repo="Tarun-Elango/outpost"
@@ -203,25 +202,7 @@ if path_configured_in_rc "${rc_file}"; then
   exit 0
 fi
 
-# ask the user if they want to add it to their shell config
-if [ -t 0 ]; then
-  printf 'Add %s to PATH in %s? [y/N] ' "${install_dir}" "${rc_file}"
-  read -r reply
-  case "${reply}" in
-    [yY] | [yY][eE][sS]) ;;
-    *)
-      echo "Skipped PATH setup. Add this line to ${rc_file} manually:"
-      echo "  ${path_line}"
-      exit 0
-      ;;
-  esac
-else
-  echo "Add this line to ${rc_file} to use outpost:"
-  echo "  ${path_line}"
-  exit 0
-fi
-
-# add the install directory to the shell config
+# Add the install directory to the shell config
 {
   echo ""
   echo "# outpost"
