@@ -29,6 +29,6 @@ jobs:
           for os in linux darwin; do
             for arch in amd64 arm64; do
               GOOS="$os" GOARCH="$arch" go build \
-                -o "dist/devbox-$os-$arch" .
+                -o "dist/outpost-$os-$arch" .
             done
           done

@@ -30,14 +30,14 @@ jobs:
           for os in linux darwin; do
             for arch in amd64 arm64; do
               GOOS="$os" GOARCH="$arch" go build \
-                -o "dist/devbox-$os-$arch" .
+                -o "dist/outpost-$os-$arch" .
             done
           done
 
       - name: Generate checksums
         run: |
           cd dist
-          sha256sum devbox-linux-amd64 devbox-linux-arm64 devbox-darwin-amd64 devbox-darwin-arm64 > checksums.txt
+          sha256sum outpost-linux-amd64 outpost-linux-arm64 outpost-darwin-amd64 outpost-darwin-arm64 > checksums.txt
           cat checksums.txt
 
       - name: Create and push tag
@@ -56,7 +56,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${TAG}" -m "devbox ${TAG}"
+          git tag -a "${TAG}" -m "outpost ${TAG}"
           git push "${REPO_URL}" "${TAG}"
 
       - name: Create versioned release
@@ -65,12 +65,12 @@ jobs:
         run: |
           VERSION=$(tr -d '[:space:]' < internal/version/VERSION)
           gh release create "v${VERSION}" \
-            dist/devbox-linux-amd64 \
-            dist/devbox-linux-arm64 \
-            dist/devbox-darwin-amd64 \
-            dist/devbox-darwin-arm64 \
+            dist/outpost-linux-amd64 \
+            dist/outpost-linux-arm64 \
+            dist/outpost-darwin-amd64 \
+            dist/outpost-darwin-arm64 \
             dist/checksums.txt \
-            --title "devbox v${VERSION}" \
+            --title "outpost v${VERSION}" \
             --notes "Linux and macOS builds for amd64 and arm64."
 
       - name: Refresh rolling latest release
@@ -96,12 +96,12 @@ jobs:
           fi
 
           gh release create latest \
-            dist/devbox-linux-amd64 \
-            dist/devbox-linux-arm64 \
-            dist/devbox-darwin-amd64 \
-            dist/devbox-darwin-arm64 \
+            dist/outpost-linux-amd64 \
+            dist/outpost-linux-arm64 \
+            dist/outpost-darwin-amd64 \
+            dist/outpost-darwin-arm64 \
             dist/checksums.txt \
             --target "${GITHUB_SHA}" \
-            --title "devbox latest (v${VERSION})" \
-            --notes "Rolling latest release for the most recent devbox version: v${VERSION}." \
+            --title "outpost latest (v${VERSION})" \
+            --notes "Rolling latest release for the most recent outpost version: v${VERSION}." \
             --latest
