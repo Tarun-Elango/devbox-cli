@@ -15,7 +15,7 @@ export default function TransferHowTo() {
 
       <div className="card">
         <p>
-          Move files between your laptop and a outpost with <code>outpost cp</code> and{' '}
+          Move files between your laptop and a remote box with <code>outpost cp</code> and{' '}
           <code>outpost sync</code>. Both commands use SSH under the hood — you do not need
           to look up the box IP or edit <code>~/.ssh/config</code> yourself. Remote paths
           use <code>mybox:/path/on/box</code> syntax (box name or ID, then a colon and the

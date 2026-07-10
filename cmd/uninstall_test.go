@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"outpost-cli/internal/sqliteutil"
 )
 
 func withUninstallStubs(t *testing.T, home, exe string) {
@@ -35,6 +37,8 @@ func TestUninstallRejectsExtraArgs(t *testing.T) {
 }
 
 func TestUninstallDeclined(t *testing.T) {
+	home := t.TempDir()
+	withUninstallStubs(t, home, filepath.Join(home, ".local", "bin", "outpost"))
 	withSetupStdin(t, "n\n")
 
 	out := captureStdout(t, func() {
@@ -172,5 +176,92 @@ func TestUninstallAcceptedRemovesBinaryDataAndPath(t *testing.T) {
 	}
 	if !strings.Contains(out, "Removed "+exe) {
 		t.Fatalf("stdout = %q, want binary removal message", out)
+	}
+}
+
+func writeEmptyOutpostDB(t *testing.T, home string) string {
+	t.Helper()
+	dir := filepath.Join(home, ".outpost")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "outpost.db")
+	conn, err := sqliteutil.Open(path)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+	for _, stmt := range []string{
+		`CREATE TABLE templates (
+  id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,
+  description TEXT, startup_script TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, name))`,
+		`CREATE TABLE snapshots (
+  id TEXT PRIMARY KEY, ami_id TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+  user_id TEXT NOT NULL, box_id TEXT, state TEXT, region TEXT, provider TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+	} {
+		if _, err := conn.Exec(stmt); err != nil {
+			t.Fatalf("create table: %v", err)
+		}
+	}
+	return path
+}
+
+func TestUninstallBlockedWhenTemplatesRemain(t *testing.T) {
+	home := t.TempDir()
+	path := writeEmptyOutpostDB(t, home)
+	conn, err := sqliteutil.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(`INSERT INTO templates (id, user_id, name) VALUES ('t1', 'local', 'python3')`); err != nil {
+		t.Fatal(err)
+	}
+	_ = conn.Close()
+
+	withUninstallStubs(t, home, filepath.Join(home, ".local", "bin", "outpost"))
+
+	stderr := captureStderr(t, func() {
+		code, exited := withSetupExit(t, func() { Uninstall(nil) })
+		if !exited || code != 1 {
+			t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
+		}
+	})
+	if !strings.Contains(stderr, "cannot uninstall") || !strings.Contains(stderr, "template") {
+		t.Fatalf("stderr = %q, want blocked for templates", stderr)
+	}
+}
+
+func TestUninstallBlockedWhenSnapshotsRemain(t *testing.T) {
+	home := t.TempDir()
+	path := writeEmptyOutpostDB(t, home)
+	conn, err := sqliteutil.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(`INSERT INTO snapshots (id, ami_id, name, user_id) VALUES ('s1', 'ami-abc', 'snap', 'local')`); err != nil {
+		t.Fatal(err)
+	}
+	_ = conn.Close()
+
+	withUninstallStubs(t, home, filepath.Join(home, ".local", "bin", "outpost"))
+
+	stderr := captureStderr(t, func() {
+		code, exited := withSetupExit(t, func() { Uninstall(nil) })
+		if !exited || code != 1 {
+			t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
+		}
+	})
+	if !strings.Contains(stderr, "cannot uninstall") || !strings.Contains(stderr, "snapshot") {
+		t.Fatalf("stderr = %q, want blocked for snapshots", stderr)
+	}
+}
+
+func TestEnsureUninstallAllowedEmptyDB(t *testing.T) {
+	home := t.TempDir()
+	writeEmptyOutpostDB(t, home)
+	if err := ensureUninstallAllowed(home); err != nil {
+		t.Fatalf("ensureUninstallAllowed() = %v, want nil", err)
 	}
 }

@@ -10,8 +10,8 @@ export default function AboutPage() {
           </a>
         </div>
         <p className="tagline">
-          Manage remote dev boxes from the terminal — provision, connect, sync, and
-          destroy them with your own cloud account (BYOK).
+          Manage remote dev boxes from the CLI — provision, connect, sync, and destroy
+          them using your own AWS account (BYOK).
         </p>
 
         <div className="card card-purpose">

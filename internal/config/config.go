@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
-
-	"outpost-cli/internal/backup"
 )
 
 const (
@@ -37,7 +35,7 @@ func ConfigPath() (string, error) {
 // Load reads Config from ~/.outpost/config.json.
 // If the file does not exist an empty Config is returned.
 func Load() (*Config, error) {
-	backup.RestoreConfigIfNeeded()
+	//backup.RestoreConfigIfNeeded()
 	path, err := ConfigPath()
 	if err != nil {
 		return nil, err

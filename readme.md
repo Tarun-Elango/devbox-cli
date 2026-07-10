@@ -1,6 +1,6 @@
-# outpost CLI
+# Outpost CLI
 
-Manage remote dev boxes from the CLI — provision, connect, sync, and destroy them using your own cloud account (BYOK - AWS only for now). CLI supports linux and macos.
+Manage remote dev boxes from the CLI — provision, connect, sync, and destroy them using your own AWS account (BYOK). Currently supports Linux and macOS.
 
 ## What is a box?
 

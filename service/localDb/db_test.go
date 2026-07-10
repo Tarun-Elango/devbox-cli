@@ -160,3 +160,50 @@ func TestMigrateSnapshotsRegionProviderBackfillsFromBox(t *testing.T) {
 		t.Fatalf("got provider=%+v, want aws", record.Provider)
 	}
 }
+
+func TestOpenExistingMissingAndCounts(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	missing := filepath.Join(t.TempDir(), "missing.db")
+	db, err := OpenExisting(missing)
+	if err != nil {
+		t.Fatalf("OpenExisting(missing) error = %v", err)
+	}
+	if db != nil {
+		t.Fatal("OpenExisting(missing) = non-nil, want nil")
+	}
+
+	seeded, err := Open()
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	_ = seeded.Close()
+
+	path, err := DBPath()
+	if err != nil {
+		t.Fatalf("DBPath() error = %v", err)
+	}
+	db, err = OpenExisting(path)
+	if err != nil {
+		t.Fatalf("OpenExisting(existing) error = %v", err)
+	}
+	if db == nil {
+		t.Fatal("OpenExisting(existing) = nil, want db")
+	}
+	defer func() { _ = db.Close() }()
+
+	templates, err := db.CountTemplates()
+	if err != nil {
+		t.Fatalf("CountTemplates() error = %v", err)
+	}
+	if templates == 0 {
+		t.Fatal("CountTemplates() = 0, want seeded defaults")
+	}
+	snapshots, err := db.CountSnapshots()
+	if err != nil {
+		t.Fatalf("CountSnapshots() error = %v", err)
+	}
+	if snapshots != 0 {
+		t.Fatalf("CountSnapshots() = %d, want 0", snapshots)
+	}
+}

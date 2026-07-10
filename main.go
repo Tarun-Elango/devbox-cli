@@ -74,7 +74,7 @@ Commands:
 
   version             Show the outpost CLI version
   update              Check for a newer release and install it (asks for confirmation)
-  uninstall           Remove outpost, local data, and PATH entries (asks for confirmation)
+  uninstall           Remove outpost, local data, and PATH entries (requires no templates/snapshots; asks for confirmation)
 
   setup               Configure AWS credentials and region (stored in ~/.outpost/config.json)
   clear-creds         Clear saved AWS credentials from ~/.outpost/config.json

@@ -14,7 +14,7 @@ export default function GithubSyncHowTo() {
 
       <div className="card">
         <p>
-          Use your local GitHub SSH key on a outpost for <code>git clone</code>,{' '}
+          Use your local GitHub SSH key on a remote box for <code>git clone</code>,{' '}
           <code>git push</code>, and other Git operations — without copying the key
           onto the box. <code>outpost git-sync</code> sets up SSH agent forwarding so
           the box uses the key already on your laptop.

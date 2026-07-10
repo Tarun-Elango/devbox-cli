@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"outpost-cli/internal/backup"
 	"outpost-cli/internal/config"
 	"outpost-cli/internal/sqliteutil"
 )
@@ -33,7 +32,7 @@ func DBPath() (string, error) {
 
 // Open connects to ~/.outpost/outpost.db, creating the directory and schema if needed.
 func Open() (*DB, error) {
-	backup.RestoreDBIfNeeded()
+	//backup.RestoreDBIfNeeded()
 	path, err := DBPath()
 	if err != nil {
 		return nil, err
@@ -74,6 +73,52 @@ func Open() (*DB, error) {
 
 	// return db connection
 	return db, nil
+}
+
+// OpenExisting opens path if the database file already exists, without creating
+// directories or seeding default templates. Returns (nil, nil) when the file is absent.
+// called by cmd/uninstall.go
+func OpenExisting(path string) (*DB, error) {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("stat db: %w", err)
+	}
+
+	conn, err := sqliteutil.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open db: %w", err)
+	}
+
+	db := &DB{conn: conn}
+	if err := db.migrate(); err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
+	if err := conn.Ping(); err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("ping db: %w", err)
+	}
+	return db, nil
+}
+
+// CountTemplates returns the number of rows in the templates table.
+func (db *DB) CountTemplates() (int, error) {
+	var n int
+	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM templates`).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count templates: %w", err)
+	}
+	return n, nil
+}
+
+// CountSnapshots returns the number of rows in the snapshots table.
+func (db *DB) CountSnapshots() (int, error) {
+	var n int
+	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM snapshots`).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count snapshots: %w", err)
+	}
+	return n, nil
 }
 
 func (db *DB) Close() error {
