@@ -47,7 +47,7 @@ Run `outpost help` to print usage, or see the table below.
 | `setup` | Configure/change AWS credentials and region (stored in `~/.outpost/config.json`) |
 | `clear-creds` | Clear saved AWS credentials from `~/.outpost/config.json` |
 | `health` | Check config, AWS credentials, region, and database |
-| `import` | Sync EC2 instances and snapshots from your AWS account (configured region) into the local DB; prompts yes/no for each resource not already tracked. For boxes, may ask for an existing `.pem` to authorize outpost SSH |
+| `import` | Sync EC2 instances and self-owned AMIs from your AWS account (configured region) into the local DB; prompts for each untracked resource — answer `y` to import or press Enter to skip. For boxes, may ask for an existing `.pem` to authorize outpost SSH |
 
 ### Boxes
 

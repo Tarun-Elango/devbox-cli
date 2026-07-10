@@ -35,7 +35,8 @@ const topics = [
   {
     to: '/docs/import',
     title: 'Import',
-    description: 'sync EC2 instances and snapshots from your AWS account into the local machine',
+    description:
+      'discover and sync EC2 instances and self-owned AMIs from your AWS account into the local database',
   },
   {
     to: '/docs/commands',

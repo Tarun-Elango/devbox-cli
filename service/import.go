@@ -49,71 +49,79 @@ func (r *Runtime) ListUntrackedImportCandidates(userID string) ([]ImportCandidat
 	db := r.DB()
 
 	var out []ImportCandidate
+	instanceNames := make(map[string]struct{})
 
-	instResp, err := ec2Client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{ // describe the instances
+	instancePages := ec2.NewDescribeInstancesPaginator(ec2Client, &ec2.DescribeInstancesInput{
 		Filters: []types.Filter{{
 			Name:   aws.String("instance-state-name"),
 			Values: []string{"pending", "running", "stopping", "stopped"},
 		}},
 	})
-	if err != nil {
-		return nil, awsclient.WrapError("describe instances", err)
+	for instancePages.HasMorePages() {
+		instResp, err := instancePages.NextPage(ctx)
+		if err != nil {
+			return nil, awsclient.WrapError("describe instances", err)
+		}
+		for _, reservation := range instResp.Reservations {
+			for _, inst := range reservation.Instances {
+				awsID := aws.ToString(inst.InstanceId)
+				_, err := db.GetInstanceByAwsInstanceIDAndUserID(awsID, userID)
+				if err == nil { // if the instance is already in the database, skip it
+					continue
+				}
+				if err != sql.ErrNoRows {
+					return nil, err
+				}
+				dto := instanceFromAWS(inst)
+				name, err := uniqueImportName(db, userID, dto.Name, awsID, false, instanceNames)
+				if err != nil {
+					return nil, err
+				}
+				ip := dto.IPAddress
+				if ip == "" {
+					ip = dto.PrivateIPAddress
+				}
+				out = append(out, ImportCandidate{
+					Kind:         ImportKindBox,
+					AWSID:        awsID,
+					Name:         name,
+					State:        dto.Status,
+					InstanceType: dto.InstanceType,
+					IPAddress:    ip,
+				})
+			}
+		}
 	}
-	for _, reservation := range instResp.Reservations { // iterate over the reservations
-		for _, inst := range reservation.Instances {
-			awsID := aws.ToString(inst.InstanceId)
-			_, err := db.GetInstanceByAwsInstanceIDAndUserID(awsID, userID)
-			if err == nil { // if the instance is already in the database, skip it
+
+	snapshotNames := make(map[string]struct{})
+	imagePages := ec2.NewDescribeImagesPaginator(ec2Client, &ec2.DescribeImagesInput{
+		Owners: []string{"self"},
+	})
+	for imagePages.HasMorePages() {
+		imgResp, err := imagePages.NextPage(ctx)
+		if err != nil {
+			return nil, awsclient.WrapError("describe images", err)
+		}
+		for _, img := range imgResp.Images {
+			amiID := aws.ToString(img.ImageId)
+			_, err := db.GetSnapshotByAmiIDAndUserID(amiID, userID)
+			if err == nil {
 				continue
 			}
 			if err != sql.ErrNoRows {
 				return nil, err
 			}
-			dto := instanceFromAWS(inst)
-			name, err := uniqueImportName(db, userID, dto.Name, awsID, false)
+			name, err := uniqueImportName(db, userID, aws.ToString(img.Name), amiID, true, snapshotNames)
 			if err != nil {
 				return nil, err
 			}
-			ip := dto.IPAddress
-			if ip == "" {
-				ip = dto.PrivateIPAddress
-			}
 			out = append(out, ImportCandidate{
-				Kind:         ImportKindBox,
-				AWSID:        awsID,
-				Name:         name,
-				State:        dto.Status,
-				InstanceType: dto.InstanceType,
-				IPAddress:    ip,
+				Kind:  ImportKindSnapshot,
+				AWSID: amiID,
+				Name:  name,
+				State: string(img.State),
 			})
 		}
-	}
-
-	imgResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{ // describe the images
-		Owners: []string{"self"},
-	})
-	if err != nil {
-		return nil, awsclient.WrapError("describe images", err)
-	}
-	for _, img := range imgResp.Images { // iterate over the images
-		amiID := aws.ToString(img.ImageId)
-		_, err := db.GetSnapshotByAmiIDAndUserID(amiID, userID)
-		if err == nil {
-			continue
-		}
-		if err != sql.ErrNoRows {
-			return nil, err
-		}
-		name, err := uniqueImportName(db, userID, aws.ToString(img.Name), amiID, true)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, ImportCandidate{
-			Kind:  ImportKindSnapshot,
-			AWSID: amiID,
-			Name:  name,
-			State: string(img.State),
-		})
 	}
 
 	return out, nil
@@ -154,7 +162,7 @@ func (r *Runtime) ImportCandidate(c ImportCandidate, userID string) error {
 
 // uniqueImportName: AWS name/tag, else imported-<id>, else -2/-3 on collision.
 // ponytail: linear scan; fine for interactive import
-func uniqueImportName(db *localDb.DB, userID, preferred, awsID string, snapshot bool) (string, error) {
+func uniqueImportName(db *localDb.DB, userID, preferred, awsID string, snapshot bool, batchNames map[string]struct{}) (string, error) {
 	base := strings.TrimSpace(preferred)
 	if base == "" || looksLikeAWSResourceID(base) {
 		base = "imported-" + shortAWSID(awsID)
@@ -164,6 +172,9 @@ func uniqueImportName(db *localDb.DB, userID, preferred, awsID string, snapshot 
 		if i > 1 {
 			name = fmt.Sprintf("%s-%d", base, i)
 		}
+		if _, used := batchNames[name]; used {
+			continue
+		}
 		var err error
 		if snapshot {
 			err = db.ValidateSnapshotNameAvailable(name, userID)
@@ -171,6 +182,7 @@ func uniqueImportName(db *localDb.DB, userID, preferred, awsID string, snapshot 
 			err = db.ValidateInstanceNameAvailable(name, userID)
 		}
 		if err == nil {
+			batchNames[name] = struct{}{}
 			return name, nil
 		}
 		if !strings.Contains(err.Error(), "already exists") {

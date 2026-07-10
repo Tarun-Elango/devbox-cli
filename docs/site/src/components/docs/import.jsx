@@ -14,15 +14,15 @@ export default function ImportDoc() {
       <div className="card">
         <h2 id="use-import">Import resources</h2>
         <p className="note">
-          Import existing EC2 instances and self-owned snapshots from the AWS region
+          Import existing EC2 instances and self-owned AMIs from the AWS region
           configured with <code>outpost setup</code>.
         </p>
         <pre>
           <code>outpost import</code>
         </pre>
         <p>
-          Outpost shows each instance and snapshot that is not already tracked locally.
-          Answer <code>y</code> to import a resource or press Enter to skip it.
+          Outpost shows each instance and self-owned AMI that is not already tracked
+          locally. Answer <code>y</code> to import a resource or press Enter to skip it.
         </p>
         <p>
           For a running instance with a reachable IP address, Outpost asks for the
@@ -51,8 +51,8 @@ export default function ImportDoc() {
         <h2 id="how-it-works">How it works</h2>
         <p>
           In simple terms, import connects to AWS, looks at the EC2 instances and
-          snapshots in your configured region, and compares them with the resources
-          already saved in Outpost&apos;s local database.
+          self-owned AMIs in your configured region, and compares them with the
+          resources already saved in Outpost&apos;s local database.
         </p>
         <ol>
           <li>
@@ -63,8 +63,8 @@ export default function ImportDoc() {
             It asks you about each resource one at a time, so you choose what to add.
           </li>
           <li>
-            Accepted instances and snapshots are saved locally with an Outpost name.
-            Existing AWS resources are not recreated.
+            Accepted instances and self-owned AMIs are saved locally with an Outpost
+            name. Existing AWS resources are not recreated.
           </li>
           <li>
             For a running box, the optional <code>.pem</code> key lets Outpost log in
@@ -73,8 +73,8 @@ export default function ImportDoc() {
           </li>
         </ol>
         <p className="note">
-          Import does not copy or move the EC2 instance, its disk, or its snapshot. It
-          only records the AWS resource locally so you can manage it through Outpost.
+          Import does not copy or move EC2 instances, their disks, or self-owned AMIs.
+          It only records the AWS resource locally so you can manage it through Outpost.
         </p>
       </div>
     </DocPage>
