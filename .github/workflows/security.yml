@@ -4,6 +4,12 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'cmd/**'
+      - 'helper/**'
+      - 'internal/**'
+      - 'scripts/**'
+      - 'service/**'
 
 permissions:
   contents: read
