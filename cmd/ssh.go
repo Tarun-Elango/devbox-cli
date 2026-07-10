@@ -193,6 +193,10 @@ func SSH(args []string) {
 		os.Exit(1)
 	}
 
+	if err := service.UpdateHost(b.Name, b.PublicIP); err != nil {
+		fmt.Fprintf(os.Stderr, "ssh: warning: failed to update SSH config: %v\n", err)
+	}
+
 	sshBin, err := exec.LookPath("ssh")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ssh: ssh binary not found in PATH")
