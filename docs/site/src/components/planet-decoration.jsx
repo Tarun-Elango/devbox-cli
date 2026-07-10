@@ -67,7 +67,7 @@ export default function PlanetDecoration() {
         />
         <path
           d="M118 28 L148 36 L118 44 Z"
-          fill="#ffffcc"
+          fill="#c45c5c"
           stroke="#000"
           strokeWidth="1"
         />
