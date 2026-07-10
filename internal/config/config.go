@@ -8,15 +8,15 @@ import (
 	"runtime"
 	"time"
 
-	"devbox-cli/internal/backup"
+	"outpost-cli/internal/backup"
 )
 
 const (
-	configDir  = ".devbox"
+	configDir  = ".outpost"
 	configFile = "config.json"
 )
 
-// Config holds the persistent CLI configuration stored at ~/.devbox/config.json.
+// Config holds the persistent CLI configuration stored at ~/.outpost/config.json.
 type Config struct {
 	AwsSecret         string    `json:"awsSecret"`
 	AwsAccessKey      string    `json:"awsAccessKey"`
@@ -25,7 +25,7 @@ type Config struct {
 	Mode              string    `json:"mode"`
 }
 
-// ConfigPath returns the absolute path to ~/.devbox/config.json.
+// ConfigPath returns the absolute path to ~/.outpost/config.json.
 func ConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -34,7 +34,7 @@ func ConfigPath() (string, error) {
 	return filepath.Join(home, configDir, configFile), nil
 }
 
-// Load reads Config from ~/.devbox/config.json.
+// Load reads Config from ~/.outpost/config.json.
 // If the file does not exist an empty Config is returned.
 func Load() (*Config, error) {
 	backup.RestoreConfigIfNeeded()
@@ -58,7 +58,7 @@ func Load() (*Config, error) {
 	return &cfg, nil
 }
 
-// Save writes cfg to ~/.devbox/config.json, creating the directory if needed.
+// Save writes cfg to ~/.outpost/config.json, creating the directory if needed.
 func Save(cfg *Config) error {
 	// backup.BeforeConfigSave()
 	path, err := ConfigPath()

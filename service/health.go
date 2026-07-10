@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 
-	awsclient "devbox-cli/service/aws"
+	awsclient "outpost-cli/service/aws"
 )
 
 // AWSCredsCheck is the result of validating AWS credentials via STS.

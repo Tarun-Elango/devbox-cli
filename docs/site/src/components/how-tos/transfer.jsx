@@ -15,16 +15,16 @@ export default function TransferHowTo() {
 
       <div className="card">
         <p>
-          Move files between your laptop and a devbox with <code>devbox cp</code> and{' '}
-          <code>devbox sync</code>. Both commands use SSH under the hood — you do not need
+          Move files between your laptop and a outpost with <code>outpost cp</code> and{' '}
+          <code>outpost sync</code>. Both commands use SSH under the hood — you do not need
           to look up the box IP or edit <code>~/.ssh/config</code> yourself. Remote paths
           use <code>mybox:/path/on/box</code> syntax (box name or ID, then a colon and the
           path).
         </p>
         <p className="note">
-          For plain <code>scp</code> or <code>rsync</code> with the <code>devbox-mybox</code>{' '}
+          For plain <code>scp</code> or <code>rsync</code> with the <code>outpost-mybox</code>{' '}
           host alias, see{' '}
-          <Link to="/how-tos/vscode-ssh">VS Code &amp; SSH without the devbox CLI</Link>.
+          <Link to="/how-tos/vscode-ssh">VS Code &amp; SSH without the outpost CLI</Link>.
           Command reference: <Link to="/docs/connect#copy-sync">Copy &amp; sync</Link> on
           the Connect page.
         </p>
@@ -34,19 +34,19 @@ export default function TransferHowTo() {
         <h2 id="copy-file">Copy a file with <code>cp</code></h2>
 
         <p>
-          Use <code>devbox cp</code> when you want to copy <strong>one file</strong> in either
+          Use <code>outpost cp</code> when you want to copy <strong>one file</strong> in either
           direction — upload from your machine to the box, or download from the box to your
           machine.
         </p>
 
         <p>Upload a local file to the box:</p>
         <pre>
-          <code>devbox cp ./main.go mybox:/home/ec2-user/app/</code>
+          <code>outpost cp ./main.go mybox:/home/ec2-user/app/</code>
         </pre>
 
         <p>Download a file from the box:</p>
         <pre>
-          <code>devbox cp mybox:/home/ec2-user/app/main.go ./</code>
+          <code>outpost cp mybox:/home/ec2-user/app/main.go ./</code>
         </pre>
 
         <p>
@@ -59,19 +59,19 @@ export default function TransferHowTo() {
         <h2 id="sync-directory">Sync a directory with <code>sync</code></h2>
 
         <p>
-          Use <code>devbox sync</code> when you want to keep a <strong>whole folder</strong>{' '}
+          Use <code>outpost sync</code> when you want to keep a <strong>whole folder</strong>{' '}
           in sync — for example your project directory. It uses <code>rsync</code> over SSH,
           so only changed files are transferred after the first run.
         </p>
 
         <p>Upload your local project to the box (updates files on the box):</p>
         <pre>
-          <code>devbox sync ./project mybox:/home/ec2-user/project</code>
+          <code>outpost sync ./project mybox:/home/ec2-user/project</code>
         </pre>
 
         <p>Download the project from the box to your laptop (updates your local copy):</p>
         <pre>
-          <code>devbox sync mybox:/home/ec2-user/project ./project</code>
+          <code>outpost sync mybox:/home/ec2-user/project ./project</code>
         </pre>
 
         <p>
@@ -79,7 +79,7 @@ export default function TransferHowTo() {
           — files on the destination that are not in the source are removed:
         </p>
         <pre>
-          <code>devbox sync --delete ./project mybox:/home/ec2-user/project</code>
+          <code>outpost sync --delete ./project mybox:/home/ec2-user/project</code>
         </pre>
         <p className="note">
           <code>--delete</code> only affects the <strong>destination</strong>. Your source
@@ -104,7 +104,7 @@ export default function TransferHowTo() {
           </li>
           <li>
             <strong>Only the destination changes.</strong> Whether you upload or download,
-            devbox reads from the source and writes to the destination. The source is
+            outpost reads from the source and writes to the destination. The source is
             read-only — nothing on the source side is deleted or overwritten by mistake.
           </li>
           <li>
@@ -116,7 +116,7 @@ export default function TransferHowTo() {
 
         <p>
           The box must be running and reachable over SSH. If you use a custom key, pass{' '}
-          <code>-i</code> to either command the same way you would with <code>devbox ssh</code>.
+          <code>-i</code> to either command the same way you would with <code>outpost ssh</code>.
         </p>
       </div>
     </HowToPage>

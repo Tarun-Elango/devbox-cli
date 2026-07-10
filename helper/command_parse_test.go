@@ -153,13 +153,13 @@ func TestParseSingleBoxRefRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseSingleBoxRef(tt.args, "usage: devbox status <id|name>")
+			ParseSingleBoxRef(tt.args, "usage: outpost status <id|name>")
 		})
 	}
 }
 
 func TestParseSingleBoxRefAcceptsOneArg(t *testing.T) {
-	got := ParseSingleBoxRef([]string{"mybox"}, "usage: devbox status <id|name>")
+	got := ParseSingleBoxRef([]string{"mybox"}, "usage: outpost status <id|name>")
 	if got != "mybox" {
 		t.Fatalf("ParseSingleBoxRef() = %q, want %q", got, "mybox")
 	}
@@ -191,13 +191,13 @@ func TestParseRenameBoxArgsRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseRenameBoxArgs(tt.args, "usage: devbox rename <id|name> <new-name>")
+			ParseRenameBoxArgs(tt.args, "usage: outpost rename <id|name> <new-name>")
 		})
 	}
 }
 
 func TestParseRenameBoxArgsAcceptsTwoArgs(t *testing.T) {
-	ref, newName := ParseRenameBoxArgs([]string{"mybox", " new-name "}, "usage: devbox rename <id|name> <new-name>")
+	ref, newName := ParseRenameBoxArgs([]string{"mybox", " new-name "}, "usage: outpost rename <id|name> <new-name>")
 	if ref != "mybox" || newName != "new-name" {
 		t.Fatalf("ParseRenameBoxArgs() = (%q, %q), want (%q, %q)", ref, newName, "mybox", "new-name")
 	}
@@ -229,20 +229,20 @@ func TestParseForwardArgsRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseForwardArgs(tt.args, "usage: devbox forward <id|name> <port>")
+			ParseForwardArgs(tt.args, "usage: outpost forward <id|name> <port>")
 		})
 	}
 }
 
 func TestParseForwardArgsAcceptsTwoArgs(t *testing.T) {
-	ref, port := ParseForwardArgs([]string{"mybox", "8080"}, "usage: devbox forward <id|name> <port>")
+	ref, port := ParseForwardArgs([]string{"mybox", "8080"}, "usage: outpost forward <id|name> <port>")
 	if ref != "mybox" || port != "8080" {
 		t.Fatalf("ParseForwardArgs() = (%q, %q), want (%q, %q)", ref, port, "mybox", "8080")
 	}
 }
 
 func TestParseForwardArgsTrimsPort(t *testing.T) {
-	ref, port := ParseForwardArgs([]string{"mybox", " 8080 "}, "usage: devbox forward <id|name> <port>")
+	ref, port := ParseForwardArgs([]string{"mybox", " 8080 "}, "usage: outpost forward <id|name> <port>")
 	if ref != "mybox" || port != "8080" {
 		t.Fatalf("ParseForwardArgs() = (%q, %q), want (%q, %q)", ref, port, "mybox", "8080")
 	}
@@ -277,7 +277,7 @@ func TestParseForwardArgsRejectsInvalidPort(t *testing.T) {
 				}
 			}()
 
-			ParseForwardArgs([]string{"mybox", tt.port}, "usage: devbox forward <id|name> <port>")
+			ParseForwardArgs([]string{"mybox", tt.port}, "usage: outpost forward <id|name> <port>")
 		})
 	}
 }
@@ -293,7 +293,7 @@ func TestParseForwardArgsAcceptsPortBoundaries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
-			_, port := ParseForwardArgs([]string{"mybox", tt.in}, "usage: devbox forward <id|name> <port>")
+			_, port := ParseForwardArgs([]string{"mybox", tt.in}, "usage: outpost forward <id|name> <port>")
 			if port != tt.want {
 				t.Fatalf("ParseForwardArgs() port = %q, want %q", port, tt.want)
 			}
@@ -327,13 +327,13 @@ func TestParseSnapshotArgsRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseSnapshotArgs(tt.args, "usage: devbox snapshot create <id|name> <name>")
+			ParseSnapshotArgs(tt.args, "usage: outpost snapshot create <id|name> <name>")
 		})
 	}
 }
 
 func TestParseSnapshotArgsAcceptsTwoArgs(t *testing.T) {
-	ref, snapshotName := ParseSnapshotArgs([]string{"mybox", " snap-name "}, "usage: devbox snapshot create <id|name> <name>")
+	ref, snapshotName := ParseSnapshotArgs([]string{"mybox", " snap-name "}, "usage: outpost snapshot create <id|name> <name>")
 	if ref != "mybox" || snapshotName != "snap-name" {
 		t.Fatalf("ParseSnapshotArgs() = (%q, %q), want (%q, %q)", ref, snapshotName, "mybox", "snap-name")
 	}
@@ -364,13 +364,13 @@ func TestParseSingleSnapshotRefArgRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseSingleSnapshotRefArg(tt.args, "usage: devbox snapshot ls <amiId|name>")
+			ParseSingleSnapshotRefArg(tt.args, "usage: outpost snapshot ls <amiId|name>")
 		})
 	}
 }
 
 func TestParseSingleSnapshotRefArgAcceptsOneArg(t *testing.T) {
-	got := ParseSingleSnapshotRefArg([]string{"before-upgrade"}, "usage: devbox snapshot ls <amiId|name>")
+	got := ParseSingleSnapshotRefArg([]string{"before-upgrade"}, "usage: outpost snapshot ls <amiId|name>")
 	if got != "before-upgrade" {
 		t.Fatalf("ParseSingleSnapshotRefArg() = %q, want %q", got, "before-upgrade")
 	}
@@ -401,13 +401,13 @@ func TestParseTemplateDeleteArgsRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseTemplateDeleteArgs(tt.args, "usage: devbox template delete <name>")
+			ParseTemplateDeleteArgs(tt.args, "usage: outpost template delete <name>")
 		})
 	}
 }
 
 func TestParseTemplateDeleteArgsAcceptsOneArg(t *testing.T) {
-	got := ParseTemplateDeleteArgs([]string{"my-template"}, "usage: devbox template delete <name>")
+	got := ParseTemplateDeleteArgs([]string{"my-template"}, "usage: outpost template delete <name>")
 	if got != "my-template" {
 		t.Fatalf("ParseTemplateDeleteArgs() = %q, want %q", got, "my-template")
 	}
@@ -439,13 +439,13 @@ func TestParseTemplateRenameArgsRejectsWrongArgCount(t *testing.T) {
 				}
 			}()
 
-			ParseTemplateRenameArgs(tt.args, "usage: devbox template rename <name> <new-name>")
+			ParseTemplateRenameArgs(tt.args, "usage: outpost template rename <name> <new-name>")
 		})
 	}
 }
 
 func TestParseTemplateRenameArgsAcceptsTwoArgs(t *testing.T) {
-	id, newName := ParseTemplateRenameArgs([]string{"my-template", " new-name "}, "usage: devbox template rename <name> <new-name>")
+	id, newName := ParseTemplateRenameArgs([]string{"my-template", " new-name "}, "usage: outpost template rename <name> <new-name>")
 	if id != "my-template" || newName != " new-name " {
 		t.Fatalf("ParseTemplateRenameArgs() = (%q, %q), want (%q, %q)", id, newName, "my-template", " new-name ")
 	}

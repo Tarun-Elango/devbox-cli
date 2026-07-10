@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // GitSync toggles GitHub SSH access for a box. Synced means both the local SSH
@@ -17,7 +17,7 @@ import (
 // config entry. If either side is missing, git-sync enables both; when both
 // are already set, it disables both.
 func GitSync(args []string) {
-	ref := helper.ParseSingleBoxRef(args, "usage: devbox git-sync <id|name>")
+	ref := helper.ParseSingleBoxRef(args, "usage: outpost git-sync <id|name>")
 
 	keyPath := defaultKeyPath()
 	if keyPath == "" {
@@ -46,7 +46,7 @@ func GitSync(args []string) {
 	}
 
 	synced := configEnabled && keyLoaded
-	hostAlias := service.DevboxHostName(target.Name)
+	hostAlias := service.OutpostHostName(target.Name)
 
 	if synced { // if both are true, disable both
 		if err := service.DisableForwardAgent(target.Name); err != nil {
@@ -72,7 +72,7 @@ func GitSync(args []string) {
 	}
 
 	fmt.Printf("git-sync: enabled GitHub SSH for %s (key in ssh-agent, ForwardAgent yes in ~/.ssh/config)\n", hostAlias)
-	fmt.Printf("git-sync: reconnect with `ssh %s` (or `devbox ssh %s -- -A`)\n", hostAlias, target.Name)
+	fmt.Printf("git-sync: reconnect with `ssh %s` (or `outpost ssh %s -- -A`)\n", hostAlias, target.Name)
 	fmt.Println("git-sync: on the box, verify with: ssh -T git@github.com")
 }
 

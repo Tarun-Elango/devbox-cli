@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // Start starts a stopped box.
 func Start(args []string) {
 
-	ref := helper.ParseSingleBoxRef(args, "usage: devbox start <id|name>")
+	ref := helper.ParseSingleBoxRef(args, "usage: outpost start <id|name>")
 
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()

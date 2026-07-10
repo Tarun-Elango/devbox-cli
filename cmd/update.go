@@ -12,15 +12,15 @@ import (
 	"strconv"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/internal/version"
+	"outpost-cli/helper"
+	"outpost-cli/internal/version"
 )
 
 const (
-	updateTagsURL = "https://api.github.com/repos/Tarun-Elango/devbox-cli/tags"
+	updateTagsURL = "https://api.github.com/repos/Tarun-Elango/outpost/tags"
 	// Pinned to the "latest" release tag (not the mutable main branch) so
 	// the fetched script always matches a published release.
-	updateInstallScript = "https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh"
+	updateInstallScript = "https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh"
 )
 
 var (
@@ -35,7 +35,7 @@ type githubTag struct {
 }
 
 func Update(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox update")
+	helper.RejectExtraArgs(args, "usage: outpost update")
 
 	current := currentVersionFn()
 	latest, err := fetchLatestVersionFn(context.Background())
@@ -52,11 +52,11 @@ func Update(args []string) {
 		return
 	}
 	if cmp >= 0 {
-		fmt.Printf("devbox %s is up to date.\n", current)
+		fmt.Printf("outpost %s is up to date.\n", current)
 		return
 	}
 
-	fmt.Printf("devbox %s is available. You have %s.\n", latest, current)
+	fmt.Printf("outpost %s is available. You have %s.\n", latest, current)
 	fmt.Print("Update now? [y/N] ")
 	answer, err := helper.ReadStdinLine()
 	if err != nil {
@@ -71,7 +71,7 @@ func Update(args []string) {
 
 	exe, err := osExecutableFn()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "locate current devbox binary: %v\n", err)
+		fmt.Fprintf(os.Stderr, "locate current outpost binary: %v\n", err)
 		setupExit(1)
 		return
 	}
@@ -90,7 +90,7 @@ func fetchLatestVersion(ctx context.Context) (string, error) {
 		return "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "devbox-cli")
+	req.Header.Set("User-Agent", "outpost-cli")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -205,7 +205,7 @@ func installLatest(ctx context.Context, installDir string) error {
 		return fmt.Errorf("install script returned %s", resp.Status)
 	}
 
-	tmp, err := os.CreateTemp("", "devbox-install-*.sh")
+	tmp, err := os.CreateTemp("", "outpost-install-*.sh")
 	if err != nil {
 		return err
 	}

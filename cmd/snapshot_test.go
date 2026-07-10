@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"devbox-cli/service"
+	"outpost-cli/service"
 )
 
 func TestSnapshotsToItemsEmpty(t *testing.T) {

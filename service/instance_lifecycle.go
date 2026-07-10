@@ -5,7 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 
-	awsclient "devbox-cli/service/aws"
+	awsclient "outpost-cli/service/aws"
 )
 
 // DeleteInstance terminates a box owned by userID and removes it from the local DB.
@@ -146,7 +146,7 @@ func (r *Runtime) RebootInstance(instanceID, userID string) error {
 	}
 
 	if _, err := r.syncInstanceFromAWSByID(instanceID); err != nil {
-		return fmt.Errorf("instance rebooted but failed to refresh local state; run devbox ls to resync: %w", err)
+		return fmt.Errorf("instance rebooted but failed to refresh local state; run outpost ls to resync: %w", err)
 	}
 	return nil
 }

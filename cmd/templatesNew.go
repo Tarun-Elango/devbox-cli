@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
-const templateNewUsageLine = "usage: devbox template new <name> [command string]"
+const templateNewUsageLine = "usage: outpost template new <name> [command string]"
 
 // FailBox prints a clean error for a box subcommand and exits.
 func FailBox(cmd string, err error) {
@@ -19,11 +19,11 @@ func FailBox(cmd string, err error) {
 
 // Template dispatches template sub-commands.
 //
-//	devbox template [ls]                           → list available templates
-//	devbox template new <name> [command string]    → create a template
-//	devbox template delete <name>                    → delete a template
-//	devbox template rename <name> <new-name>         → rename a template
-//	devbox template search <query>                   → search templates by name
+//	outpost template [ls]                           → list available templates
+//	outpost template new <name> [command string]    → create a template
+//	outpost template delete <name>                    → delete a template
+//	outpost template rename <name> <new-name>         → rename a template
+//	outpost template search <query>                   → search templates by name
 func Template(args []string) {
 	if len(args) == 0 {
 		TemplateList(args)
@@ -84,7 +84,7 @@ func templateNewUsage() string {
 }
 
 // TemplateNew creates a user-owned startup template.
-// Usage: devbox template new <name> [command string]
+// Usage: outpost template new <name> [command string]
 
 // this is to create a new template
 func TemplateNew(args []string) {
@@ -110,17 +110,17 @@ func TemplateNew(args []string) {
 		fmt.Printf("  Description: %s\n", created.Description)
 	}
 	if startupScript != "" {
-		fmt.Printf("\n  Use: devbox create <box-name> --template %s\n", created.Name)
+		fmt.Printf("\n  Use: outpost create <box-name> --template %s\n", created.Name)
 	} else {
 		fmt.Printf("\n  Add a startup command later or use as-is with:\n")
-		fmt.Printf("  devbox create <box-name> --template %s\n", created.Name)
+		fmt.Printf("  outpost create <box-name> --template %s\n", created.Name)
 	}
 }
 
-const templateDeleteUsageLine = "usage: devbox template delete <name>"
+const templateDeleteUsageLine = "usage: outpost template delete <name>"
 
 // TemplateDelete deletes a user-owned startup template.
-// Usage: devbox template delete <name>
+// Usage: outpost template delete <name>
 func TemplateDelete(args []string) {
 	id := strings.TrimSpace(helper.ParseTemplateDeleteArgs(args, templateDeleteUsageLine))
 	if id == "" {
@@ -147,10 +147,10 @@ func TemplateDelete(args []string) {
 	fmt.Printf("Template %s deleted.\n", id)
 }
 
-const templateRenameUsageLine = "usage: devbox template rename <name> <new-name>"
+const templateRenameUsageLine = "usage: outpost template rename <name> <new-name>"
 
 // TemplateRename updates a user-owned template name.
-// Usage: devbox template rename <name> <new-name>
+// Usage: outpost template rename <name> <new-name>
 func TemplateRename(args []string) {
 	id, newName := helper.ParseTemplateRenameArgs(args, templateRenameUsageLine)
 	id = strings.TrimSpace(id)

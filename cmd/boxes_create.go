@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // Create creates a new box with a name and returns as soon as EC2 accepts the launch.
@@ -15,7 +15,7 @@ func Create(args []string) {
 	name, templateRefs, fromSnapshot, err := helper.ParseCreateArgs(args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		fmt.Fprintln(os.Stderr, "usage: devbox create <name> [--template <templateName>...] [--from <amiId|name>]")
+		fmt.Fprintln(os.Stderr, "usage: outpost create <name> [--template <templateName>...] [--from <amiId|name>]")
 		os.Exit(1)
 	}
 
@@ -98,10 +98,10 @@ func Create(args []string) {
 	}
 
 	fmt.Printf("\nRecommended next steps:\n")
-	fmt.Printf("  1. Check box status: devbox status %s\n", b.Name)
-	fmt.Printf("  2. Wait for SSH and template setup: devbox ssh %s\n", b.Name)
+	fmt.Printf("  1. Check box status: outpost status %s\n", b.Name)
+	fmt.Printf("  2. Wait for SSH and template setup: outpost ssh %s\n", b.Name)
 	fmt.Printf("     Use this command to check SSH/template readiness and connect once the box is ready.\n")
-	fmt.Printf("  3. After devbox ssh %s succeeds, you can also connect outside this CLI with:\n", b.Name)
-	fmt.Printf("     ssh devbox-%s\n", b.Name)
-	fmt.Printf("     VS Code Remote-SSH -> devbox-%s\n", b.Name)
+	fmt.Printf("  3. After outpost ssh %s succeeds, you can also connect outside this CLI with:\n", b.Name)
+	fmt.Printf("     ssh outpost-%s\n", b.Name)
+	fmt.Printf("     VS Code Remote-SSH -> outpost-%s\n", b.Name)
 }

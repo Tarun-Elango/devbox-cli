@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"devbox-cli/service"
+	"outpost-cli/service"
 )
 
 // helper function to select the volume size in GB

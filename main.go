@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/cmd"
+	"outpost-cli/cmd"
 )
 
 const helpTopics = "create, box, ssh, snapshot, template, idle-stop, git-sync, budget"
@@ -41,7 +41,7 @@ func isHelpFlag(s string) bool {
 }
 
 // resolveHelpTopic handles help anywhere in the invocation, e.g.
-// "devbox help box", "devbox box help", or "devbox snapshot create help".
+// "outpost help box", "outpost box help", or "outpost snapshot create help".
 func resolveHelpTopic(command string, args []string) (topic string, showGeneral bool, ok bool) {
 	if command == "help" || isHelpFlag(command) {
 		for _, arg := range args {
@@ -66,18 +66,18 @@ func resolveHelpTopic(command string, args []string) (topic string, showGeneral 
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox <command> [args]
+	fmt.Fprintf(os.Stderr, `Usage: outpost <command> [args]
 
 Commands:
   help, -h, --help    Show this help message
   help <topic>        Show help for a topic (%s)
 
-  version             Show the devbox CLI version
+  version             Show the outpost CLI version
   update              Check for a newer release and install it (asks for confirmation)
-  uninstall           Remove devbox, local data, and PATH entries (asks for confirmation)
+  uninstall           Remove outpost, local data, and PATH entries (asks for confirmation)
 
-  setup               Configure AWS credentials and region (stored in ~/.devbox/config.json)
-  clear-creds         Clear saved AWS credentials from ~/.devbox/config.json
+  setup               Configure AWS credentials and region (stored in ~/.outpost/config.json)
+  clear-creds         Clear saved AWS credentials from ~/.outpost/config.json
   health              Check config, AWS credentials, region, and database
 
   create <name> [--template <templateName>...] [--from <amiId|name>]
@@ -103,14 +103,14 @@ Commands:
                             -L 8080:localhost:8080); for one-off remote commands use exec
   cp [-i key] <source> <dest>
                       Copy a file to or from a box
-                        devbox cp ./main.go mybox:/home/ec2-user/app/
-                        devbox cp mybox:/home/ec2-user/app/main.go ./
+                        outpost cp ./main.go mybox:/home/ec2-user/app/
+                        outpost cp mybox:/home/ec2-user/app/main.go ./
   sync [-i key] [--delete] <source> <dest>
                       Sync directories via rsync over SSH (one local path, one box:/path)
                         Only dest is modified; source is read-only.
                         --delete also removes files on dest that are not in source
-                        devbox sync ./project mybox:/home/ec2-user/project
-                        devbox sync mybox:/home/ec2-user/project ./project
+                        outpost sync ./project mybox:/home/ec2-user/project
+                        outpost sync mybox:/home/ec2-user/project ./project
   exec [-i key] [-s] [-t] <id|name> -- <command>
                       Run a one-off command on a running box
                         -s  Run as a shell snippet via sh -lc (pipes, &&, cd)
@@ -140,7 +140,7 @@ Commands:
   budget [ls] [--refresh]
                       List AWS account budgets (name, period, limit, spend,
                       forecast, %% of budget)
-                      Results are cached under ~/.devbox/ for 12h.
+                      Results are cached under ~/.outpost/ for 12h.
   budget create <name> <limit> <email>
                       Create a monthly cost budget for all AWS services.
                       Alerts at 85%% actual, 100%% actual, and 100%% forecasted spend.
@@ -150,7 +150,7 @@ Commands:
 }
 
 func helpCreate() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox create <name> [--template <templateName>...] [--from <amiId|name>]
+	fmt.Fprintf(os.Stderr, `Usage: outpost create <name> [--template <templateName>...] [--from <amiId|name>]
 
   create <name>
                       Create a new box
@@ -164,7 +164,7 @@ func helpCreate() {
 }
 
 func helpBox() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox <box-command> <id|name> [args]
+	fmt.Fprintf(os.Stderr, `Usage: outpost <box-command> <id|name> [args]
 
   ls                  List all boxes
   status <id|name>    Show details for a box
@@ -181,7 +181,7 @@ func helpBox() {
 }
 
 func helpSSH() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox <ssh-command> [args]
+	fmt.Fprintf(os.Stderr, `Usage: outpost <ssh-command> [args]
 
   ssh [-i key] <id|name> [-- <ssh-option>...]
                       Open an SSH session to a box
@@ -190,14 +190,14 @@ func helpSSH() {
                             -L 8080:localhost:8080); for one-off remote commands use exec
   cp [-i key] <source> <dest>
                       Copy a file to or from a box
-                        devbox cp ./main.go mybox:/home/ec2-user/app/
-                        devbox cp mybox:/home/ec2-user/app/main.go ./
+                        outpost cp ./main.go mybox:/home/ec2-user/app/
+                        outpost cp mybox:/home/ec2-user/app/main.go ./
   sync [-i key] [--delete] <source> <dest>
                       Sync directories via rsync over SSH (one local path, one box:/path)
                         Only dest is modified; source is read-only
                         --delete  Also remove files on dest that are not in source
-                        devbox sync ./project mybox:/home/ec2-user/project
-                        devbox sync mybox:/home/ec2-user/project ./project
+                        outpost sync ./project mybox:/home/ec2-user/project
+                        outpost sync mybox:/home/ec2-user/project ./project
   exec [-i key] [-s] [-t] <id|name> -- <command>
                       Run a one-off command on a running box
                         -s  Run as a shell snippet via sh -lc (pipes, &&, cd)
@@ -208,7 +208,7 @@ func helpSSH() {
 }
 
 func helpSnapshot() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox snapshot [subcommand] [args]
+	fmt.Fprintf(os.Stderr, `Usage: outpost snapshot [subcommand] [args]
 
 A snapshot is a saved disk image of a box; restore one with create --from.
 
@@ -219,7 +219,7 @@ A snapshot is a saved disk image of a box; restore one with create --from.
 }
 
 func helpTemplate() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox template [subcommand] [args]
+	fmt.Fprintf(os.Stderr, `Usage: outpost template [subcommand] [args]
 
 Templates let you create boxes preloaded with libs, tools, and other setup.
 
@@ -232,7 +232,7 @@ Templates let you create boxes preloaded with libs, tools, and other setup.
 }
 
 func helpIdleStop() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox idle-stop <subcommand> <id|name> [args]
+	fmt.Fprintf(os.Stderr, `Usage: outpost idle-stop <subcommand> <id|name> [args]
 
   idle-stop set <id|name> <minutes>     Stop the box after inactivity
   idle-stop show <id|name>              Show idle-stop settings for a box
@@ -242,7 +242,7 @@ func helpIdleStop() {
 }
 
 func helpGitSync() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox git-sync <id|name>
+	fmt.Fprintf(os.Stderr, `Usage: outpost git-sync <id|name>
 
   git-sync <id|name>  Toggle GitHub SSH access for a box: adds the local key
                       to ssh-agent and enables agent forwarding (-A) in the
@@ -251,7 +251,7 @@ func helpGitSync() {
 }
 
 func helpBudget() {
-	fmt.Fprintf(os.Stderr, `Usage: devbox budget [ls] [--refresh] | create <name> <limit> <email> | update <name> | delete <name>
+	fmt.Fprintf(os.Stderr, `Usage: outpost budget [ls] [--refresh] | create <name> <limit> <email> | update <name> | delete <name>
 
   budget                List all AWS account budgets
   budget ls             Same as above
@@ -264,7 +264,7 @@ func helpBudget() {
   budget delete <name>  Delete a budget by exact name (quote names with spaces)
 
 Budgets require AWSBudgetsActionsWithAWSResourceControlAccess permission policy to the IAM user
-Results are cached under ~/.devbox/ for 12h since repeated calls aren't necessary (Budgets API is free).
+Results are cached under ~/.outpost/ for 12h since repeated calls aren't necessary (Budgets API is free).
 `)
 }
 
@@ -287,7 +287,7 @@ func showHelpTopic(topic string) {
 	case "budget", "cost", "bill":
 		helpBudget()
 	default:
-		fmt.Fprintf(os.Stderr, "devbox: unknown help topic %q\n\n", topic)
+		fmt.Fprintf(os.Stderr, "outpost: unknown help topic %q\n\n", topic)
 		fmt.Fprintf(os.Stderr, "Topics: %s\n", helpTopics)
 		os.Exit(1)
 	}
@@ -366,7 +366,7 @@ func main() {
 	case "git-sync":
 		cmd.GitSync(args)
 	default:
-		fmt.Fprintf(os.Stderr, "devbox: unknown command %q\n\n", command)
+		fmt.Fprintf(os.Stderr, "outpost: unknown command %q\n\n", command)
 		usage()
 		os.Exit(1)
 	}

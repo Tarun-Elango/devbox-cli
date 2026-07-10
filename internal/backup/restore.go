@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"devbox-cli/internal/sqliteutil"
+	"outpost-cli/internal/sqliteutil"
 )
 
 // RestoreConfigIfNeeded copies config.json from the latest backup when the live
@@ -22,7 +22,7 @@ func RestoreConfigIfNeeded() {
 	restoreFile(path, configFile)
 }
 
-// RestoreDBIfNeeded copies devbox.db from the latest backup when the live file
+// RestoreDBIfNeeded copies outpost.db from the latest backup when the live file
 // is missing or unusable. Best-effort: errors are ignored.
 func RestoreDBIfNeeded() {
 	path, err := dbPath()
@@ -36,12 +36,12 @@ func RestoreDBIfNeeded() {
 }
 
 func configPath() (string, error) {
-	configPath, _, err := devboxPaths()
+	configPath, _, err := outpostPaths()
 	return configPath, err
 }
 
 func dbPath() (string, error) {
-	_, dbPath, err := devboxPaths()
+	_, dbPath, err := outpostPaths()
 	return dbPath, err
 }
 
@@ -107,7 +107,7 @@ func latestBackupDirWithFile(name string) (string, bool) {
 	return result, found
 }
 
-// restore file ( based on name - either config.json or devbox.db)
+// restore file ( based on name - either config.json or outpost.db)
 func restoreFile(destPath, name string) {
 	backupRoot, ok := latestBackupDirWithFile(name)
 	if !ok {

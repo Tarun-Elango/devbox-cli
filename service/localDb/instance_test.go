@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"devbox-cli/internal/sqliteutil"
+	"outpost-cli/internal/sqliteutil"
 )
 
 const (
@@ -16,7 +16,7 @@ const (
 func newTestDB(t *testing.T) *DB {
 	t.Helper()
 
-	conn, err := sqliteutil.Open(filepath.Join(t.TempDir(), "devbox.db"))
+	conn, err := sqliteutil.Open(filepath.Join(t.TempDir(), "outpost.db"))
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}

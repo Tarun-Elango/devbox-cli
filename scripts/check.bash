@@ -1,8 +1,8 @@
 #!/bin/bash
-# /usr/local/bin/devbox-idle-stop
+# /usr/local/bin/outpost-idle-stop
 
-CONFIG="/var/lib/devbox/idle-stop-minutes"
-ACTIVITY="/var/lib/devbox/last-activity"
+CONFIG="/var/lib/outpost/idle-stop-minutes"
+ACTIVITY="/var/lib/outpost/last-activity"
 NOW=$(date +%s)
 
 # idle-stop disabled?
@@ -26,6 +26,6 @@ IDLE_SEC=$((NOW - LAST))
 LIMIT_SEC=$((MINUTES * 60))
 
 if (( IDLE_SEC >= LIMIT_SEC )); then
-  /usr/bin/logger -t devbox-idle-stop "idle for ${IDLE_SEC}s (limit ${LIMIT_SEC}s), shutting down"
+  /usr/bin/logger -t outpost-idle-stop "idle for ${IDLE_SEC}s (limit ${LIMIT_SEC}s), shutting down"
   /usr/sbin/shutdown -h now
 fi

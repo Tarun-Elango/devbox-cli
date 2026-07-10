@@ -1,0 +1,11 @@
+# /etc/systemd/system/outpost-idle-stop.timer
+[Unit]
+Description=Run outpost idle-stop check every 30 seconds
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

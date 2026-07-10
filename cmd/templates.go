@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 func TemplateList(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox template [ls]")
+	helper.RejectExtraArgs(args, "usage: outpost template [ls]")
 
 	var templates []*service.Template
 
@@ -59,7 +59,7 @@ func writeTemplateTable(w io.Writer, templates []*service.Template) error {
 	return nil
 }
 
-const templateSearchUsageLine = "usage: devbox template search <query>"
+const templateSearchUsageLine = "usage: outpost template search <query>"
 
 // TemplateSearch lists templates whose name contains the query string.
 func TemplateSearch(args []string) { // args should be a string of the query
@@ -236,8 +236,8 @@ func createFromTemplates(name string, templateRefs []string, fromSnapshot string
 	addSSHHostOrWarn(b.Name, inst)
 	if b.PublicIP != "" {
 		fmt.Printf("  Public IP: %s\n", b.PublicIP)
-		fmt.Printf("\n  Connect:   devbox ssh %s\n", b.Name)
+		fmt.Printf("\n  Connect:   outpost ssh %s\n", b.Name)
 	} else {
-		fmt.Printf("\n  Provisioning — check status: devbox status %s\n", b.Name)
+		fmt.Printf("\n  Provisioning — check status: outpost status %s\n", b.Name)
 	}
 }

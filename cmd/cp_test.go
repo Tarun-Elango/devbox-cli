@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"devbox-cli/service"
+	"outpost-cli/service"
 )
 
 // TestParseCPTransferUpload locks local → remote copy direction.

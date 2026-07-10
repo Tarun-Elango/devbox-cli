@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // Status displays details for a single box.
 func Status(args []string) {
 
-	ref := helper.ParseSingleBoxRef(args, "usage: devbox status <id|name>")
+	ref := helper.ParseSingleBoxRef(args, "usage: outpost status <id|name>")
 
 	var b Box
 

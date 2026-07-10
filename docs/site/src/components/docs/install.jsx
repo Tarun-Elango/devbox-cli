@@ -16,7 +16,7 @@ export default function InstallDoc() {
       <div className="card">
         <h2 id="quick-install">Quick install</h2>
         <pre>
-          <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash`}</code>
+          <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | bash`}</code>
         </pre>
         <p className="note">
           Detects your OS and CPU, downloads the matching binary, installs to{' '}
@@ -24,7 +24,7 @@ export default function InstallDoc() {
           needed. Restart your shell, then verify:
         </p>
         <pre>
-          <code>devbox version</code>
+          <code>outpost version</code>
         </pre>
       </div>
 
@@ -36,7 +36,7 @@ export default function InstallDoc() {
           pipe does not pass env vars to the right-hand command):
         </p>
         <pre>
-          <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | RELEASE_TAG=v0.7.0 bash`}</code>
+          <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | RELEASE_TAG=v0.7.0 bash`}</code>
         </pre>
       </div>
 
@@ -46,11 +46,11 @@ export default function InstallDoc() {
           Use this on a shared Mac or Linux desktop, or if you prefer{' '}
           <code>/usr/local/bin</code> over <code>~/.local/bin</code>. Installs the
           binary for all accounts (each user still has their own{' '}
-          <code>~/.devbox</code> config). Requires <code>sudo</code> and skips shell
+          <code>~/.outpost</code> config). Requires <code>sudo</code> and skips shell
           config changes because <code>/usr/local/bin</code> is already on PATH.
         </p>
         <pre>
-          <code>{`INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/main/scripts/install.sh | sudo bash`}</code>
+          <code>{`INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/main/scripts/install.sh | sudo bash`}</code>
         </pre>
       </div>
 
@@ -83,27 +83,27 @@ sudo apt install golang-go`}</code>
 
         <p className="note">Clone the repo — all build steps below run from inside it:</p>
         <pre>
-          <code>{`git clone https://github.com/Tarun-Elango/devbox-cli.git
-cd devbox-cli`}</code>
+          <code>{`git clone https://github.com/Tarun-Elango/outpost.git
+cd outpost`}</code>
         </pre>
 
         <h3>Build in the repo folder</h3>
-        <p className="note">From the <code>devbox-cli</code> directory:</p>
+        <p className="note">From the <code>outpost</code> directory:</p>
         <pre>
-          <code>go build -o devbox .</code>
+          <code>go build -o outpost .</code>
         </pre>
         <p className="note">Test the binary in place:</p>
         <pre>
-          <code>./devbox version</code>
+          <code>./outpost version</code>
         </pre>
 
         <h3>Install system-wide</h3>
         <p className="note">
-          Still from the <code>devbox-cli</code> directory — puts <code>devbox</code> on
+          Still from the <code>outpost</code> directory — puts <code>outpost</code> on
           your PATH so you can run it from anywhere:
         </p>
         <pre>
-          <code>{`go build -o "$(go env GOPATH)/bin/devbox" .`}</code>
+          <code>{`go build -o "$(go env GOPATH)/bin/outpost" .`}</code>
         </pre>
         <p className="note">
           If <code>$GOPATH/bin</code> isn't on your PATH yet, run:
@@ -114,7 +114,7 @@ export PATH="$GOPATH/bin:$PATH"`}</code>
         </pre>
         <p className="note">Verify:</p>
         <pre>
-          <code>devbox version</code>
+          <code>outpost version</code>
         </pre>
       </div>
     </DocPage>

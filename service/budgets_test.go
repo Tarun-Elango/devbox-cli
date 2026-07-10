@@ -17,7 +17,7 @@ func TestWrapBudgetAPIError(t *testing.T) {
 		if !strings.Contains(err.Error(), "budget not found: test2") {
 			t.Fatalf("got %q, want budget not found message", err)
 		}
-		if !strings.Contains(err.Error(), "devbox budget ls") {
+		if !strings.Contains(err.Error(), "outpost budget ls") {
 			t.Fatalf("got %q, want list hint", err)
 		}
 	})

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // Stop stops a running box.
 func Stop(args []string) {
 
-	ref := helper.ParseSingleBoxRef(args, "usage: devbox stop <id|name>")
+	ref := helper.ParseSingleBoxRef(args, "usage: outpost stop <id|name>")
 
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()

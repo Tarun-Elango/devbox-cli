@@ -22,7 +22,7 @@ export default function BoxesDoc() {
       <div className="card">
         <h2 id="create-box">Create a box</h2>
         <pre>
-          <code>devbox create mybox</code>
+          <code>outpost create mybox</code>
         </pre>
         <p className="note">
           Launches an interactive wizard. You will be asked to choose an instance type
@@ -32,35 +32,35 @@ export default function BoxesDoc() {
         <dl className="cmd-variant">
           <dt>Restore from a snapshot</dt>
           <dd>
-            <code>devbox create {'<name>'} [--from {'<amiId|name>'}]</code>
+            <code>outpost create {'<name>'} [--from {'<amiId|name>'}]</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox create mybox --from my-snapshot</code>
+            Example: <code>outpost create mybox --from my-snapshot</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Preload templates ( 1 upto n templates)</dt>
           <dd>
             <code>
-              devbox create {'<name>'} [--template {'<templateName>'}...] 
+              outpost create {'<name>'} [--template {'<templateName>'}...] 
             </code>
           </dd>
           <dd className="example">
             Example:{' '}
-            <code>devbox create mybox --template node go opencode</code>
+            <code>outpost create mybox --template node go opencode</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Templates and snapshot together</dt>
           <dd>
             <code>
-              devbox create {'<name>'} [--template {'<templateName>'}...] [--from {'<amiId|name>'}]
+              outpost create {'<name>'} [--template {'<templateName>'}...] [--from {'<amiId|name>'}]
             </code>
           </dd>
           <dd className="example">
             Example:{' '}
             <code>
-              devbox create mybox --template java claude-code --from my-snapshot
+              outpost create mybox --template java claude-code --from my-snapshot
             </code>
           </dd>
         </dl>
@@ -68,13 +68,13 @@ export default function BoxesDoc() {
         <h3>List &amp; inspect</h3>
         <ul>
           <li>
-            <code>devbox ls</code> — list all boxes
+            <code>outpost ls</code> — list all boxes
           </li>
           <li>
-            <code>devbox status mybox</code> — show details for a box
+            <code>outpost status mybox</code> — show details for a box
           </li>
           <li>
-            <code>devbox rename mybox new-name</code> — rename a box
+            <code>outpost rename mybox new-name</code> — rename a box
           </li>
         </ul>
       </div>
@@ -83,24 +83,24 @@ export default function BoxesDoc() {
         <h2 id="power-lifecycle">Power &amp; lifecycle</h2>
         <ul>
           <li>
-            <code>devbox stop mybox</code> — stop a running box
+            <code>outpost stop mybox</code> — stop a running box
           </li>
           <li>
-            <code>devbox start mybox</code> — start a stopped box
+            <code>outpost start mybox</code> — start a stopped box
           </li>
           <li>
-            <code>devbox restart mybox</code> — reboot a running box (
+            <code>outpost restart mybox</code> — reboot a running box (
             <code>reboot</code> is an alias)
           </li>
           <li>
-            <code>devbox delete mybox</code> — delete a box
+            <code>outpost delete mybox</code> — delete a box
           </li>
         </ul>
 
         <h3>Resize</h3>
         <pre>
           <code>
-            devbox stop mybox{'\n'}devbox resize mybox
+            outpost stop mybox{'\n'}outpost resize mybox
           </code>
         </pre>
         <p className="note">
@@ -118,7 +118,7 @@ export default function BoxesDoc() {
           forget to shut down and want to save cost.
         </p>
         <pre>
-          <code>devbox idle-stop set mybox 30</code>
+          <code>outpost idle-stop set mybox 30</code>
         </pre>
         <p className="note">
           Stops <code>mybox</code> after 30 minutes of inactivity. The box must be
@@ -126,13 +126,13 @@ export default function BoxesDoc() {
         </p>
         <ul>
           <li>
-            <code>devbox idle-stop show mybox</code> — show the current timeout
+            <code>outpost idle-stop show mybox</code> — show the current timeout
           </li>
           <li>
-            <code>devbox idle-stop update mybox 60</code> — change the timeout
+            <code>outpost idle-stop update mybox 60</code> — change the timeout
           </li>
           <li>
-            <code>devbox idle-stop delete mybox</code> — remove idle-stop from a box
+            <code>outpost idle-stop delete mybox</code> — remove idle-stop from a box
           </li>
         </ul>
       </div>

@@ -5,13 +5,13 @@ import (
 	"os"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // Ls lists all boxes belonging to the authenticated user.
 func Ls(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox ls")
+	helper.RejectExtraArgs(args, "usage: outpost ls")
 	var boxes []Box
 
 	fmt.Println("Listing local boxes")

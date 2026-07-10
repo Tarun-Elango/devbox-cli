@@ -24,7 +24,7 @@ func writeTestSSHConfig(t *testing.T, content string) string {
 }
 
 func TestUpdateHostInsertsHostNameWithoutOverwritingFollowingBlock(t *testing.T) {
-	path := writeTestSSHConfig(t, "Host devbox-alpha\n    User ec2-user\n\nHost devbox-beta\n    HostName 10.0.0.2\n")
+	path := writeTestSSHConfig(t, "Host outpost-alpha\n    User ec2-user\n\nHost outpost-beta\n    HostName 10.0.0.2\n")
 
 	if err := UpdateHost("alpha", "10.0.0.1"); err != nil {
 		t.Fatalf("update host: %v", err)
@@ -35,14 +35,14 @@ func TestUpdateHostInsertsHostNameWithoutOverwritingFollowingBlock(t *testing.T)
 		t.Fatalf("read ssh config: %v", err)
 	}
 	got := string(data)
-	want := "Host devbox-alpha\n    HostName 10.0.0.1\n    User ec2-user\n\nHost devbox-beta\n    HostName 10.0.0.2\n"
+	want := "Host outpost-alpha\n    HostName 10.0.0.1\n    User ec2-user\n\nHost outpost-beta\n    HostName 10.0.0.2\n"
 	if got != want {
 		t.Fatalf("ssh config = %q, want %q", got, want)
 	}
 }
 
 func TestRenameHostPreservesOptionsAndOtherHosts(t *testing.T) {
-	path := writeTestSSHConfig(t, "Host github.com\n    HostName github.com\n\nHost devbox-alpha alpha-extra\n    HostName 10.0.0.1\n    User ec2-user\n")
+	path := writeTestSSHConfig(t, "Host github.com\n    HostName github.com\n\nHost outpost-alpha alpha-extra\n    HostName 10.0.0.1\n    User ec2-user\n")
 
 	if err := RenameHost("alpha", "beta"); err != nil {
 		t.Fatalf("rename host: %v", err)
@@ -53,28 +53,28 @@ func TestRenameHostPreservesOptionsAndOtherHosts(t *testing.T) {
 		t.Fatalf("read ssh config: %v", err)
 	}
 	got := string(data)
-	if !strings.Contains(got, "Host devbox-beta alpha-extra\n    HostName 10.0.0.1\n    User ec2-user") {
+	if !strings.Contains(got, "Host outpost-beta alpha-extra\n    HostName 10.0.0.1\n    User ec2-user") {
 		t.Fatalf("renamed host block not preserved:\n%s", got)
 	}
-	if strings.Contains(got, "devbox-alpha") {
+	if strings.Contains(got, "outpost-alpha") {
 		t.Fatalf("old host still present:\n%s", got)
 	}
 }
 
 func TestRenameHostRejectsExistingTarget(t *testing.T) {
-	writeTestSSHConfig(t, "Host devbox-alpha\n    HostName 10.0.0.1\n\nHost devbox-beta\n    HostName 10.0.0.2\n")
+	writeTestSSHConfig(t, "Host outpost-alpha\n    HostName 10.0.0.1\n\nHost outpost-beta\n    HostName 10.0.0.2\n")
 
 	err := RenameHost("alpha", "beta")
 	if err == nil {
 		t.Fatal("expected duplicate host error")
 	}
-	if !strings.Contains(err.Error(), `host "devbox-beta" already exists`) {
+	if !strings.Contains(err.Error(), `host "outpost-beta" already exists`) {
 		t.Fatalf("unexpected duplicate host error: %v", err)
 	}
 }
 
 func TestEnableDisableForwardAgent(t *testing.T) {
-	path := writeTestSSHConfig(t, "Host devbox-alpha\n    HostName 10.0.0.1\n    User ec2-user\n\nHost devbox-beta\n    HostName 10.0.0.2\n")
+	path := writeTestSSHConfig(t, "Host outpost-alpha\n    HostName 10.0.0.1\n    User ec2-user\n\nHost outpost-beta\n    HostName 10.0.0.2\n")
 
 	enabled, err := ForwardAgentEnabled("alpha")
 	if err != nil {
@@ -92,7 +92,7 @@ func TestEnableDisableForwardAgent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read ssh config: %v", err)
 	}
-	want := "Host devbox-alpha\n    HostName 10.0.0.1\n    User ec2-user\n    ForwardAgent yes\n\nHost devbox-beta\n    HostName 10.0.0.2\n"
+	want := "Host outpost-alpha\n    HostName 10.0.0.1\n    User ec2-user\n    ForwardAgent yes\n\nHost outpost-beta\n    HostName 10.0.0.2\n"
 	if string(data) != want {
 		t.Fatalf("ssh config = %q, want %q", string(data), want)
 	}
@@ -124,7 +124,7 @@ func TestEnableDisableForwardAgent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read ssh config: %v", err)
 	}
-	want = "Host devbox-alpha\n    HostName 10.0.0.1\n    User ec2-user\n\nHost devbox-beta\n    HostName 10.0.0.2\n"
+	want = "Host outpost-alpha\n    HostName 10.0.0.1\n    User ec2-user\n\nHost outpost-beta\n    HostName 10.0.0.2\n"
 	if string(data) != want {
 		t.Fatalf("ssh config = %q, want %q", string(data), want)
 	}
@@ -142,7 +142,7 @@ func TestEnableDisableForwardAgent(t *testing.T) {
 }
 
 func TestEnableForwardAgentReplacesExistingNo(t *testing.T) {
-	path := writeTestSSHConfig(t, "Host devbox-alpha\n    HostName 10.0.0.1\n    ForwardAgent no\n")
+	path := writeTestSSHConfig(t, "Host outpost-alpha\n    HostName 10.0.0.1\n    ForwardAgent no\n")
 
 	if err := EnableForwardAgent("alpha"); err != nil {
 		t.Fatalf("enable forward agent: %v", err)
@@ -152,7 +152,7 @@ func TestEnableForwardAgentReplacesExistingNo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read ssh config: %v", err)
 	}
-	want := "Host devbox-alpha\n    HostName 10.0.0.1\n    ForwardAgent yes\n"
+	want := "Host outpost-alpha\n    HostName 10.0.0.1\n    ForwardAgent yes\n"
 	if string(data) != want {
 		t.Fatalf("ssh config = %q, want %q", string(data), want)
 	}
@@ -167,7 +167,7 @@ func TestEnableForwardAgentReplacesExistingNo(t *testing.T) {
 }
 
 func TestEnableForwardAgentCleansDuplicateForwardAgentLines(t *testing.T) {
-	path := writeTestSSHConfig(t, "Host devbox-alpha\n    HostName 10.0.0.1\n    ForwardAgent no\n    ForwardAgent yes\n")
+	path := writeTestSSHConfig(t, "Host outpost-alpha\n    HostName 10.0.0.1\n    ForwardAgent no\n    ForwardAgent yes\n")
 
 	if err := EnableForwardAgent("alpha"); err != nil {
 		t.Fatalf("enable forward agent: %v", err)
@@ -177,14 +177,14 @@ func TestEnableForwardAgentCleansDuplicateForwardAgentLines(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read ssh config: %v", err)
 	}
-	want := "Host devbox-alpha\n    HostName 10.0.0.1\n    ForwardAgent yes\n"
+	want := "Host outpost-alpha\n    HostName 10.0.0.1\n    ForwardAgent yes\n"
 	if string(data) != want {
 		t.Fatalf("ssh config = %q, want %q", string(data), want)
 	}
 }
 
 func TestDisableForwardAgentRemovesNo(t *testing.T) {
-	path := writeTestSSHConfig(t, "Host devbox-alpha\n    HostName 10.0.0.1\n    ForwardAgent no\n")
+	path := writeTestSSHConfig(t, "Host outpost-alpha\n    HostName 10.0.0.1\n    ForwardAgent no\n")
 
 	if err := DisableForwardAgent("alpha"); err != nil {
 		t.Fatalf("disable forward agent: %v", err)
@@ -194,14 +194,14 @@ func TestDisableForwardAgentRemovesNo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read ssh config: %v", err)
 	}
-	want := "Host devbox-alpha\n    HostName 10.0.0.1\n"
+	want := "Host outpost-alpha\n    HostName 10.0.0.1\n"
 	if string(data) != want {
 		t.Fatalf("ssh config = %q, want %q", string(data), want)
 	}
 }
 
 func TestForwardAgentEnabledRejectsMissingHost(t *testing.T) {
-	writeTestSSHConfig(t, "Host devbox-alpha\n    HostName 10.0.0.1\n")
+	writeTestSSHConfig(t, "Host outpost-alpha\n    HostName 10.0.0.1\n")
 
 	_, err := ForwardAgentEnabled("missing")
 	if err == nil {
@@ -210,13 +210,13 @@ func TestForwardAgentEnabledRejectsMissingHost(t *testing.T) {
 	if !errors.Is(err, errSSHHostNotFound) {
 		t.Fatalf("expected errSSHHostNotFound, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), `host "devbox-missing" does not exist`) {
+	if !strings.Contains(err.Error(), `host "outpost-missing" does not exist`) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func TestSyncSSHHostIPUpdatesExistingHostAndAddsMissingHost(t *testing.T) {
-	path := writeTestSSHConfig(t, "Host devbox-alpha\n    HostName 10.0.0.1\n")
+	path := writeTestSSHConfig(t, "Host outpost-alpha\n    HostName 10.0.0.1\n")
 
 	if err := syncSSHHostIP("alpha", "10.0.0.9"); err != nil {
 		t.Fatalf("sync existing host: %v", err)
@@ -236,13 +236,13 @@ func TestSyncSSHHostIPUpdatesExistingHostAndAddsMissingHost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read ssh config: %v", err)
 	}
-	if !strings.Contains(string(data), "Host devbox-beta\n    HostName 10.0.0.2") {
+	if !strings.Contains(string(data), "Host outpost-beta\n    HostName 10.0.0.2") {
 		t.Fatalf("missing host not added:\n%s", string(data))
 	}
 }
 
 func TestDeleteHostRejectsInvalidName(t *testing.T) {
-	writeTestSSHConfig(t, "Host devbox-alpha\n    HostName 10.0.0.1\n")
+	writeTestSSHConfig(t, "Host outpost-alpha\n    HostName 10.0.0.1\n")
 
 	err := DeleteHost("")
 	if err == nil {
@@ -254,7 +254,7 @@ func TestDeleteHostRejectsInvalidName(t *testing.T) {
 }
 
 func TestUpdateHostPreservesBlockIndentAndTrailingNewline(t *testing.T) {
-	path := writeTestSSHConfig(t, "Host devbox-alpha\n\tUser ec2-user\n\nHost devbox-beta\n    HostName 10.0.0.2\n")
+	path := writeTestSSHConfig(t, "Host outpost-alpha\n\tUser ec2-user\n\nHost outpost-beta\n    HostName 10.0.0.2\n")
 
 	if err := UpdateHost("alpha", "10.0.0.1"); err != nil {
 		t.Fatalf("update host: %v", err)
@@ -265,7 +265,7 @@ func TestUpdateHostPreservesBlockIndentAndTrailingNewline(t *testing.T) {
 		t.Fatalf("read ssh config: %v", err)
 	}
 	got := string(data)
-	want := "Host devbox-alpha\n\tHostName 10.0.0.1\n\tUser ec2-user\n\nHost devbox-beta\n    HostName 10.0.0.2\n"
+	want := "Host outpost-alpha\n\tHostName 10.0.0.1\n\tUser ec2-user\n\nHost outpost-beta\n    HostName 10.0.0.2\n"
 	if got != want {
 		t.Fatalf("ssh config = %q, want %q", got, want)
 	}
@@ -280,7 +280,7 @@ func TestUpdateSSHConfigWithRetryRetriesFailures(t *testing.T) {
 		if attempts < sshConfigUpdateAttempts {
 			return "", fmt.Errorf("temporary failure")
 		}
-		return "Host devbox-beta\n", nil
+		return "Host outpost-beta\n", nil
 	})
 	if err != nil {
 		t.Fatalf("update ssh config with retry: %v", err)
@@ -293,7 +293,7 @@ func TestUpdateSSHConfigWithRetryRetriesFailures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read ssh config: %v", err)
 	}
-	if string(data) != "Host devbox-beta\n" {
-		t.Fatalf("ssh config = %q, want %q", string(data), "Host devbox-beta\n")
+	if string(data) != "Host outpost-beta\n" {
+		t.Fatalf("ssh config = %q, want %q", string(data), "Host outpost-beta\n")
 	}
 }

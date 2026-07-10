@@ -138,8 +138,8 @@ func hostInBlock(block hostBlock, name string) bool {
 	return false
 }
 
-func DevboxHostName(name string) string {
-	return "devbox-" + name
+func OutpostHostName(name string) string {
+	return "outpost-" + name
 }
 
 func findBlockByHost(content, name string) (hostBlock, bool) {
@@ -190,7 +190,7 @@ func AddHost(name, ipAddress string) error {
 	if err := validateSSHIPAddress(ipAddress); err != nil {
 		return err
 	}
-	host := DevboxHostName(name)
+	host := OutpostHostName(name)
 	return updateSSHConfig(func(content string) (string, error) {
 		if _, found := findBlockByHost(content, host); found { // check if the host already exists
 			return "", fmt.Errorf("host %q already exists", host)
@@ -211,7 +211,7 @@ func UpdateHost(name, ipAddress string) error {
 	if err := validateSSHIPAddress(ipAddress); err != nil {
 		return err
 	}
-	host := DevboxHostName(name)
+	host := OutpostHostName(name)
 	return updateSSHConfig(func(content string) (string, error) {
 		block, found := findBlockByHost(content, host)
 		if !found {
@@ -245,7 +245,7 @@ func UpdateHost(name, ipAddress string) error {
 	})
 }
 
-// RenameHost rewrites an existing devbox host alias while preserving its SSH options.
+// RenameHost rewrites an existing outpost host alias while preserving its SSH options.
 func RenameHost(oldName, newName string) error {
 	if err := validateSSHBoxName(oldName); err != nil {
 		return err
@@ -253,8 +253,8 @@ func RenameHost(oldName, newName string) error {
 	if err := validateSSHBoxName(newName); err != nil {
 		return err
 	}
-	oldHost := DevboxHostName(oldName)
-	newHost := DevboxHostName(newName)
+	oldHost := OutpostHostName(oldName)
+	newHost := OutpostHostName(newName)
 	if oldHost == newHost {
 		return nil
 	}
@@ -374,7 +374,7 @@ func appendBlockOption(blockLines []string, option string) []string {
 	return updated
 }
 
-// ForwardAgentEnabled reports whether ForwardAgent yes is set for a devbox host.
+// ForwardAgentEnabled reports whether ForwardAgent yes is set for a outpost host.
 // read ssh config, get block , and check if ForwardAgent yes is set
 func ForwardAgentEnabled(name string) (bool, error) {
 	if err := validateSSHBoxName(name); err != nil {
@@ -384,20 +384,20 @@ func ForwardAgentEnabled(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	block, found := findBlockByHost(content, DevboxHostName(name))
+	block, found := findBlockByHost(content, OutpostHostName(name))
 	if !found {
-		return false, sshHostNotFound(DevboxHostName(name))
+		return false, sshHostNotFound(OutpostHostName(name))
 	}
 	lines, _ := sshConfigLines(content)
 	return forwardAgentEnabledInBlock(lines[block.start:block.end]), nil
 }
 
-// EnableForwardAgent adds ForwardAgent yes to a devbox host block when missing.
+// EnableForwardAgent adds ForwardAgent yes to a outpost host block when missing.
 func EnableForwardAgent(name string) error {
 	if err := validateSSHBoxName(name); err != nil {
 		return err
 	}
-	host := DevboxHostName(name)
+	host := OutpostHostName(name)
 	return updateSSHConfigWithRetry(func(content string) (string, error) {
 		block, found := findBlockByHost(content, host)
 		if !found {
@@ -415,12 +415,12 @@ func EnableForwardAgent(name string) error {
 	})
 }
 
-// DisableForwardAgent removes ForwardAgent yes from a devbox host block when present.
+// DisableForwardAgent removes ForwardAgent yes from a outpost host block when present.
 func DisableForwardAgent(name string) error {
 	if err := validateSSHBoxName(name); err != nil {
 		return err
 	}
-	host := DevboxHostName(name)
+	host := OutpostHostName(name)
 	return updateSSHConfigWithRetry(func(content string) (string, error) {
 		block, found := findBlockByHost(content, host)
 		if !found {
@@ -444,7 +444,7 @@ func DeleteHost(name string) error {
 	if err := validateSSHBoxName(name); err != nil {
 		return err
 	}
-	host := DevboxHostName(name)
+	host := OutpostHostName(name)
 	return updateSSHConfig(func(content string) (string, error) {
 		block, found := findBlockByHost(content, host)
 		if !found {

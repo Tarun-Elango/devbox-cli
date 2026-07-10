@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/helper"
-	"devbox-cli/internal/config"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/internal/config"
+	"outpost-cli/service"
 )
 
 // setupExit is os.Exit by default; tests replace it to capture exit codes.
 var setupExit = os.Exit
 
-// Setup prompts for AWS access key, secret, and region, then saves to ~/.devbox/.
+// Setup prompts for AWS access key, secret, and region, then saves to ~/.outpost/.
 func Setup(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox setup")
+	helper.RejectExtraArgs(args, "usage: outpost setup")
 
 	existing, err := config.Load()
 	if err != nil {
@@ -73,13 +73,13 @@ func Setup(args []string) {
 		fmt.Fprintf(os.Stderr, "save config: %v\n", err)
 		setupExit(1)
 	}
-	fmt.Println("Credentials saved to ~/.devbox/config.json.")
+	fmt.Println("Credentials saved to ~/.outpost/config.json.")
 	fmt.Println("Keep this folder local only — do not sync or commit it.")
 }
 
 // ClearCreds prompts for confirmation, then removes saved AWS credentials.
 func ClearCreds(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox clear-creds")
+	helper.RejectExtraArgs(args, "usage: outpost clear-creds")
 
 	fmt.Print("Are you sure you want to clear saved AWS credentials? [y/N] ")
 	var answer string
@@ -93,7 +93,7 @@ func ClearCreds(args []string) {
 		fmt.Fprintf(os.Stderr, "clear credentials: %v\n", err)
 		setupExit(1)
 	}
-	fmt.Println("AWS credentials cleared from ~/.devbox/config.json.")
+	fmt.Println("AWS credentials cleared from ~/.outpost/config.json.")
 }
 
 // function to select region

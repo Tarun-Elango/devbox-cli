@@ -5,14 +5,14 @@ import (
 	"os"
 	"time"
 
-	"devbox-cli/helper"
-	"devbox-cli/internal/config"
-	"devbox-cli/service"
-	"devbox-cli/service/localDb"
+	"outpost-cli/helper"
+	"outpost-cli/internal/config"
+	"outpost-cli/service"
+	"outpost-cli/service/localDb"
 )
 
 func Health(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox health")
+	helper.RejectExtraArgs(args, "usage: outpost health")
 	var failed bool
 
 	// helper closure to check the health of the system
@@ -49,13 +49,13 @@ func Health(args []string) {
 	}
 
 	if cfg.AwsRegion == "" {
-		check("region", "not set", "run: devbox setup")
+		check("region", "not set", "run: outpost setup")
 	} else {
 		check("region", "ok", cfg.AwsRegion)
 	}
 
 	if cfg.AwsAccessKey == "" && cfg.AwsSecret == "" {
-		check("aws creds", "not configured", "run: devbox setup")
+		check("aws creds", "not configured", "run: outpost setup")
 		check("aws updated", "n/a", "")
 	} else {
 		ctx, cancel := helper.CommandContext()

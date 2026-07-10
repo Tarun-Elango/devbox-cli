@@ -6,20 +6,20 @@ import (
 	"strconv"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
-const budgetUsage = "usage: devbox budget [ls] [--refresh] | create <name> <limit> <email> | update <name> | delete <name>"
+const budgetUsage = "usage: outpost budget [ls] [--refresh] | create <name> <limit> <email> | update <name> | delete <name>"
 
 // Budget dispatches budget sub-commands.
 //
-//	devbox budget            → list all account budgets
-//	devbox budget ls         → same as above
-//	devbox budget [ls] --refresh → bypass the local cache and refetch
-//	devbox budget create <name> <limit> <email> → create a monthly cost budget
-//	devbox budget update <name> → interactively update name, limit, or alert email
-//	devbox budget delete <name> → delete a budget by exact name
+//	outpost budget            → list all account budgets
+//	outpost budget ls         → same as above
+//	outpost budget [ls] --refresh → bypass the local cache and refetch
+//	outpost budget create <name> <limit> <email> → create a monthly cost budget
+//	outpost budget update <name> → interactively update name, limit, or alert email
+//	outpost budget delete <name> → delete a budget by exact name
 func Budget(args []string) {
 	if len(args) == 0 {
 		budgetList(args)
@@ -79,7 +79,7 @@ func budgetList(args []string) {
 }
 
 func budgetCreate(args []string) {
-	const usage = "usage: devbox budget create <name> <limit> <email>"
+	const usage = "usage: outpost budget create <name> <limit> <email>"
 	if len(args) != 3 {
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(1)
@@ -125,7 +125,7 @@ func budgetCreate(args []string) {
 }
 
 func budgetDelete(args []string) {
-	const usage = "usage: devbox budget delete <name>"
+	const usage = "usage: outpost budget delete <name>"
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(1)
@@ -150,7 +150,7 @@ func budgetDelete(args []string) {
 }
 
 func budgetUpdate(args []string) {
-	const usage = "usage: devbox budget update <name>"
+	const usage = "usage: outpost budget update <name>"
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(1)

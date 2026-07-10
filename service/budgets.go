@@ -17,7 +17,7 @@ import (
 	budgetstypes "github.com/aws/aws-sdk-go-v2/service/budgets/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 
-	awsclient "devbox-cli/service/aws"
+	awsclient "outpost-cli/service/aws"
 )
 
 // budgetsRegion is where the Budgets API lives; billing is global but the SDK
@@ -254,7 +254,7 @@ func UpdateBudget(ctx context.Context, opts UpdateBudgetOptions) error {
 		}
 		if err := deleteBudgetWithClient(ctx, budgetsClient, accountID, details.Name); err != nil {
 			clearBudgetCache()
-			return fmt.Errorf("renamed budget to %q but failed to delete %q: %w\nhint: delete the old budget manually with `devbox budget delete %q`", newName, details.Name, err, details.Name)
+			return fmt.Errorf("renamed budget to %q but failed to delete %q: %w\nhint: delete the old budget manually with `outpost budget delete %q`", newName, details.Name, err, details.Name)
 		}
 		clearBudgetCache()
 		return nil
@@ -542,11 +542,11 @@ func wrapBudgetAPIError(op, name string, err error) error {
 		}
 	case "get", "delete":
 		cases = []budgetErrCase{
-			{code: "NotFoundException", replace: fmt.Sprintf("budget not found: %s\nhint: run `devbox budget ls` to see existing budgets", name)},
+			{code: "NotFoundException", replace: fmt.Sprintf("budget not found: %s\nhint: run `outpost budget ls` to see existing budgets", name)},
 		}
 	case "update":
 		cases = []budgetErrCase{
-			{code: "NotFoundException", replace: fmt.Sprintf("budget not found: %s\nhint: run `devbox budget ls` to see existing budgets", name)},
+			{code: "NotFoundException", replace: fmt.Sprintf("budget not found: %s\nhint: run `outpost budget ls` to see existing budgets", name)},
 			{code: "InvalidParameterException", wrapHint: "check the budget name, limit, and email address"},
 			{code: "DuplicateRecordException", replace: fmt.Sprintf("budget already exists: %s\nhint: choose a different name", name)},
 		}
@@ -649,7 +649,7 @@ func budgetCachePath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve home dir: %w", err)
 	}
-	return filepath.Join(home, ".devbox", budgetCacheFile), nil
+	return filepath.Join(home, ".outpost", budgetCacheFile), nil
 }
 
 func readBudgetCache(accountID string) (budgetCachePayload, bool) {

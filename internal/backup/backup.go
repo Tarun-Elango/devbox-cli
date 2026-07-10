@@ -9,14 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"devbox-cli/internal/sqliteutil"
+	"outpost-cli/internal/sqliteutil"
 )
 
 const (
-	devboxDir         = ".devbox"
-	backupDirName     = ".devbox-backup"
+	outpostDir        = ".outpost"
+	backupDirName     = ".outpost-backup"
 	configFile        = "config.json"
-	dbFile            = "devbox.db"
+	dbFile            = "outpost.db"
 	backupInterval    = 24 * time.Hour
 	timestampLayout   = "20060102-150405"
 	timestampLayoutNS = "20060102-150405.000000000"
@@ -64,12 +64,12 @@ func backupDir() (string, error) {
 	return filepath.Join(home, backupDirName), nil
 }
 
-func devboxPaths() (configPath, dbPath string, err error) {
+func outpostPaths() (configPath, dbPath string, err error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", "", err
 	}
-	base := filepath.Join(home, devboxDir)
+	base := filepath.Join(home, outpostDir)
 	return filepath.Join(base, configFile), filepath.Join(base, dbFile), nil
 }
 
@@ -106,7 +106,7 @@ func parseBackupDirTime(name string) (time.Time, error) {
 }
 
 func create(backupRoot string) error {
-	configPath, dbPath, err := devboxPaths()
+	configPath, dbPath, err := outpostPaths()
 	if err != nil {
 		return err
 	}

@@ -7,26 +7,26 @@ import (
 	"runtime"
 	"strings"
 
-	"devbox-cli/helper"
+	"outpost-cli/helper"
 )
 
 const (
-	devboxDataDir    = ".devbox"
-	devboxBackupDir  = ".devbox-backup"
-	devboxPathMarker = "# devbox"
+	outpostDataDir    = ".outpost"
+	outpostBackupDir  = ".outpost-backup"
+	outpostPathMarker = "# outpost"
 )
 
 var (
 	userHomeDirFn = os.UserHomeDir
 )
 
-// Uninstall removes the devbox binary, local data directories, and PATH entries
+// Uninstall removes the outpost binary, local data directories, and PATH entries
 // added by scripts/install.sh.
 func Uninstall(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox uninstall")
+	helper.RejectExtraArgs(args, "usage: outpost uninstall")
 
-	fmt.Println("This will remove devbox, ~/.devbox, ~/.devbox-backup, and PATH entries added by install.")
-	fmt.Print("Uninstall devbox? [y/N] ")
+	fmt.Println("This will remove outpost, ~/.outpost, ~/.outpost-backup, and PATH entries added by install.")
+	fmt.Print("Uninstall outpost? [y/N] ")
 	answer, err := helper.ReadStdinLine()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "read uninstall confirmation: %v\n", err)
@@ -38,13 +38,13 @@ func Uninstall(args []string) {
 		return
 	}
 
-	exe, err := osExecutableFn() // get the path to the current devbox binary
+	exe, err := osExecutableFn() // get the path to the current outpost binary
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "locate current devbox binary: %v\n", err)
+		fmt.Fprintf(os.Stderr, "locate current outpost binary: %v\n", err)
 		setupExit(1)
 		return
 	}
-	installDir := filepath.Dir(exe) // get the directory of the current devbox binary
+	installDir := filepath.Dir(exe) // get the directory of the current outpost binary
 
 	home, err := userHomeDirFn() // get the home directory of the current user
 	if err != nil {
@@ -53,45 +53,45 @@ func Uninstall(args []string) {
 		return
 	}
 
-	// delete the ~/.devbox directory
-	if err := removeDataDir(filepath.Join(home, devboxDataDir)); err != nil {
-		fmt.Fprintf(os.Stderr, "remove ~/.devbox: %v\n", err)
+	// delete the ~/.outpost directory
+	if err := removeDataDir(filepath.Join(home, outpostDataDir)); err != nil {
+		fmt.Fprintf(os.Stderr, "remove ~/.outpost: %v\n", err)
 		setupExit(1)
 		return
 	}
-	fmt.Println("Removed ~/.devbox")
+	fmt.Println("Removed ~/.outpost")
 
-	// delete the ~/.devbox-backup directory if it exists
-	backupDir := filepath.Join(home, devboxBackupDir)
+	// delete the ~/.outpost-backup directory if it exists
+	backupDir := filepath.Join(home, outpostBackupDir)
 	if fileExists(backupDir) {
 		if err := removeDataDir(backupDir); err != nil {
-			fmt.Fprintf(os.Stderr, "remove ~/.devbox-backup: %v\n", err)
+			fmt.Fprintf(os.Stderr, "remove ~/.outpost-backup: %v\n", err)
 			setupExit(1)
 			return
 		}
-		fmt.Println("Removed ~/.devbox-backup")
+		fmt.Println("Removed ~/.outpost-backup")
 	}
 
 	// clear the PATH entries from the shell config
-	updated, err := clearDevboxPath(home, installDir)
+	updated, err := clearoutpostPath(home, installDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "clear PATH entries: %v\n", err)
 		setupExit(1)
 		return
 	}
 	for _, path := range updated {
-		fmt.Printf("Removed devbox PATH entry from %s\n", path)
+		fmt.Printf("Removed outpost PATH entry from %s\n", path)
 	}
 	if len(updated) == 0 {
-		fmt.Println("No devbox PATH entries found in shell config.")
+		fmt.Println("No outpost PATH entries found in shell config.")
 	}
 
-	// delete the devbox binary
+	// delete the outpost binary
 	if err := os.Remove(exe); err != nil {
 		if os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "devbox binary not found at %s\n", exe)
+			fmt.Fprintf(os.Stderr, "outpost binary not found at %s\n", exe)
 		} else {
-			fmt.Fprintf(os.Stderr, "remove devbox binary: %v\n", err)
+			fmt.Fprintf(os.Stderr, "remove outpost binary: %v\n", err)
 		}
 		setupExit(1)
 		return
@@ -105,7 +105,7 @@ func Uninstall(args []string) {
 		}
 	}
 
-	fmt.Println("devbox uninstalled. Restart your shell if PATH was updated.")
+	fmt.Println("outpost uninstalled. Restart your shell if PATH was updated.")
 }
 
 func removeDataDir(path string) error {
@@ -115,7 +115,7 @@ func removeDataDir(path string) error {
 	return nil
 }
 
-func clearDevboxPath(home, installDir string) ([]string, error) {
+func clearoutpostPath(home, installDir string) ([]string, error) {
 	var updated []string
 	for _, rcPath := range shellRCFiles(home) {
 		changed, err := cleanShellRCFile(rcPath, installDir, home)
@@ -222,7 +222,7 @@ func cleanShellRCFile(path, installDir, home string) (bool, error) {
 }
 
 // cleanShellRCContent removes only the PATH block that install.sh itself
-// wrote: the "# devbox" marker comment together with the PATH export line
+// wrote: the "# outpost" marker comment together with the PATH export line
 // immediately following it. Lines are never matched by content alone (e.g.
 // any line that happens to mention ~/.local/bin), since that would risk
 // deleting unrelated PATH entries added by other tools (pipx, cargo, npm,
@@ -234,7 +234,7 @@ func cleanShellRCContent(content, installDir, home string) string {
 
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
-		if strings.TrimSpace(line) == devboxPathMarker && i+1 < len(lines) && isDevboxPathExport(lines[i+1], installDir, home) {
+		if strings.TrimSpace(line) == outpostPathMarker && i+1 < len(lines) && isoutpostPathExport(lines[i+1], installDir, home) {
 			changed = true
 			i++ // also skip the PATH export line right after the marker
 			continue
@@ -248,7 +248,7 @@ func cleanShellRCContent(content, installDir, home string) string {
 	return strings.TrimRight(strings.Join(out, "\n"), "\n") + "\n"
 }
 
-func isDevboxPathExport(line, installDir, home string) bool {
+func isoutpostPathExport(line, installDir, home string) bool {
 	trimmed := strings.TrimSpace(line)
 	if !strings.Contains(trimmed, "PATH") {
 		return false

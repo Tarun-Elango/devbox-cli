@@ -11,8 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
-	awsclient "devbox-cli/service/aws"
-	localDb "devbox-cli/service/localDb"
+	awsclient "outpost-cli/service/aws"
+	localDb "outpost-cli/service/localDb"
 )
 
 // LocalUserID is the fixed user id for local-mode CLI usage.
@@ -337,7 +337,7 @@ func (r *Runtime) RenameInstance(instanceID, userID, newName string) (*Instance,
 
 	// db update
 	if err := db.UpdateInstanceName(instanceID, userID, newName); err != nil {
-		return nil, fmt.Errorf("AWS name tag updated but failed to update local database; run devbox ls to resync: %w", err)
+		return nil, fmt.Errorf("AWS name tag updated but failed to update local database; run outpost ls to resync: %w", err)
 	}
 
 	renamed := &Instance{

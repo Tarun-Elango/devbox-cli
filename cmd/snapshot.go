@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
-const snapshotUsage = "usage: devbox snapshot [ls [<amiId|name>]] | create <id|name> <name> | delete <amiId|name>"
+const snapshotUsage = "usage: outpost snapshot [ls [<amiId|name>]] | create <id|name> <name> | delete <amiId|name>"
 
 // snapshotItem represents a snapshot as returned by the API.
 type snapshotItem struct {
@@ -23,10 +23,10 @@ type snapshotItem struct {
 
 // Snapshot dispatches snapshot sub-commands.
 //
-//	devbox snapshot [ls]                    → list all user snapshots
-//	devbox snapshot ls <amiId|name>         → show details for a specific snapshot
-//	devbox snapshot create <id|name> <name> → create a snapshot
-//	devbox snapshot delete <amiId|name>     → delete a snapshot
+//	outpost snapshot [ls]                    → list all user snapshots
+//	outpost snapshot ls <amiId|name>         → show details for a specific snapshot
+//	outpost snapshot create <id|name> <name> → create a snapshot
+//	outpost snapshot delete <amiId|name>     → delete a snapshot
 func Snapshot(args []string) {
 	if len(args) == 0 {
 		snapshotsList(args)
@@ -41,13 +41,13 @@ func Snapshot(args []string) {
 		if len(subArgs) == 0 {
 			snapshotsList(subArgs)
 		} else {
-			ref := helper.ParseSingleSnapshotRefArg(subArgs, "usage: devbox snapshot ls [<amiId|name>]")
+			ref := helper.ParseSingleSnapshotRefArg(subArgs, "usage: outpost snapshot ls [<amiId|name>]")
 			snapshotShowByRef(ref)
 		}
 	case "create":
 		snapshotCreate(subArgs)
 	case "delete":
-		ref := helper.ParseSingleSnapshotRefArg(subArgs, "usage: devbox snapshot delete <amiId|name>")
+		ref := helper.ParseSingleSnapshotRefArg(subArgs, "usage: outpost snapshot delete <amiId|name>")
 		snapshotDeleteByRef(ref)
 	default:
 		fmt.Fprintf(os.Stderr, "snapshot: unknown sub-command %q\n", sub)
@@ -57,7 +57,7 @@ func Snapshot(args []string) {
 }
 
 func snapshotCreate(args []string) {
-	ref, name := helper.ParseSnapshotArgs(args, "usage: devbox snapshot create <id|name> <name>")
+	ref, name := helper.ParseSnapshotArgs(args, "usage: outpost snapshot create <id|name> <name>")
 	if name == "" {
 		fmt.Fprintln(os.Stderr, "error: snapshot name is required")
 		os.Exit(1)
@@ -79,7 +79,7 @@ func snapshotCreate(args []string) {
 	result = *snap
 
 	fmt.Printf("Snapshot created: %s  name=%s  state=%s\n", result.AmiID, result.Name, result.State)
-	fmt.Printf("Snapshot creation may take a minute or so to finish. Check status with: devbox snapshot ls %s\n", result.Name)
+	fmt.Printf("Snapshot creation may take a minute or so to finish. Check status with: outpost snapshot ls %s\n", result.Name)
 }
 
 func snapshotShowByRef(ref string) {
@@ -113,7 +113,7 @@ func snapshotDeleteByRef(ref string) {
 }
 
 func snapshotsList(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox snapshot [ls]")
+	helper.RejectExtraArgs(args, "usage: outpost snapshot [ls]")
 
 	var items []snapshotItem
 	rt := helper.MustOpenRuntime()

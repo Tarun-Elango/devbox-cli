@@ -3,7 +3,7 @@ package service
 import (
 	"time"
 
-	"devbox-cli/internal/config"
+	"outpost-cli/internal/config"
 )
 
 // Region is an AWS region id with a human-readable label.
@@ -54,7 +54,7 @@ func ProviderForRegion(region string) string {
 	return "aws" // for now, only AWS is supported
 }
 
-// SaveAWSCredentials stores AWS credentials and region in ~/.devbox/config.json.
+// SaveAWSCredentials stores AWS credentials and region in ~/.outpost/config.json.
 func SaveAWSCredentials(secret, accessKey, region string) error {
 	cfg, err := config.Load() // load
 	if err != nil {
@@ -68,7 +68,7 @@ func SaveAWSCredentials(secret, accessKey, region string) error {
 	return config.Save(cfg)
 }
 
-// ClearAWSCredentials blanks the saved AWS credential fields in ~/.devbox/config.json.
+// ClearAWSCredentials blanks the saved AWS credential fields in ~/.outpost/config.json.
 func ClearAWSCredentials() error {
 	cfg, err := config.Load()
 	if err != nil {

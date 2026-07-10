@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/google/uuid"
 
-	awsclient "devbox-cli/service/aws"
-	localDb "devbox-cli/service/localDb"
+	awsclient "outpost-cli/service/aws"
+	localDb "outpost-cli/service/localDb"
 )
 
 // Snapshot mirrors lighthouse SnapshotDto (amiId, name, state, boxAwsId), plus

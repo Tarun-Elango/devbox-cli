@@ -14,9 +14,9 @@ export default function GithubSyncHowTo() {
 
       <div className="card">
         <p>
-          Use your local GitHub SSH key on a devbox for <code>git clone</code>,{' '}
+          Use your local GitHub SSH key on a outpost for <code>git clone</code>,{' '}
           <code>git push</code>, and other Git operations — without copying the key
-          onto the box. <code>devbox git-sync</code> sets up SSH agent forwarding so
+          onto the box. <code>outpost git-sync</code> sets up SSH agent forwarding so
           the box uses the key already on your laptop.
         </p>
       </div>
@@ -33,14 +33,14 @@ export default function GithubSyncHowTo() {
           , and confirm <code>ssh -T git@github.com</code> succeeds locally — then run:
         </p>
         <pre>
-          <code>devbox git-sync mybox</code>
+          <code>outpost git-sync mybox</code>
         </pre>
         <p>
           Replace <code>mybox</code> with the box name or ID. The command is a
           toggle — run it again on the same box to turn GitHub SSH access off.
         </p>
 
-        <p>When enabling, devbox:</p>
+        <p>When enabling, outpost:</p>
         <ol>
           <li>
             Adds your key to <code>ssh-agent</code> (you may be prompted for the
@@ -56,9 +56,9 @@ export default function GithubSyncHowTo() {
           existing session does not pick up agent forwarding automatically:
         </p>
         <pre>
-          <code>{`ssh devbox-mybox
+          <code>{`ssh outpost-mybox
 # or
-devbox ssh mybox -- -A`}</code>
+outpost ssh mybox -- -A`}</code>
         </pre>
 
         <p>On the box, verify GitHub sees your account:</p>
@@ -80,7 +80,7 @@ devbox ssh mybox -- -A`}</code>
 git config --global user.email "you@example.com"`}</code>
         </pre>
 
-        <p>When disabling, devbox removes the key from <code>ssh-agent</code> and
+        <p>When disabling, outpost removes the key from <code>ssh-agent</code> and
           drops <code>ForwardAgent</code> from the SSH config block for that box.</p>
       </div>
 
@@ -96,7 +96,7 @@ git config --global user.email "you@example.com"`}</code>
         </p>
 
         <p>
-          <code>devbox git-sync</code> wires up both sides of that flow on your
+          <code>outpost git-sync</code> wires up both sides of that flow on your
           machine:
         </p>
         <ul>
@@ -106,7 +106,7 @@ git config --global user.email "you@example.com"`}</code>
           </li>
           <li>
             <strong>ForwardAgent yes</strong> — added to the{' '}
-            <code>Host devbox-mybox</code> block in <code>~/.ssh/config</code> so
+            <code>Host outpost-mybox</code> block in <code>~/.ssh/config</code> so
             connections to the box allow agent forwarding (same as passing{' '}
             <code>-A</code> to <code>ssh</code>).
           </li>
@@ -122,7 +122,7 @@ git config --global user.email "you@example.com"`}</code>
         <p className="note">
           Agent forwarding only applies to new SSH sessions after you reconnect.
           For day-to-day editing over VS Code, see{' '}
-          <Link to="/how-tos/vscode-ssh">VS Code &amp; SSH without the devbox CLI</Link>.
+          <Link to="/how-tos/vscode-ssh">VS Code &amp; SSH without the outpost CLI</Link>.
           Command reference: <Link to="/docs/connect#git-sync">Git sync</Link> on
           the Connect page.
         </p>

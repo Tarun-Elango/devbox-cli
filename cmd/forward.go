@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"syscall"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // findFreePort asks the OS for an available TCP port on localhost.
@@ -26,10 +26,10 @@ func findFreePort() (int, error) {
 // Forward asks the server for connection details, then establishes an SSH
 // local port-forward so that localhost:<localPort> proxies to the box's
 // <remotePort>.  Blocks until the user presses Ctrl-C.
-// Usage: devbox forward <id|name> <port>
+// Usage: outpost forward <id|name> <port>
 func Forward(args []string) {
 
-	ref, port := helper.ParseForwardArgs(args, "usage: devbox forward <id|name> <port>")
+	ref, port := helper.ParseForwardArgs(args, "usage: outpost forward <id|name> <port>")
 
 	var result service.PortForwardResponse
 
@@ -60,13 +60,13 @@ func Forward(args []string) {
 
 	// we also check if user-data script is completed
 	identity := defaultKeyPath()
-	ready, err := checkDevboxReady(sshBin, identity, result.User, result.Host, "22")
+	ready, err := checkoutpostReady(sshBin, identity, result.User, result.Host, "22")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "forward: SSH is not reachable yet (%v) — the box may still be starting, try again in a moment\n", err)
 		os.Exit(1)
 	}
 	if !ready {
-		fmt.Fprintln(os.Stderr, "forward: devbox is not ready yet — try again in a minute")
+		fmt.Fprintln(os.Stderr, "forward: outpost is not ready yet — try again in a minute")
 		os.Exit(1)
 	}
 

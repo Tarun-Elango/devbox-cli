@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 const (
@@ -164,15 +164,15 @@ func cpStatusForBox(ref string) (*cpStatusResponse, error) {
 	return cpStatusFromInstance(inst), nil
 }
 
-// CP copies one file between the local machine and a devbox using scp.
+// CP copies one file between the local machine and a outpost using scp.
 func CP(args []string) {
 
 	fs := flag.NewFlagSet("cp", flag.ExitOnError)
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox cp [-i key] <source> <dest>")
+		fmt.Fprintln(os.Stderr, "usage: outpost cp [-i key] <source> <dest>")
 		fmt.Fprintln(os.Stderr, "examples:")
-		fmt.Fprintln(os.Stderr, "  devbox cp ./main.go mybox:/home/ec2-user/app/")
-		fmt.Fprintln(os.Stderr, "  devbox cp mybox:/home/ec2-user/app/main.go ./")
+		fmt.Fprintln(os.Stderr, "  outpost cp ./main.go mybox:/home/ec2-user/app/")
+		fmt.Fprintln(os.Stderr, "  outpost cp mybox:/home/ec2-user/app/main.go ./")
 	}
 
 	parsed, err := helper.ParseCPCommandArgs(args, cpDefaultKeyPath())
@@ -219,7 +219,7 @@ func CP(args []string) {
 	}
 
 	// check if the box is ready
-	if err := waitForDevboxReady(sshBin, parsed.Identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
+	if err := waitForoutpostReady(sshBin, parsed.Identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "cp: %v\n", err)
 		os.Exit(1)
 	}

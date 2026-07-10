@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // Rename updates a local box name in AWS, the local DB, and SSH config.
 func Rename(args []string) {
-	ref, newName := helper.ParseRenameBoxArgs(args, "usage: devbox rename <id|name> <new-name>")
+	ref, newName := helper.ParseRenameBoxArgs(args, "usage: outpost rename <id|name> <new-name>")
 
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
@@ -29,5 +29,5 @@ func Rename(args []string) {
 		fmt.Fprintf(os.Stderr, "warning: box renamed but failed to update SSH config on this machine (~/.ssh/config) after retries: %v\n", err)
 		return
 	}
-	fmt.Printf("SSH config: devbox-%s updated to devbox-%s\n", target.Name, renamed.Name)
+	fmt.Printf("SSH config: outpost-%s updated to outpost-%s\n", target.Name, renamed.Name)
 }

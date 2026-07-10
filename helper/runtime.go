@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"devbox-cli/service"
+	"outpost-cli/service"
 )
 
 const defaultCommandTimeout = 5 * time.Minute

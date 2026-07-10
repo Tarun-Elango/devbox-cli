@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/service"
+	"outpost-cli/service"
 )
 
 func SelectInstanceType(types []service.InstanceType) (string, error) {

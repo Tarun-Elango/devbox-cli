@@ -8,8 +8,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 
-	awsclient "devbox-cli/service/aws"
-	localDb "devbox-cli/service/localDb"
+	awsclient "outpost-cli/service/aws"
+	localDb "outpost-cli/service/localDb"
 )
 
 // Runtime holds shared DB and AWS clients for a single CLI invocation.
@@ -74,7 +74,7 @@ func (r *Runtime) EC2() (*ec2.Client, error) {
 		return nil, err
 	}
 	if cfg.AwsRegion == "" {
-		return nil, fmt.Errorf("aws region is required; run: devbox setup")
+		return nil, fmt.Errorf("aws region is required; run: outpost setup")
 	}
 	return r.EC2ForRegion(cfg.AwsRegion)
 }

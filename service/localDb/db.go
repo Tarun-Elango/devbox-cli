@@ -7,22 +7,22 @@ import (
 	"path/filepath"
 	"strings"
 
-	"devbox-cli/internal/backup"
-	"devbox-cli/internal/config"
-	"devbox-cli/internal/sqliteutil"
+	"outpost-cli/internal/backup"
+	"outpost-cli/internal/config"
+	"outpost-cli/internal/sqliteutil"
 )
 
 const (
-	dbDir  = ".devbox"
-	dbFile = "devbox.db"
+	dbDir  = ".outpost"
+	dbFile = "outpost.db"
 )
 
-// DB wraps a local SQLite connection at ~/.devbox/devbox.db.
+// DB wraps a local SQLite connection at ~/.outpost/outpost.db.
 type DB struct {
 	conn *sql.DB // common database connection, used by all other functions
 }
 
-// DBPath returns the absolute path to ~/.devbox/devbox.db.
+// DBPath returns the absolute path to ~/.outpost/outpost.db.
 func DBPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -31,7 +31,7 @@ func DBPath() (string, error) {
 	return filepath.Join(home, dbDir, dbFile), nil
 }
 
-// Open connects to ~/.devbox/devbox.db, creating the directory and schema if needed.
+// Open connects to ~/.outpost/outpost.db, creating the directory and schema if needed.
 func Open() (*DB, error) {
 	backup.RestoreDBIfNeeded()
 	path, err := DBPath()

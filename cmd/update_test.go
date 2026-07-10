@@ -68,7 +68,7 @@ func TestUpdateRejectsExtraArgs(t *testing.T) {
 			t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
 		}
 	})
-	if !strings.Contains(stderr, "usage: devbox update") {
+	if !strings.Contains(stderr, "usage: outpost update") {
 		t.Fatalf("stderr = %q, want usage message", stderr)
 	}
 }
@@ -84,7 +84,7 @@ func TestUpdateAlreadyCurrent(t *testing.T) {
 			t.Fatalf("unexpected exit %d", code)
 		}
 	})
-	if !strings.Contains(out, "devbox 0.4.0 is up to date.") {
+	if !strings.Contains(out, "outpost 0.4.0 is up to date.") {
 		t.Fatalf("stdout = %q, want up-to-date message", out)
 	}
 }
@@ -115,7 +115,7 @@ func TestUpdateAcceptedInstallsToExecutableDir(t *testing.T) {
 	withSetupStdin(t, "yes\n")
 	currentVersionFn = func() string { return "0.4.0" }
 	fetchLatestVersionFn = func(context.Context) (string, error) { return "0.5.0", nil }
-	osExecutableFn = func() (string, error) { return "/tmp/devbox-test/bin/devbox", nil }
+	osExecutableFn = func() (string, error) { return "/tmp/outpost-test/bin/outpost", nil }
 
 	var gotInstallDir string
 	installLatestFn = func(_ context.Context, installDir string) error {
@@ -129,10 +129,10 @@ func TestUpdateAcceptedInstallsToExecutableDir(t *testing.T) {
 			t.Fatalf("unexpected exit %d", code)
 		}
 	})
-	if gotInstallDir != "/tmp/devbox-test/bin" {
-		t.Fatalf("install dir = %q, want /tmp/devbox-test/bin", gotInstallDir)
+	if gotInstallDir != "/tmp/outpost-test/bin" {
+		t.Fatalf("install dir = %q, want /tmp/outpost-test/bin", gotInstallDir)
 	}
-	if !strings.Contains(out, "devbox 0.5.0 is available. You have 0.4.0.") {
+	if !strings.Contains(out, "outpost 0.5.0 is available. You have 0.4.0.") {
 		t.Fatalf("stdout = %q, want available message", out)
 	}
 }

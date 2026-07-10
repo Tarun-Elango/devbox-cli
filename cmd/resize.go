@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 func Resize(args []string) {
-	ref := helper.ParseSingleBoxRef(args, "usage: devbox resize <id|name>")
+	ref := helper.ParseSingleBoxRef(args, "usage: outpost resize <id|name>")
 
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()

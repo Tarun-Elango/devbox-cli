@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // Delete permanently deletes a box.
 func Delete(args []string) {
-	ref := helper.ParseSingleBoxRef(args, "usage: devbox delete <id|name>")
+	ref := helper.ParseSingleBoxRef(args, "usage: outpost delete <id|name>")
 
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()

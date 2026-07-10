@@ -29,7 +29,7 @@ func TestUninstallRejectsExtraArgs(t *testing.T) {
 			t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
 		}
 	})
-	if !strings.Contains(stderr, "usage: devbox uninstall") {
+	if !strings.Contains(stderr, "usage: outpost uninstall") {
 		t.Fatalf("stderr = %q, want usage message", stderr)
 	}
 }
@@ -48,13 +48,13 @@ func TestUninstallDeclined(t *testing.T) {
 	}
 }
 
-func TestCleanShellRCContentRemovesDevboxBlock(t *testing.T) {
+func TestCleanShellRCContentRemovesoutpostBlock(t *testing.T) {
 	home := "/home/user"
 	installDir := filepath.Join(home, ".local", "bin")
 	input := strings.Join([]string{
 		"export EDITOR=vim",
 		"",
-		"# devbox",
+		"# outpost",
 		`export PATH="/home/user/.local/bin:$PATH"`,
 		"alias ll='ls -la'",
 	}, "\n")
@@ -75,7 +75,7 @@ func TestCleanShellRCContentRemovesHomePathVariant(t *testing.T) {
 	home := "/home/user"
 	installDir := filepath.Join(home, ".local", "bin")
 	input := strings.Join([]string{
-		"# devbox",
+		"# outpost",
 		`export PATH="$HOME/.local/bin:$PATH"`,
 	}, "\n") + "\n"
 
@@ -87,8 +87,8 @@ func TestCleanShellRCContentRemovesHomePathVariant(t *testing.T) {
 
 // TestCleanShellRCContentIgnoresUnmarkedPathLines guards against removing
 // PATH lines added by other tools (e.g. pipx, cargo) that happen to
-// reference the same directory as devbox's default install dir, but were
-// never written by install.sh (i.e. have no preceding "# devbox" marker).
+// reference the same directory as outpost's default install dir, but were
+// never written by install.sh (i.e. have no preceding "# outpost" marker).
 func TestCleanShellRCContentIgnoresUnmarkedPathLines(t *testing.T) {
 	home := "/home/user"
 	installDir := filepath.Join(home, ".local", "bin")
@@ -107,7 +107,7 @@ func TestCleanShellRCContentIgnoresUnmarkedPathLines(t *testing.T) {
 func TestUninstallAcceptedRemovesBinaryDataAndPath(t *testing.T) {
 	home := t.TempDir()
 	installDir := filepath.Join(home, ".local", "bin")
-	exe := filepath.Join(installDir, "devbox")
+	exe := filepath.Join(installDir, "outpost")
 	if err := os.MkdirAll(installDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -115,15 +115,15 @@ func TestUninstallAcceptedRemovesBinaryDataAndPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	devboxDir := filepath.Join(home, ".devbox")
-	if err := os.MkdirAll(devboxDir, 0o700); err != nil {
+	outpostDir := filepath.Join(home, ".outpost")
+	if err := os.MkdirAll(outpostDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(devboxDir, "config.json"), []byte("{}"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(outpostDir, "config.json"), []byte("{}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	backupDir := filepath.Join(home, ".devbox-backup")
+	backupDir := filepath.Join(home, ".outpost-backup")
 	if err := os.MkdirAll(backupDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestUninstallAcceptedRemovesBinaryDataAndPath(t *testing.T) {
 	rcContent := strings.Join([]string{
 		"export EDITOR=vim",
 		"",
-		"# devbox",
+		"# outpost",
 		`export PATH="` + installDir + `:$PATH"`,
 	}, "\n") + "\n"
 	if err := os.WriteFile(zshrc, []byte(rcContent), 0o644); err != nil {
@@ -152,22 +152,22 @@ func TestUninstallAcceptedRemovesBinaryDataAndPath(t *testing.T) {
 	if _, err := os.Stat(exe); !os.IsNotExist(err) {
 		t.Fatalf("binary still exists: %v", err)
 	}
-	if _, err := os.Stat(devboxDir); !os.IsNotExist(err) {
-		t.Fatalf(".devbox still exists: %v", err)
+	if _, err := os.Stat(outpostDir); !os.IsNotExist(err) {
+		t.Fatalf(".outpost still exists: %v", err)
 	}
 	if _, err := os.Stat(backupDir); !os.IsNotExist(err) {
-		t.Fatalf(".devbox-backup still exists: %v", err)
+		t.Fatalf(".outpost-backup still exists: %v", err)
 	}
 
 	updatedRC, err := os.ReadFile(zshrc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(updatedRC), "# devbox") || strings.Contains(string(updatedRC), installDir) {
-		t.Fatalf("shell rc still contains devbox PATH: %q", string(updatedRC))
+	if strings.Contains(string(updatedRC), "# outpost") || strings.Contains(string(updatedRC), installDir) {
+		t.Fatalf("shell rc still contains outpost PATH: %q", string(updatedRC))
 	}
 
-	if !strings.Contains(out, "Removed ~/.devbox") {
+	if !strings.Contains(out, "Removed ~/.outpost") {
 		t.Fatalf("stdout = %q, want removal messages", out)
 	}
 	if !strings.Contains(out, "Removed "+exe) {

@@ -10,7 +10,7 @@ set -euo pipefail
 # add the binary to the path
 
 # --- Config ---
-repo="Tarun-Elango/devbox-cli"
+repo="Tarun-Elango/outpost"
 
 # When run via sudo, the binary and shell config should target the invoking
 # user, not root — otherwise `sudo bash install.sh` installs to /root while
@@ -65,7 +65,7 @@ esac
 # Pin a version: curl -fsSL .../install.sh | RELEASE_TAG=v0.7.0 bash
 # (RELEASE_TAG must be on bash, not curl — a pipe does not pass env vars across.)
 release_tag="${RELEASE_TAG:-latest}"
-asset_name="devbox-${os}-${arch}"
+asset_name="outpost-${os}-${arch}"
 url="https://github.com/${repo}/releases/download/${release_tag}/${asset_name}"
 checksums_url="https://github.com/${repo}/releases/download/${release_tag}/checksums.txt"
 tmp="$(mktemp)"
@@ -110,8 +110,8 @@ echo "Checksum OK."
 # --- Install ---
 # Copy the binary into place
 mkdir -p "$install_dir"  # create the directory if it doesn't exist
-install -m 755 "$tmp" "${install_dir}/devbox"  # copy the binary into the directory
-echo "Installed devbox to ${install_dir}/devbox" # print the path of the binary
+install -m 755 "$tmp" "${install_dir}/outpost"  # copy the binary into the directory
+echo "Installed outpost to ${install_dir}/outpost" # print the path of the binary
 
 # --- PATH setup ---
 # Purpose: check if the install directory is usable, if not asks the 
@@ -129,7 +129,7 @@ is_system_bin_dir() {
 # System install dirs are usually already on PATH — don't touch anyone's shell config
 if is_system_bin_dir "${install_dir}"; then
   echo "${install_dir} is a standard system directory (usually already on PATH)."
-  echo "Restart your shell if needed, then run: devbox ls"
+  echo "Restart your shell if needed, then run: outpost ls"
   exit 0
 fi
 
@@ -199,7 +199,7 @@ esac
 path_line="export PATH=\"${install_dir}:\$PATH\""
 if path_configured_in_rc "${rc_file}"; then
   echo "${install_dir} is already configured in ${rc_file}"
-  echo "Restart your shell if needed, then run: devbox ls"
+  echo "Restart your shell if needed, then run: outpost ls"
   exit 0
 fi
 
@@ -216,7 +216,7 @@ if [ -t 0 ]; then
       ;;
   esac
 else
-  echo "Add this line to ${rc_file} to use devbox:"
+  echo "Add this line to ${rc_file} to use outpost:"
   echo "  ${path_line}"
   exit 0
 fi
@@ -224,8 +224,8 @@ fi
 # add the install directory to the shell config
 {
   echo ""
-  echo "# devbox"
+  echo "# outpost"
   echo "${path_line}"
 } >> "${rc_file}"
 echo "Added ${install_dir} to ${rc_file}"
-echo "Restart your shell, then run: devbox ls"
+echo "Restart your shell, then run: outpost ls"

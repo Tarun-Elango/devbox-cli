@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"devbox-cli/helper"
-	"devbox-cli/internal/config"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/internal/config"
+	"outpost-cli/service"
 )
 
 const testExit = "setupTestExit"
@@ -149,7 +149,7 @@ func TestSetup(t *testing.T) {
 				t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
 			}
 		})
-		if !strings.Contains(stderr, "usage: devbox setup") {
+		if !strings.Contains(stderr, "usage: outpost setup") {
 			t.Fatalf("stderr = %q, want usage message", stderr)
 		}
 	})
@@ -206,7 +206,7 @@ func TestSetup(t *testing.T) {
 
 	t.Run("load_config_error", func(t *testing.T) {
 		home := t.TempDir()
-		if err := os.WriteFile(filepath.Join(home, ".devbox"), []byte("not-a-dir"), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(home, ".outpost"), []byte("not-a-dir"), 0600); err != nil {
 			t.Fatal(err)
 		}
 		t.Setenv("HOME", home)
@@ -282,8 +282,8 @@ func TestSetup(t *testing.T) {
 
 	t.Run("save_error", func(t *testing.T) {
 		home := t.TempDir()
-		// create a file .devbox, so it messes up the config save
-		if err := os.WriteFile(filepath.Join(home, ".devbox"), []byte("block"), 0600); err != nil {
+		// create a file .outpost, so it messes up the config save
+		if err := os.WriteFile(filepath.Join(home, ".outpost"), []byte("block"), 0600); err != nil {
 			t.Fatal(err)
 		}
 		t.Setenv("HOME", home)
@@ -509,7 +509,7 @@ func TestClearCreds(t *testing.T) {
 				t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
 			}
 		})
-		if !strings.Contains(stderr, "usage: devbox clear-creds") {
+		if !strings.Contains(stderr, "usage: outpost clear-creds") {
 			t.Fatalf("stderr = %q, want usage message", stderr)
 		}
 	})
@@ -561,11 +561,11 @@ func TestClearCreds(t *testing.T) {
 
 	t.Run("clear_error", func(t *testing.T) {
 		home := t.TempDir()
-		devboxDir := filepath.Join(home, ".devbox")
-		if err := os.MkdirAll(devboxDir, 0700); err != nil {
+		outpostDir := filepath.Join(home, ".outpost")
+		if err := os.MkdirAll(outpostDir, 0700); err != nil {
 			t.Fatal(err)
 		}
-		cfgPath := filepath.Join(devboxDir, "config.json")
+		cfgPath := filepath.Join(outpostDir, "config.json")
 		if err := os.WriteFile(cfgPath, []byte("{"), 0600); err != nil {
 			t.Fatal(err)
 		}

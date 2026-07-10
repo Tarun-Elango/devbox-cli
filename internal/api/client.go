@@ -10,12 +10,12 @@ package api
 // 	"strings"
 // 	"time"
 
-// 	"devbox-cli/internal/config"
+// 	"outpost-cli/internal/config"
 // )
 
 // // unused api client class
 
-// // Client is an HTTP client that injects auth headers for every devbox API request.
+// // Client is an HTTP client that injects auth headers for every outpost API request.
 // type Client struct {
 // 	httpClient *http.Client
 // 	baseURL    string
@@ -44,7 +44,7 @@ package api
 // 	}
 // }
 
-// // NewDefault creates a Client by loading config from ~/.devbox/config.json.
+// // NewDefault creates a Client by loading config from ~/.outpost/config.json.
 // // The full config is attached so the client can transparently refresh tokens.
 // func NewDefault() (*Client, error) {
 // 	cfg, err := config.Load()
@@ -97,13 +97,13 @@ package api
 // 	// Fast-fail if there are no credentials at all — avoids a round-trip that
 // 	// would return an opaque 401/403 with no actionable message.
 // 	if c.cfg != nil && c.cfg.Token == "" && c.cfg.RefreshToken == "" {
-// 		return nil, fmt.Errorf("not logged in — please run `devbox login`")
+// 		return nil, fmt.Errorf("not logged in — please run `outpost login`")
 // 	}
 
 // 	// Pre-flight: refresh before the request if we already know the token is stale.
 // 	if c.cfg != nil && c.cfg.RefreshToken != "" && c.cfg.IsTokenExpired() {
 // 		if err := refreshAccessToken(c.cfg); err != nil {
-// 			return nil, fmt.Errorf("session expired — please run `devbox login`")
+// 			return nil, fmt.Errorf("session expired — please run `outpost login`")
 // 		}
 // 		c.token = c.cfg.Token
 // 	}
@@ -118,7 +118,7 @@ package api
 // 	if resp.StatusCode == http.StatusUnauthorized && c.cfg != nil && c.cfg.RefreshToken != "" {
 // 		_ = resp.Body.Close() // close the original 401 response body before retrying
 // 		if err := refreshAccessToken(c.cfg); err != nil {
-// 			return nil, fmt.Errorf("session expired — please run `devbox login`")
+// 			return nil, fmt.Errorf("session expired — please run `outpost login`")
 // 		}
 // 		c.token = c.cfg.Token
 // 		return c.execute(method, path, body)

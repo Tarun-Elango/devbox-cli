@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	localDb "devbox-cli/service/localDb"
+	localDb "outpost-cli/service/localDb"
 )
 
 func TestReconcileLocalAgainstRemote(t *testing.T) {

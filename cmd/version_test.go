@@ -12,7 +12,7 @@ func TestVersionRejectsExtraArgs(t *testing.T) {
 			t.Fatalf("exit = %v exited = %v, want exit 1", code, exited)
 		}
 	})
-	if !strings.Contains(stderr, "usage: devbox version") {
+	if !strings.Contains(stderr, "usage: outpost version") {
 		t.Fatalf("stderr = %q, want usage message", stderr)
 	}
 }

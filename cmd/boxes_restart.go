@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 // Restart reboots a running box.
 func Restart(args []string) {
 
-	ref := helper.ParseSingleBoxRef(args, "usage: devbox restart|reboot <id|name>")
+	ref := helper.ParseSingleBoxRef(args, "usage: outpost restart|reboot <id|name>")
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 	target, err := helper.ResolveBoxTarget(rt, ref)

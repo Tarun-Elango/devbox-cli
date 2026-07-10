@@ -1,4 +1,4 @@
-# Devbox CLI
+# outpost CLI
 
 Manage remote dev boxes from the CLI — provision, connect, sync, and destroy them using your own cloud account (BYOK - AWS only for now). CLI supports linux and macos.
 
@@ -11,7 +11,7 @@ The idea of keeping your dev environment away from your machine, keeps the blast
 
 The tool has since been extended with commands for box management, snapshots (save a copy of your box so you can restore it later), templates (spin up a box with pre-installed software), ssh, sync, idle-stop to save on costs, git-sync to use your local git credentials on the box, budget tracking, and more.
 
-see the docs for more details: https://devbox.tarunelango.com
+see the docs for more details: https://outpost.tarunelango.com
 
 ## Table of Contents
 - [Download and Install (from GitHub release)](#download-and-install-from-github-release)
@@ -20,32 +20,32 @@ see the docs for more details: https://devbox.tarunelango.com
 
 ## Download and Install (from GitHub release)
 
-Every push to `main` publishes Linux and macOS binaries to the [latest release](https://github.com/Tarun-Elango/devbox-cli/releases/tag/latest). Run the following command:
+Every push to `main` publishes Linux and macOS binaries to the [latest release](https://github.com/Tarun-Elango/outpost/releases/tag/latest). Run the following command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | bash
 ```
 
-Verify with the command `devbox ls`.
+Verify with the command `outpost ls`.
 
 If that worked, you're done — skip the sections below. They're optional alternatives for pinning a version or installing system-wide.
 
-Note: if you want to pin a specific version, or install it for every user on this machine, see here https://devbox.tarunelango.com/docs/install
+Note: if you want to pin a specific version, or install it for every user on this machine, see here https://outpost.tarunelango.com/docs/install
 
-If you want to clone the repo and build it yourself, see here https://devbox.tarunelango.com/docs/install#build-from-source
+If you want to clone the repo and build it yourself, see here https://outpost.tarunelango.com/docs/install#build-from-source
 
 ## Common commands
 
-Run `devbox help` to print usage, or see the table below.
+Run `outpost help` to print usage, or see the table below.
 
 ### Config and health
 
 | Command | Notes |
 | --- | --- |
-| `version` | Show the devbox CLI version |
+| `version` | Show the outpost CLI version |
 | `update` | Check GitHub releases for a newer version and install it after confirmation |
-| `setup` | Configure/change AWS credentials and region (stored in `~/.devbox/config.json`) |
-| `clear-creds` | Clear saved AWS credentials from `~/.devbox/config.json` |
+| `setup` | Configure/change AWS credentials and region (stored in `~/.outpost/config.json`) |
+| `clear-creds` | Clear saved AWS credentials from `~/.outpost/config.json` |
 | `health` | Check config, AWS credentials, region, and database |
 
 ### Boxes
@@ -67,7 +67,7 @@ Run `devbox help` to print usage, or see the table below.
 | Command | Notes |
 | --- | --- |
 | `ssh [-i key] <id-or-name> [-- <ssh-option>...]` | Open an SSH session to a box (`-i` path to private key; default `~/.ssh/id_ed25519`; `--` passes native ssh options before the target, e.g. `-v`, `-A`, `-L 8080:localhost:8080`; for one-off remote commands use `exec`) |
-| `cp [-i key] <source> <dest>` | Copy a file to or from a box (e.g. `devbox cp ./main.go mybox:/home/ec2-user/app/`) |
+| `cp [-i key] <source> <dest>` | Copy a file to or from a box (e.g. `outpost cp ./main.go mybox:/home/ec2-user/app/`) |
 | `sync [-i key] [--delete] <source> <dest>` | Incremental directory sync via rsync over SSH (same path syntax as `cp`: one local path, one `box:/path`). Only **dest** is modified — copies new/changed files from source; source is never changed. `--delete` also removes files on dest that are not in source |
 | `exec [-i key] [-s] [-t] <id-or-name> -- <command>` | Run a one-off command on a running box (`-s` run as a shell snippet via `sh -lc`; `-t` allocate a pseudo-TTY for sudo or interactive commands) |
 | `forward <id-or-name> <port>` | Forward a port from a box |
@@ -113,7 +113,7 @@ Use your local GitHub SSH key on a box (for `git push`, `git clone`, etc.) witho
 
 ### Budgets
 
-List and manage AWS account cost budgets. Results are cached under `~/.devbox/` for 12 hours. Requires the `AWSBudgetsActionsWithAWSResourceControlAccess` IAM policy.
+List and manage AWS account cost budgets. Results are cached under `~/.outpost/` for 12 hours. Requires the `AWSBudgetsActionsWithAWSResourceControlAccess` IAM policy.
 
 | Command | Notes |
 | --- | --- |
@@ -124,23 +124,23 @@ List and manage AWS account cost budgets. Results are cached under `~/.devbox/` 
 
 ## Setup
 
-***Note***: the aws access key and secret are stored in the `~/.devbox/` file, locally on your machine. No cloud storage or syncing is done.
+***Note***: the aws access key and secret are stored in the `~/.outpost/` file, locally on your machine. No cloud storage or syncing is done.
 
 Go to your AWS console 
 
 1. **create an IAM user**
-Go to the IAM console → **Users** → **Create user**. Name it (e.g. `devbox-cli`), choose **Attach policies directly**, search for `AmazonEC2FullAccess` and `AWSBudgetsActionsWithAWSResourceControlAccess`, select it, and create the user.
+Go to the IAM console → **Users** → **Create user**. Name it (e.g. `outpost`), choose **Attach policies directly**, search for `AmazonEC2FullAccess` and `AWSBudgetsActionsWithAWSResourceControlAccess`, select it, and create the user.
 
 2. **Access keys** 
 Open the user → **Security credentials** → **Access keys** → **Create access key**. Select **Local code**, confirm, then copy the **Access key ID** and **Secret access key** (the secret is shown only once).
 
-3. **Configure devbox**
+3. **Configure outpost**
 Run the steps below to create your first box:
 
 ```bash
-devbox setup    # enter access key, secret, region → ~/.devbox/config.json
-devbox create mybox  # create a simple box
-devbox ssh mybox  # ssh into the box
+outpost setup    # enter access key, secret, region → ~/.outpost/config.json
+outpost create mybox  # create a simple box
+outpost ssh mybox  # ssh into the box
 ```
 
-for detailed instructions, see here https://devbox.tarunelango.com/docs/setup
+for detailed instructions, see here https://outpost.tarunelango.com/docs/setup

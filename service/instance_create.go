@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/google/uuid"
 
-	awsclient "devbox-cli/service/aws"
+	awsclient "outpost-cli/service/aws"
 )
 
 // Create defaults — mirrors Lighthouse application.properties.
@@ -21,10 +21,10 @@ const (
 	defaultSecurityGroupID = ""                      // we dont have one, so we will default to creating in the code
 	defaultSubnetID        = ""
 
-	isolatedSecurityGroupName = "devbox-isolated"
+	isolatedSecurityGroupName = "outpost-isolated"
 
 	readyMessage = "the user data script is completed"
-	readyPath    = "/var/lib/devbox/ready"
+	readyPath    = "/var/lib/outpost/ready"
 )
 
 // CreateInstance creates a new box locally.
@@ -206,7 +206,7 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 }
 
 // ensureIsolatedSecurityGroup creates or reuses a security group named
-// "devbox-isolated" that allows only inbound SSH (TCP 22).
+// "outpost-isolated" that allows only inbound SSH (TCP 22).
 // Mirrors Ec2Service.ensureIsolatedSecurityGroup in Lighthouse.
 func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (string, error) {
 	var vpcID string
@@ -252,7 +252,7 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 	} else {
 		createResp, err := ec2Client.CreateSecurityGroup(ctx, &ec2.CreateSecurityGroupInput{
 			GroupName:   aws.String(isolatedSecurityGroupName),
-			Description: aws.String("Devbox isolated: SSH inbound only"),
+			Description: aws.String("outpost isolated: SSH inbound only"),
 			VpcId:       aws.String(vpcID),
 		})
 		if err != nil {
@@ -321,6 +321,6 @@ func buildUserDataV2(publicKey string, startupScripts []string) (string, error) 
 }
 
 func appendReadyMarker(sb *strings.Builder) {
-	sb.WriteString("mkdir -p /var/lib/devbox\n")
+	sb.WriteString("mkdir -p /var/lib/outpost\n")
 	fmt.Fprintf(sb, "echo \"%s\" > %s\n", readyMessage, readyPath)
 }

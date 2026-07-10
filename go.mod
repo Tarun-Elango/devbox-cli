@@ -1,4 +1,4 @@
-module devbox-cli
+module outpost-cli
 
 go 1.26.5
 

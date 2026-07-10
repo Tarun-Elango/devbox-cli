@@ -3,7 +3,7 @@ import DocPage from './doc-page'
 
 const sections = [
   { id: 'aws-credentials', label: 'AWS credentials' },
-  { id: 'wizard', label: 'Setup on devbox CLI' },
+  { id: 'wizard', label: 'Setup on outpost CLI' },
   { id: 'local-config', label: 'Local config' },
   { id: 'related-commands', label: 'Related commands' },
 ]
@@ -21,7 +21,7 @@ export default function SetupDoc() {
         <ol>
           <li>
             IAM console → <strong>Users</strong> → <strong>Create user</strong> (e.g.{' '}
-            <code>devbox-cli</code>)
+            <code>outpost</code>)
           </li>
           <li>
             Attach <code>AmazonEC2FullAccess</code> and <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> directly and create the user
@@ -37,12 +37,12 @@ export default function SetupDoc() {
       </div>
 
       <div className="card">
-        <h2 id="wizard">Setup on devbox CLI</h2>
+        <h2 id="wizard">Setup on outpost CLI</h2>
         <p className="note">
           Run once after install to save AWS credentials and region locally.
         </p>
         <pre>
-          <code>devbox setup</code>
+          <code>outpost setup</code>
         </pre>
         <p className="note">
           Enter the access key, secret, and preferred AWS region when prompted. 
@@ -52,16 +52,16 @@ export default function SetupDoc() {
       <div className="card">
         <h2 id="local-config">Local config details</h2>
         <p className="note">
-          Credentials and tokens live in <code>~/.devbox/config.json</code> (mode 0600).
+          Credentials and tokens live in <code>~/.outpost/config.json</code> (mode 0600).
         </p>
         <ul>
-          <li>Do not sync <code>~/.devbox</code> via dotfiles, iCloud, Dropbox, or Git</li>
+          <li>Do not sync <code>~/.outpost</code> via dotfiles, iCloud, Dropbox, or Git</li>
           <li>Use a dedicated IAM user for AWS keys</li>
           <li>
-            Run <code>devbox health</code> to verify config, credentials, region, and
+            Run <code>outpost health</code> to verify config, credentials, region, and
             database
           </li>
-          <li>You can run <code>devbox setup</code> again to update the config and credentials.</li>
+          <li>You can run <code>outpost setup</code> again to update the config and credentials.</li>
         </ul>
       </div>
 
@@ -69,16 +69,16 @@ export default function SetupDoc() {
         <h2 id="related-commands">Related commands</h2>
         <ul>
           <li>
-            <code>devbox health</code> — check config, credentials, region, and database
+            <code>outpost health</code> — check config, credentials, region, and database
           </li>
           <li>
-            <code>devbox clear-creds</code> — remove saved AWS credentials
+            <code>outpost clear-creds</code> — remove saved AWS credentials
           </li>
           <li>
-            <code>devbox update</code> — check for and install a newer CLI release
+            <code>outpost update</code> — check for and install a newer CLI release
           </li>
           <li>
-            <code>devbox version</code> — show the installed CLI version
+            <code>outpost version</code> — show the installed CLI version
           </li>
         </ul>
       </div>

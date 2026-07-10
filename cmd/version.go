@@ -3,11 +3,11 @@ package cmd
 import (
 	"fmt"
 
-	"devbox-cli/helper"
-	"devbox-cli/internal/version"
+	"outpost-cli/helper"
+	"outpost-cli/internal/version"
 )
 
 func Version(args []string) {
-	helper.RejectExtraArgs(args, "usage: devbox version")
+	helper.RejectExtraArgs(args, "usage: outpost version")
 	fmt.Println(version.String())
 }

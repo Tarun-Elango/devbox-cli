@@ -12,12 +12,12 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 
-	appconfig "devbox-cli/internal/config"
+	appconfig "outpost-cli/internal/config"
 )
 
 const awsRequestTimeout = 60 * time.Second
 
-// aws key and secret are in .devbox/config.json
+// aws key and secret are in .outpost/config.json
 // we need to load the config and create a client
 
 // Client wraps a configured AWS SDK v2 runtime.
@@ -25,7 +25,7 @@ type Client struct {
 	cfg aws.Config
 }
 
-// LoadConfig reads ~/.devbox/config.json.
+// LoadConfig reads ~/.outpost/config.json.
 func LoadConfig() (*appconfig.Config, error) {
 	return appconfig.Load() // return config struct, and error
 }
@@ -37,7 +37,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
 	if appCfg.AwsRegion == "" {
-		return nil, fmt.Errorf("aws region is required; run: devbox setup")
+		return nil, fmt.Errorf("aws region is required; run: outpost setup")
 	}
 	return NewClientForRegion(ctx, appCfg.AwsRegion)
 }
@@ -49,10 +49,10 @@ func NewClientForRegion(ctx context.Context, region string) (*Client, error) {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
 	if appCfg.AwsSecret == "" || appCfg.AwsAccessKey == "" {
-		return nil, fmt.Errorf("aws secret and access key are required")
+		return nil, fmt.Errorf("aws secret and access key are required\nhint: run: outpost setup")
 	}
 	if region == "" {
-		return nil, fmt.Errorf("aws region is required; run: devbox setup")
+		return nil, fmt.Errorf("aws region is required; run: outpost setup")
 	}
 
 	opts := []func(*awsconfig.LoadOptions) error{

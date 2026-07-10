@@ -27,7 +27,7 @@ export default function CommandsDoc() {
   return (
     <DocPage title="All commands">
       <p className="note">
-        Run <code>devbox help</code> for usage, or use the reference below.
+        Run <code>outpost help</code> for usage, or use the reference below.
       </p>
 
       <div className="card">
@@ -35,11 +35,11 @@ export default function CommandsDoc() {
         <p className="note">CLI version, setup, credentials, and health checks.</p>
         <CmdTable
           rows={[
-            ['devbox version', 'Show the devbox CLI version'],
-            ['devbox update', 'Check for and install a newer release'],
-            ['devbox setup', 'Configure AWS credentials and region'],
-            ['devbox clear-creds', 'Clear saved AWS credentials'],
-            ['devbox health', 'Check config, credentials, region, and database'],
+            ['outpost version', 'Show the outpost CLI version'],
+            ['outpost update', 'Check for and install a newer release'],
+            ['outpost setup', 'Configure AWS credentials and region'],
+            ['outpost clear-creds', 'Clear saved AWS credentials'],
+            ['outpost health', 'Check config, credentials, region, and database'],
           ]}
         />
       </div>
@@ -50,23 +50,23 @@ export default function CommandsDoc() {
         <CmdTable
           rows={[
             [
-              "devbox create <name> [--template <name>...] [--from <amiId|name>]",
+              "outpost create <name> [--template <name>...] [--from <amiId|name>]",
               'Create a box, optionally from templates or a snapshot',
             ],
-            ['devbox ls', 'List all boxes'],
-            ['devbox status <id-or-name>', 'Show details for a box'],
-            ['devbox rename <id-or-name> <new-name>', 'Rename a box'],
+            ['outpost ls', 'List all boxes'],
+            ['outpost status <id-or-name>', 'Show details for a box'],
+            ['outpost rename <id-or-name> <new-name>', 'Rename a box'],
             [
-              'devbox resize <id-or-name> · devbox upgrade <id-or-name>',
+              'outpost resize <id-or-name> · outpost upgrade <id-or-name>',
               'Resize instance type or root disk (box must be stopped)',
             ],
-            ['devbox stop <id-or-name>', 'Stop a running box'],
-            ['devbox start <id-or-name>', 'Start a stopped box'],
+            ['outpost stop <id-or-name>', 'Stop a running box'],
+            ['outpost start <id-or-name>', 'Start a stopped box'],
             [
-              'devbox restart <id-or-name> · devbox reboot <id-or-name>',
+              'outpost restart <id-or-name> · outpost reboot <id-or-name>',
               'Reboot a running box',
             ],
-            ['devbox delete <id-or-name>', 'Delete a box'],
+            ['outpost delete <id-or-name>', 'Delete a box'],
           ]}
         />
       </div>
@@ -77,22 +77,22 @@ export default function CommandsDoc() {
         <CmdTable
           rows={[
             [
-              'devbox ssh [-i key] <id-or-name> [-- <ssh-option>...]',
+              'outpost ssh [-i key] <id-or-name> [-- <ssh-option>...]',
               'Open an SSH session (use -- before native ssh flags)',
             ],
             [
-              'devbox cp [-i key] <source> <dest>',
+              'outpost cp [-i key] <source> <dest>',
               'Copy a file to or from a box',
             ],
             [
-              'devbox sync [-i key] [--delete] <source> <dest>',
+              'outpost sync [-i key] [--delete] <source> <dest>',
               'Incremental directory sync via rsync; only dest is modified',
             ],
             [
-              'devbox exec [-i key] [-s] [-t] <id-or-name> -- <command>',
+              'outpost exec [-i key] [-s] [-t] <id-or-name> -- <command>',
               'Run a one-off command on a running box',
             ],
-            ['devbox forward <id-or-name> <port>', 'Forward a port from a box'],
+            ['outpost forward <id-or-name> <port>', 'Forward a port from a box'],
           ]}
         />
       </div>
@@ -102,17 +102,17 @@ export default function CommandsDoc() {
         <p className="note">Save and restore box disk images.</p>
         <CmdTable
           rows={[
-            ['devbox snapshot [ls]', 'List all snapshots'],
+            ['outpost snapshot [ls]', 'List all snapshots'],
             [
-              'devbox snapshot ls <amiId-or-name>',
+              'outpost snapshot ls <amiId-or-name>',
               'Show details for a snapshot',
             ],
             [
-              'devbox snapshot create <id-or-name> <name>',
+              'outpost snapshot create <id-or-name> <name>',
               'Create a snapshot of a box',
             ],
             [
-              'devbox snapshot delete <amiId-or-name>',
+              'outpost snapshot delete <amiId-or-name>',
               'Delete a snapshot',
             ],
           ]}
@@ -124,18 +124,18 @@ export default function CommandsDoc() {
         <p className="note">Reusable box setups with preinstalled tools.</p>
         <CmdTable
           rows={[
-            ['devbox template [ls]', 'List available templates'],
+            ['outpost template [ls]', 'List available templates'],
             [
-              'devbox template new <name> [command]',
+              'outpost template new <name> [command]',
               'Create a template with optional startup command',
             ],
-            ['devbox template delete <name>', 'Delete a template'],
+            ['outpost template delete <name>', 'Delete a template'],
             [
-              'devbox template rename <name> <new-name>',
+              'outpost template rename <name> <new-name>',
               'Rename a template',
             ],
             [
-              'devbox template search <query>',
+              'outpost template search <query>',
               'Search templates by name',
             ],
           ]}
@@ -148,19 +148,19 @@ export default function CommandsDoc() {
         <CmdTable
           rows={[
             [
-              'devbox idle-stop set <id-or-name> <minutes>',
+              'outpost idle-stop set <id-or-name> <minutes>',
               'Stop the box after inactivity',
             ],
             [
-              'devbox idle-stop show <id-or-name>',
+              'outpost idle-stop show <id-or-name>',
               'Show idle-stop settings',
             ],
             [
-              'devbox idle-stop update <id-or-name> <minutes>',
+              'outpost idle-stop update <id-or-name> <minutes>',
               'Update idle-stop timeout',
             ],
             [
-              'devbox idle-stop delete <id-or-name>',
+              'outpost idle-stop delete <id-or-name>',
               'Remove idle-stop from a box',
             ],
           ]}
@@ -175,7 +175,7 @@ export default function CommandsDoc() {
         <CmdTable
           rows={[
             [
-              'devbox git-sync <id-or-name>',
+              'outpost git-sync <id-or-name>',
               'Toggle GitHub SSH agent forwarding (run again to undo)',
             ],
           ]}
@@ -187,26 +187,26 @@ export default function CommandsDoc() {
         <p className="note">List and manage AWS account cost budgets.</p>
         <CmdTable
           rows={[
-            ['devbox budget [ls]', 'List all budgets'],
-            ['devbox budget [ls] --refresh', 'Refresh budget list from AWS'],
+            ['outpost budget [ls]', 'List all budgets'],
+            ['outpost budget [ls] --refresh', 'Refresh budget list from AWS'],
             [
-              'devbox budget create <name> <limit> <email>',
+              'outpost budget create <name> <limit> <email>',
               'Create a monthly budget with spend alerts',
             ],
-            ['devbox budget update <name>', 'Update a budget'],
-            ['devbox budget delete <name>', 'Delete a budget'],
+            ['outpost budget update <name>', 'Update a budget'],
+            ['outpost budget delete <name>', 'Delete a budget'],
           ]}
         />
       </div>
 
       <div className="card">
         <h2>Uninstall</h2>
-        <p className="note">Remove devbox from your machine.</p>
+        <p className="note">Remove outpost from your machine.</p>
         <CmdTable
           rows={[
             [
-              'devbox uninstall',
-              'Remove the binary, ~/.devbox, ~/.devbox-backup, and shell PATH entries',
+              'outpost uninstall',
+              'Remove the binary, ~/.outpost, ~/.outpost-backup, and shell PATH entries',
             ],
           ]}
         />

@@ -4,7 +4,7 @@ const guides = [
   {
     to: '/how-tos/ssh',
     title: 'SSH',
-    description: 'connect to your devbox from your local machine',
+    description: 'connect to your outpost from your local machine',
   },
   {
     to: '/how-tos/transfer',
@@ -23,8 +23,8 @@ const guides = [
   // },
   {
     to: '/how-tos/vscode-ssh',
-    title: 'VS Code & SSH without the devbox CLI',
-    description: 'using regular ssh config, connect using VS Code, and differences between devbox ssh and regular ssh',
+    title: 'VS Code & SSH without the outpost CLI',
+    description: 'using regular ssh config, connect using VS Code, and differences between outpost ssh and regular ssh',
   },
   {
     to: '/how-tos/ai-sandbox',
@@ -37,7 +37,7 @@ export default function HowTosIndexPage() {
   return (
     <>
       <h1>How tos</h1>
-      <p className="tagline">Step-by-step guides for common devbox workflows.</p>
+      <p className="tagline">Step-by-step guides for common outpost workflows.</p>
 
       <div className="card">
         <h2>Guides</h2>

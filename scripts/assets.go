@@ -5,11 +5,11 @@ import _ "embed"
 //go:embed check.bash
 var CheckBash []byte
 
-//go:embed devbox-idle-stop.service
+//go:embed outpost-idle-stop.service
 var IdleStopService []byte
 
-//go:embed devbox-idle-stop.timer
+//go:embed outpost-idle-stop.timer
 var IdleStopTimer []byte
 
-//go:embed devbox-idle-stop-boot.service
+//go:embed outpost-idle-stop-boot.service
 var IdleStopBootService []byte

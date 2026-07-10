@@ -4,7 +4,7 @@ export default function AboutPage() {
     return (
       <>
         <div className="page-title">
-          <h1>devbox CLI</h1>
+          <h1>Outpost</h1>
           <a href="https://github.com/Tarun-Elango" className="byline">
             by Tarun-Elango
           </a>
@@ -15,7 +15,7 @@ export default function AboutPage() {
         </p>
 
         <div className="card card-purpose">
-          <h2>Why devbox?</h2>
+          <h2>Why outpost?</h2>
           <div className="purpose-diagram">
             <svg
               width="672"
@@ -24,9 +24,9 @@ export default function AboutPage() {
               xmlns="http://www.w3.org/2000/svg"
               role="img"
             >
-              <title>devbox-cli architecture</title>
+              <title>outpost architecture</title>
               <desc>
-                Your laptop runs the devbox CLI; config and credentials stay local.
+                Your laptop runs the outpost CLI; config and credentials stay local.
                 Commands like setup, create, start, ssh, sync, forward, stop, and
                 delete manage computers running in the cloud.
               </desc>
@@ -118,7 +118,7 @@ export default function AboutPage() {
                 fontWeight="bold"
                 fill="#33FF33"
               >
-                devbox
+                outpost
               </text>
               <text
                 x="150"
@@ -329,9 +329,9 @@ export default function AboutPage() {
             </li>
           </ul>
           <p className="note">
-            devbox cli runs on your machine and uses your AWS account — no shared cloud,
-            no hosted credentials. Run <code>devbox setup</code> to save keys locally in{' '}
-            <code>~/.devbox/</code>.
+            outpost cli runs on your machine and uses your AWS account — no shared cloud,
+            no hosted credentials. Run <code>outpost setup</code> to save keys locally in{' '}
+            <code>~/.outpost/</code>.
           </p>
         </div>
 
@@ -339,16 +339,16 @@ export default function AboutPage() {
           <h2>Quick install</h2>
           <p className="note">
             Every push to <code>main</code> publishes binaries to the{' '}
-            <a href="https://github.com/Tarun-Elango/devbox-cli/releases/tag/latest">
+            <a href="https://github.com/Tarun-Elango/outpost/releases/tag/latest">
               latest release
             </a>, run the following command:
 
           </p>
           <pre>
-            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | bash`}</code>
+            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | bash`}</code>
           </pre>
           <p className="note">
-            Verify with the command <code>devbox ls</code>.
+            Verify with the command <code>outpost ls</code>.
           </p>
           <p className="note">
             If that worked, you&apos;re done — skip the sections below. They&apos;re
@@ -361,7 +361,7 @@ export default function AboutPage() {
             on <code>curl</code>):
           </h3>
           <pre>
-            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | RELEASE_TAG=v0.7.0 bash`}</code>
+            <code>{`curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | RELEASE_TAG=v0.7.0 bash`}</code>
           </pre>
 
           <h3>
@@ -369,7 +369,7 @@ export default function AboutPage() {
             <code>sudo</code>, no shell config changes):
           </h3>
           <pre>
-            <code>{`INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/devbox-cli/latest/scripts/install.sh | sudo bash`}</code>
+            <code>{`INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/Tarun-Elango/outpost/latest/scripts/install.sh | sudo bash`}</code>
           </pre>
 
          
@@ -379,17 +379,17 @@ export default function AboutPage() {
           <h2>Common commands</h2>
           <ul>
             <li>
-              <code>devbox setup</code> — configure AWS credentials{' '}
+              <code>outpost setup</code> — configure AWS credentials{' '}
               <Link to="/docs/setup">(see how to get AWS credentials)</Link>
             </li>
             <li>
-              <code>devbox create {'<name>'}</code> — create a box
+              <code>outpost create {'<name>'}</code> — create a box
             </li>
             <li>
-              <code>devbox ls</code> — list boxes
+              <code>outpost ls</code> — list boxes
             </li>
             <li>
-              <code>devbox ssh {'<name>'}</code> — connect via SSH
+              <code>outpost ssh {'<name>'}</code> — connect via SSH
             </li>
           </ul>
           <p className="note">
@@ -401,13 +401,13 @@ export default function AboutPage() {
           <h2>Links</h2>
           <ul>
             <li>
-              <a href="https://github.com/Tarun-Elango/devbox-cli">GitHub repository</a>
+              <a href="https://github.com/Tarun-Elango/outpost">GitHub repository</a>
             </li>
             <li>
-              <a href="https://github.com/Tarun-Elango/devbox-cli/releases">Releases</a>
+              <a href="https://github.com/Tarun-Elango/outpost/releases">Releases</a>
             </li>
             <li>
-              <a href="https://github.com/Tarun-Elango/devbox-cli/blob/main/readme.md">
+              <a href="https://github.com/Tarun-Elango/outpost/blob/main/readme.md">
                 Full README
               </a>
             </li>

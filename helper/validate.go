@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"devbox-cli/service"
+	"outpost-cli/service"
 )
 
 // helper functions for validating ids and flags

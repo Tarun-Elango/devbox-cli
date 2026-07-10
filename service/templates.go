@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	localDb "devbox-cli/service/localDb"
+	localDb "outpost-cli/service/localDb"
 )
 
 // Template mirrors Lighthouse TemplateDto (id, name, description, startupScript).

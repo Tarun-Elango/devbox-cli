@@ -10,7 +10,7 @@ const topics = [
     to: '/docs/setup',
     title: 'Setup',
     description:
-      'configure AWS credentials with devbox setup, IAM setup on AWS console',
+      'configure AWS credentials with outpost setup, IAM setup on AWS console',
   },
   {
     to: '/docs/boxes',
@@ -44,7 +44,7 @@ export default function DocsIndexPage() {
     <>
       <h1>Documentation</h1>
       <p className="tagline">
-        Guides for installing, configuring, and using devbox.
+        Guides for installing, configuring, and using outpost.
       </p>
 
       <div className="card">

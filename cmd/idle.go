@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"strings"
 
-	"devbox-cli/helper"
-	"devbox-cli/scripts"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/scripts"
+	"outpost-cli/service"
 )
 
-const idleStopUsage = "usage: devbox idle-stop [set <id|name> <minutes> | show <id|name> | update <id|name> <minutes> | delete <id|name>]"
+const idleStopUsage = "usage: outpost idle-stop [set <id|name> <minutes> | show <id|name> | update <id|name> <minutes> | delete <id|name>]"
 
 // idleStopExit is os.Exit by default; tests replace it to capture exit codes.
 var idleStopExit = os.Exit
@@ -32,28 +32,28 @@ func IdleRouter(args []string) {
 	switch sub {
 	case "set":
 		if len(rest) != 2 {
-			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop set <id|name> <minutes>")
+			fmt.Fprintln(os.Stderr, "usage: outpost idle-stop set <id|name> <minutes>")
 			idleStopExit(1)
 			return
 		}
 		idleSet(rest[0], rest[1])
 	case "show":
 		if len(rest) != 1 {
-			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop show <id|name>")
+			fmt.Fprintln(os.Stderr, "usage: outpost idle-stop show <id|name>")
 			idleStopExit(1)
 			return
 		}
 		showIdleStop(rest[0])
 	case "update":
 		if len(rest) != 2 {
-			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop update <id|name> <minutes>")
+			fmt.Fprintln(os.Stderr, "usage: outpost idle-stop update <id|name> <minutes>")
 			idleStopExit(1)
 			return
 		}
 		updateIdleStop(rest[0], rest[1])
 	case "delete":
 		if len(rest) != 1 {
-			fmt.Fprintln(os.Stderr, "usage: devbox idle-stop delete <id|name>")
+			fmt.Fprintln(os.Stderr, "usage: outpost idle-stop delete <id|name>")
 			idleStopExit(1)
 			return
 		}
@@ -114,13 +114,13 @@ func idleSet(ref, minutesStr string) {
 	}
 
 	identity := defaultKeyPath()
-	ready, err := checkDevboxReady(sshBin, identity, "ec2-user", host, "22")
+	ready, err := checkoutpostReady(sshBin, identity, "ec2-user", host, "22")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: readiness probe failed: %v\n", err)
 		os.Exit(1)
 	}
 	if !ready {
-		fmt.Fprintln(os.Stderr, "error: devbox is not ready yet — try again in a minute")
+		fmt.Fprintln(os.Stderr, "error: outpost is not ready yet — try again in a minute")
 		os.Exit(1)
 	}
 
@@ -142,28 +142,28 @@ func idleSet(ref, minutesStr string) {
 // delete for a specific instance
 /*
 # 1. Stop and disable timer + boot service
-sudo systemctl disable --now devbox-idle-stop.timer
-sudo systemctl disable --now devbox-idle-stop-boot.service
+sudo systemctl disable --now outpost-idle-stop.timer
+sudo systemctl disable --now outpost-idle-stop-boot.service
 
 # 2. Reload systemd
 sudo systemctl daemon-reload
 
 # 3. Remove systemd units (3 files now)
-sudo rm -f /etc/systemd/system/devbox-idle-stop.timer
-sudo rm -f /etc/systemd/system/devbox-idle-stop.service
-sudo rm -f /etc/systemd/system/devbox-idle-stop-boot.service
+sudo rm -f /etc/systemd/system/outpost-idle-stop.timer
+sudo rm -f /etc/systemd/system/outpost-idle-stop.service
+sudo rm -f /etc/systemd/system/outpost-idle-stop-boot.service
 
 # 4. Remove check script
-sudo rm -f /usr/local/bin/devbox-idle-stop
+sudo rm -f /usr/local/bin/outpost-idle-stop
 
 # 5. Remove idle-stop config/state
-sudo rm -f /var/lib/devbox/idle-stop-minutes
-sudo rm -f /var/lib/devbox/last-activity
+sudo rm -f /var/lib/outpost/idle-stop-minutes
+sudo rm -f /var/lib/outpost/last-activity
 
 # 6. Reload + clear failed state
 sudo systemctl daemon-reload
-sudo systemctl reset-failed devbox-idle-stop.service 2>/dev/null || true
-sudo systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
+sudo systemctl reset-failed outpost-idle-stop.service 2>/dev/null || true
+sudo systemctl reset-failed outpost-idle-stop-boot.service 2>/dev/null || true
 */
 func deleteIdleStop(ref string) {
 	rt := helper.MustOpenRuntime()
@@ -207,13 +207,13 @@ func deleteIdleStop(ref string) {
 	}
 
 	identity := defaultKeyPath()
-	ready, err := checkDevboxReady(sshBin, identity, "ec2-user", host, "22")
+	ready, err := checkoutpostReady(sshBin, identity, "ec2-user", host, "22")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: readiness probe failed: %v\n", err)
 		os.Exit(1)
 	}
 	if !ready {
-		fmt.Fprintln(os.Stderr, "error: devbox is not ready yet — try again in a minute")
+		fmt.Fprintln(os.Stderr, "error: outpost is not ready yet — try again in a minute")
 		os.Exit(1)
 	}
 
@@ -281,7 +281,7 @@ func updateIdleStop(ref, minutesStr string) {
 		os.Exit(1)
 	}
 	if !inst.IdleStopMinutes.Valid {
-		fmt.Fprintln(os.Stderr, "error: idle-stop is not set — use 'devbox idle-stop set <id|name> <minutes>' first")
+		fmt.Fprintln(os.Stderr, "error: idle-stop is not set — use 'outpost idle-stop set <id|name> <minutes>' first")
 		os.Exit(1)
 	}
 
@@ -307,13 +307,13 @@ func updateIdleStop(ref, minutesStr string) {
 	}
 
 	identity := defaultKeyPath()
-	ready, err := checkDevboxReady(sshBin, identity, "ec2-user", host, "22")
+	ready, err := checkoutpostReady(sshBin, identity, "ec2-user", host, "22")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: readiness probe failed: %v\n", err)
 		os.Exit(1)
 	}
 	if !ready {
-		fmt.Fprintln(os.Stderr, "error: devbox is not ready yet — try again in a minute")
+		fmt.Fprintln(os.Stderr, "error: outpost is not ready yet — try again in a minute")
 		os.Exit(1)
 	}
 
@@ -333,14 +333,14 @@ func updateIdleStop(ref, minutesStr string) {
 
 // helper: installIdleStop installs the idle stop service on the host ( needs ssh)
 /*
-mkdir -p /var/lib/devbox
-Writes minutesInt to /var/lib/devbox/idle-stop-minutes
-Writes current timestamp to /var/lib/devbox/last-activity
-Installs check.bash → /usr/local/bin/devbox-idle-stop (chmod +x)
+mkdir -p /var/lib/outpost
+Writes minutesInt to /var/lib/outpost/idle-stop-minutes
+Writes current timestamp to /var/lib/outpost/last-activity
+Installs check.bash → /usr/local/bin/outpost-idle-stop (chmod +x)
 Installs the 3 systemd unit files under /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now devbox-idle-stop.timer
-systemctl enable + systemctl start devbox-idle-stop-boot.service
+systemctl enable --now outpost-idle-stop.timer
+systemctl enable + systemctl start outpost-idle-stop-boot.service
 */
 func installIdleStop(sshBin, identity, user, host string, minutes int) error {
 
@@ -351,18 +351,18 @@ func installIdleStop(sshBin, identity, user, host string, minutes int) error {
 	bootB64 := base64.StdEncoding.EncodeToString(scripts.IdleStopBootService)
 
 	script := fmt.Sprintf(`set -euo pipefail
-mkdir -p /var/lib/devbox
-echo %d > /var/lib/devbox/idle-stop-minutes
-date +%%s > /var/lib/devbox/last-activity
-echo %q | base64 -d > /usr/local/bin/devbox-idle-stop
-chmod +x /usr/local/bin/devbox-idle-stop
-echo %q | base64 -d > /etc/systemd/system/devbox-idle-stop.service
-echo %q | base64 -d > /etc/systemd/system/devbox-idle-stop.timer
-echo %q | base64 -d > /etc/systemd/system/devbox-idle-stop-boot.service
+mkdir -p /var/lib/outpost
+echo %d > /var/lib/outpost/idle-stop-minutes
+date +%%s > /var/lib/outpost/last-activity
+echo %q | base64 -d > /usr/local/bin/outpost-idle-stop
+chmod +x /usr/local/bin/outpost-idle-stop
+echo %q | base64 -d > /etc/systemd/system/outpost-idle-stop.service
+echo %q | base64 -d > /etc/systemd/system/outpost-idle-stop.timer
+echo %q | base64 -d > /etc/systemd/system/outpost-idle-stop-boot.service
 systemctl daemon-reload
-systemctl enable --now devbox-idle-stop.timer
-systemctl enable devbox-idle-stop-boot.service
-systemctl start devbox-idle-stop-boot.service
+systemctl enable --now outpost-idle-stop.timer
+systemctl enable outpost-idle-stop-boot.service
+systemctl start outpost-idle-stop-boot.service
 `, minutes, checkB64, serviceB64, timerB64, bootB64)
 
 	target := fmt.Sprintf("%s@%s", user, host)
@@ -387,18 +387,18 @@ systemctl start devbox-idle-stop-boot.service
 // helper: uninstallIdleStop uninstalls the idle stop service on the host ( needs ssh)
 func uninstallIdleStop(sshBin, identity, user, host string) error {
 	script := `set -euo pipefail
-systemctl disable --now devbox-idle-stop.timer 2>/dev/null || true
-systemctl disable --now devbox-idle-stop-boot.service 2>/dev/null || true
+systemctl disable --now outpost-idle-stop.timer 2>/dev/null || true
+systemctl disable --now outpost-idle-stop-boot.service 2>/dev/null || true
 systemctl daemon-reload
-rm -f /etc/systemd/system/devbox-idle-stop.timer
-rm -f /etc/systemd/system/devbox-idle-stop.service
-rm -f /etc/systemd/system/devbox-idle-stop-boot.service
-rm -f /usr/local/bin/devbox-idle-stop
-rm -f /var/lib/devbox/idle-stop-minutes
-rm -f /var/lib/devbox/last-activity
+rm -f /etc/systemd/system/outpost-idle-stop.timer
+rm -f /etc/systemd/system/outpost-idle-stop.service
+rm -f /etc/systemd/system/outpost-idle-stop-boot.service
+rm -f /usr/local/bin/outpost-idle-stop
+rm -f /var/lib/outpost/idle-stop-minutes
+rm -f /var/lib/outpost/last-activity
 systemctl daemon-reload
-systemctl reset-failed devbox-idle-stop.service 2>/dev/null || true
-systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
+systemctl reset-failed outpost-idle-stop.service 2>/dev/null || true
+systemctl reset-failed outpost-idle-stop-boot.service 2>/dev/null || true
 `
 
 	target := fmt.Sprintf("%s@%s", user, host)
@@ -423,8 +423,8 @@ systemctl reset-failed devbox-idle-stop-boot.service 2>/dev/null || true
 // helper: updateIdleStopOnHost updates the idle stop service on the host ( needs ssh)
 func updateIdleStopOnHost(sshBin, identity, user, host string, minutes int) error {
 	script := fmt.Sprintf(`set -euo pipefail
-echo %d > /var/lib/devbox/idle-stop-minutes
-date +%%s > /var/lib/devbox/last-activity
+echo %d > /var/lib/outpost/idle-stop-minutes
+date +%%s > /var/lib/outpost/last-activity
 `, minutes)
 
 	target := fmt.Sprintf("%s@%s", user, host)

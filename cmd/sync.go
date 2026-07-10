@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"devbox-cli/helper"
+	"outpost-cli/helper"
 )
 
 func syncRemoteShell(identity, portArg string) string {
@@ -40,15 +40,15 @@ func buildRsyncArgs(identity string, transfer cpTransfer, user, host, portArg st
 	return append(argv, remote, transfer.Local)
 }
 
-// Sync synchronizes files or directories between the local machine and a devbox using rsync.
+// Sync synchronizes files or directories between the local machine and a outpost using rsync.
 func Sync(args []string) {
 
 	fs := flag.NewFlagSet("sync", flag.ExitOnError)
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox sync [-i key] [--delete] <source> <dest>")
+		fmt.Fprintln(os.Stderr, "usage: outpost sync [-i key] [--delete] <source> <dest>")
 		fmt.Fprintln(os.Stderr, "examples:")
-		fmt.Fprintln(os.Stderr, "  devbox sync ./project mybox:/home/ec2-user/project")
-		fmt.Fprintln(os.Stderr, "  devbox sync mybox:/home/ec2-user/project ./project")
+		fmt.Fprintln(os.Stderr, "  outpost sync ./project mybox:/home/ec2-user/project")
+		fmt.Fprintln(os.Stderr, "  outpost sync mybox:/home/ec2-user/project ./project")
 	}
 
 	parsed, err := helper.ParseSyncCommandArgs(args, cpDefaultKeyPath())
@@ -94,7 +94,7 @@ func Sync(args []string) {
 		os.Exit(1)
 	}
 
-	if err := waitForDevboxReady(sshBin, parsed.Identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
+	if err := waitForoutpostReady(sshBin, parsed.Identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "sync: %v\n", err)
 		os.Exit(1)
 	}

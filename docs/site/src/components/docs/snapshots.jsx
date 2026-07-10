@@ -21,46 +21,46 @@ export default function SnapshotsDoc() {
         <dl className="cmd-variant">
           <dt>List all snapshots</dt>
           <dd>
-            <code>devbox snapshot [ls]</code>
+            <code>outpost snapshot [ls]</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox snapshot ls</code>
+            Example: <code>outpost snapshot ls</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Create a snapshot</dt>
           <dd>
-            <code>devbox snapshot create {'<id-or-name>'} {'<name>'}</code>
+            <code>outpost snapshot create {'<id-or-name>'} {'<name>'}</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox snapshot create mybox pre-upgrade</code>
+            Example: <code>outpost snapshot create mybox pre-upgrade</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Show snapshot details</dt>
           <dd>
-            <code>devbox snapshot ls {'<amiId-or-name>'}</code>
+            <code>outpost snapshot ls {'<amiId-or-name>'}</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox snapshot ls pre-upgrade</code>
+            Example: <code>outpost snapshot ls pre-upgrade</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Delete a snapshot</dt>
           <dd>
-            <code>devbox snapshot delete {'<amiId-or-name>'}</code>
+            <code>outpost snapshot delete {'<amiId-or-name>'}</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox snapshot delete pre-upgrade</code>
+            Example: <code>outpost snapshot delete pre-upgrade</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Restore when creating a box</dt>
           <dd>
-            <code>devbox create {'<name>'} --from {'<amiId|name>'}</code>
+            <code>outpost create {'<name>'} --from {'<amiId|name>'}</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox create mybox --from pre-upgrade</code>
+            Example: <code>outpost create mybox --from pre-upgrade</code>
           </dd>
         </dl>
       </div>
@@ -75,58 +75,58 @@ export default function SnapshotsDoc() {
         <dl className="cmd-variant">
           <dt>List available templates</dt>
           <dd>
-            <code>devbox template [ls]</code>
+            <code>outpost template [ls]</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox template ls</code>
+            Example: <code>outpost template ls</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Create a template</dt>
           <dd>
-            <code>devbox template new {'<templateName>'} [command]</code>
+            <code>outpost template new {'<templateName>'} [command]</code>
           </dd>
           <dd className="example">
             Example:{' '}
-            <code>devbox template new my-stack &quot;npm install -g pnpm&quot;</code>
+            <code>outpost template new my-stack &quot;npm install -g pnpm&quot;</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Search templates by name</dt>
           <dd>
-            <code>devbox template search {'<query>'}</code>
+            <code>outpost template search {'<query>'}</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox template search node</code>
+            Example: <code>outpost template search node</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Rename a template</dt>
           <dd>
             <code>
-              devbox template rename {'<templateName>'} {'<new-templateName>'}
+              outpost template rename {'<templateName>'} {'<new-templateName>'}
             </code>
           </dd>
           <dd className="example">
-            Example: <code>devbox template rename my-stack my-stack-v2</code>
+            Example: <code>outpost template rename my-stack my-stack-v2</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Delete a template</dt>
           <dd>
-            <code>devbox template delete {'<templateName>'}</code>
+            <code>outpost template delete {'<templateName>'}</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox template delete my-stack</code>
+            Example: <code>outpost template delete my-stack</code>
           </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Use templates when creating a box</dt>
           <dd>
-            <code>devbox create {'<name>'} [--template {'<templateName>'}...]</code>
+            <code>outpost create {'<name>'} [--template {'<templateName>'}...]</code>
           </dd>
           <dd className="example">
-            Example: <code>devbox create mybox --template node go</code>
+            Example: <code>outpost create mybox --template node go</code>
           </dd>
         </dl>
       </div>

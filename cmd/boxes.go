@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"devbox-cli/service"
+	"outpost-cli/service"
 )
 
 // mostly just util and helper functions for the boxes command
@@ -59,7 +59,7 @@ func readPublicKey() (string, error) {
 	}
 	var answer string
 	_, _ = fmt.Scanln(&answer)
-	if answer != "y" && answer != "Y" {
+	if answer != "y" && answer != "Y" { // if not y, return error
 		if !pubExists {
 			return "", fmt.Errorf("no public key at %s", pub)
 		}
@@ -139,7 +139,7 @@ func ensureEd25519Key() error {
 	return nil
 }
 
-// Box represents a devbox instance as returned by the API.
+// Box represents a outpost instance as returned by the API.
 type Box struct {
 	ID           string `json:"instanceId"`
 	Name         string `json:"name"`
@@ -178,5 +178,5 @@ func addSSHHostOrWarn(name string, inst *service.Instance) {
 		fmt.Fprintf(os.Stderr, "warning: box created but failed to update SSH config on this machine (~/.ssh/config): %v\n", err)
 		return
 	}
-	fmt.Printf("  SSH config: devbox-%s added to ~/.ssh/config\n", name)
+	fmt.Printf("  SSH config: outpost-%s added to ~/.ssh/config\n", name)
 }

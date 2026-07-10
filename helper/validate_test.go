@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"devbox-cli/service"
+	"outpost-cli/service"
 )
 
 // helper function to create a test runtime

@@ -12,16 +12,16 @@ import (
 	"syscall"
 	"time"
 
-	"devbox-cli/helper"
-	"devbox-cli/service"
+	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 const (
-	devboxReadyPath         = "/var/lib/devbox/ready"
-	devboxReadyMessage      = "the user data script is completed"
-	devboxReadyPollInterval = 5 * time.Second
-	defaultSSHUser          = "ec2-user"
-	defaultSSHPort          = "22"
+	outpostReadyPath         = "/var/lib/outpost/ready"
+	outpostReadyMessage      = "the user data script is completed"
+	outpostReadyPollInterval = 5 * time.Second
+	defaultSSHUser           = "ec2-user"
+	defaultSSHPort           = "22"
 )
 
 // go's way to run shell commands, code needs to call
@@ -84,12 +84,12 @@ func buildExecRemoteCommand(remoteCommand []string, throughShell bool) []string 
 	return []string{strings.Join(quoted, " ")}
 }
 
-// checkDevboxReady runs one SSH probe for the user-data ready marker.
+// checkoutpostReady runs one SSH probe for the user-data ready marker.
 // Returns (true, nil) when ready, (false, nil) when SSH works but provisioning
 // is incomplete, and (false, err) when SSH is not reachable yet.
-func checkDevboxReady(sshBin, identity, user, host, portArg string) (bool, error) {
+func checkoutpostReady(sshBin, identity, user, host, portArg string) (bool, error) {
 	target := fmt.Sprintf("%s@%s", user, host)
-	probe := fmt.Sprintf(`test "$(cat %s 2>/dev/null)" = %q`, devboxReadyPath, devboxReadyMessage)
+	probe := fmt.Sprintf(`test "$(cat %s 2>/dev/null)" = %q`, outpostReadyPath, outpostReadyMessage)
 	argv := []string{sshBin,
 		"-p", portArg,
 		"-o", "ConnectTimeout=5",
@@ -115,14 +115,14 @@ func checkDevboxReady(sshBin, identity, user, host, portArg string) (bool, error
 	return false, err
 }
 
-// waitForDevboxReady polls until the user-data ready marker is present or the user cancels.
-func waitForDevboxReady(sshBin, identity, user, host, portArg string) error {
+// waitForoutpostReady polls until the user-data ready marker is present or the user cancels.
+func waitForoutpostReady(sshBin, identity, user, host, portArg string) error {
 	sigCh := make(chan os.Signal, 1)   // channel to receive signals
 	signal.Notify(sigCh, os.Interrupt) // notify when interrupt signal is received
 	defer signal.Stop(sigCh)           // stop listening for signals
 
 	for {
-		ready, err := checkDevboxReady(sshBin, identity, user, host, portArg)
+		ready, err := checkoutpostReady(sshBin, identity, user, host, portArg)
 		if ready {
 			return nil
 		}
@@ -136,7 +136,7 @@ func waitForDevboxReady(sshBin, identity, user, host, portArg string) error {
 		fmt.Fprintf(os.Stderr, "ssh: %s\n", msg)
 
 		select {
-		case <-time.After(devboxReadyPollInterval):
+		case <-time.After(outpostReadyPollInterval):
 		case <-sigCh: // if interrupt signal is received, cancel the operation
 			fmt.Fprintln(os.Stderr)
 			return fmt.Errorf("cancelled")
@@ -144,14 +144,14 @@ func waitForDevboxReady(sshBin, identity, user, host, portArg string) error {
 	}
 }
 
-// SSH checks EC2 health and the devbox ready marker, then execs ssh.
+// SSH checks EC2 health and the outpost ready marker, then execs ssh.
 // Arguments after "--" are forwarded as native ssh options (e.g. -v, -A,
-// -L 8080:localhost:8080) rather than as a remote command; use "devbox exec"
+// -L 8080:localhost:8080) rather than as a remote command; use "outpost exec"
 // to run a one-off remote command instead.
 func SSH(args []string) {
 
 	usage := func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox ssh [-i key] <id|name> [-- <ssh-option>...]")
+		fmt.Fprintln(os.Stderr, "usage: outpost ssh [-i key] <id|name> [-- <ssh-option>...]")
 	}
 
 	parsed, err := helper.ParseSSHCommandArgs(args, defaultKeyPath())
@@ -201,7 +201,7 @@ func SSH(args []string) {
 
 	sshTarget := fmt.Sprintf("%s@%s", defaultSSHUser, b.PublicIP)
 
-	if err := waitForDevboxReady(sshBin, parsed.Identity, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
+	if err := waitForoutpostReady(sshBin, parsed.Identity, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 		os.Exit(1)
 	}
@@ -226,7 +226,7 @@ func Exec(args []string) {
 	throughShell := fs.Bool("s", false, "run as a shell snippet via sh -lc (pipes, &&, cd); joins arguments and does not preserve per-arg boundaries (see buildExecRemoteCommand)")
 	allocateTTY := fs.Bool("t", false, "allocate a pseudo-TTY")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: devbox exec [-i identity] [-s] [-t] <id|name> -- <command>")
+		fmt.Fprintln(os.Stderr, "usage: outpost exec [-i identity] [-s] [-t] <id|name> -- <command>")
 		fs.PrintDefaults()
 	}
 
@@ -283,7 +283,7 @@ func Exec(args []string) {
 		os.Exit(1)
 	}
 
-	if err := waitForDevboxReady(sshBin, identityPath, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
+	if err := waitForoutpostReady(sshBin, identityPath, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "exec: %v\n", err)
 		os.Exit(1)
 	}
@@ -318,7 +318,7 @@ flowchart TD
     A[Parse flags + box id] --> B[GetInstance + map to Box]
     B --> C{IP + running?}
     C -->|no| X[exit]
-    C -->|yes| D[waitForDevboxReady probe]
+    C -->|yes| D[waitForoutpostReady probe]
     D --> E[syscall.Exec ssh]
 
 */
