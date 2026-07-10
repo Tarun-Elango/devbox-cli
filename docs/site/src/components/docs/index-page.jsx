@@ -33,6 +33,12 @@ const topics = [
     description: 'list, create, update, and delete AWS cost budgets',
   },
   {
+    to: '/docs/import',
+    title: 'Import',
+    description:
+      'discover and sync EC2 instances and self-owned AMIs from your AWS account into the local database',
+  },
+  {
     to: '/docs/commands',
     title: 'See all commands',
     description: 'full CLI command reference',

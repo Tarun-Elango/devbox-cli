@@ -9,7 +9,7 @@ A **box** is a personal dev machine on AWS — an EC2 instance running Amazon Li
 ## Why was this created?
 The idea of keeping your dev environment away from your machine, keeps the blast radius small when installing any new packages or dependencies. Having a seperate environment for AI agents to do their thing, without having to worry about our computer. All while staying in the terminal, and keeping credentials secure locally.
 
-The tool has since been extended with commands for box management, snapshots (save a copy of your box so you can restore it later), templates (spin up a box with pre-installed software), ssh, sync, idle-stop to save on costs, git-sync to use your local git credentials on the box, budget tracking, and more.
+The tool has since been extended with commands for box management, snapshots (save a copy of your box so you can restore it later), templates (spin up a box with pre-installed software), ssh, sync, idle-stop to save on costs, git-sync to use your local git credentials on the box, budget tracking, importing existing instances and more.
 
 see the docs for more details: https://outpost.tarunelango.com
 
@@ -47,6 +47,7 @@ Run `outpost help` to print usage, or see the table below.
 | `setup` | Configure/change AWS credentials and region (stored in `~/.outpost/config.json`) |
 | `clear-creds` | Clear saved AWS credentials from `~/.outpost/config.json` |
 | `health` | Check config, AWS credentials, region, and database |
+| `import` | Sync EC2 instances and self-owned AMIs from your AWS account (configured region) into the local DB; prompts for each untracked resource — answer `y` to import or press Enter to skip. For boxes, may ask for an existing `.pem` to authorize outpost SSH |
 
 ### Boxes
 

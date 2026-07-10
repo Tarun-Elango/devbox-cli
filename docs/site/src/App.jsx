@@ -19,6 +19,7 @@ import BoxesDoc from './components/docs/boxes'
 import ConnectDoc from './components/docs/connect'
 import SnapshotsDoc from './components/docs/snapshots'
 import BudgetsDoc from './components/docs/budgets'
+import ImportDoc from './components/docs/import'
 import CommandsDoc from './components/docs/commands'
 import PlanetDecoration from './components/planet-decoration'
 
@@ -60,6 +61,7 @@ function App() {
               <Route path="connect" element={<ConnectDoc />} />
               <Route path="snapshots" element={<SnapshotsDoc />} />
               <Route path="budgets" element={<BudgetsDoc />} />
+              <Route path="import" element={<ImportDoc />} />
               <Route path="commands" element={<CommandsDoc />} />
             </Route>
           </Routes>

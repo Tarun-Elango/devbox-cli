@@ -79,6 +79,10 @@ Commands:
   setup               Configure AWS credentials and region (stored in ~/.outpost/config.json)
   clear-creds         Clear saved AWS credentials from ~/.outpost/config.json
   health              Check config, AWS credentials, region, and database
+  import              Sync EC2 instances and snapshots from your AWS account
+                      (configured region) into the local DB; prompts yes/no
+                      for each resource not already tracked. For boxes, may
+                      ask for an existing .pem to authorize outpost SSH
 
   create <name> [--template <templateName>...] [--from <amiId|name>]
                       Create a new box (optionally from one or more templates,
@@ -327,6 +331,8 @@ func main() {
 		cmd.ClearCreds(args)
 	case "health":
 		cmd.Health(args)
+	case "import":
+		cmd.Import(args)
 	case "budget":
 		cmd.Budget(args)
 	case "create":
