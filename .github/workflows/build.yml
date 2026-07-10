@@ -5,9 +5,13 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/build.yml'
       - 'cmd/**'
+      - 'go.mod'
+      - 'go.sum'
       - 'helper/**'
       - 'internal/**'
+      - 'main.go'
       - 'scripts/**'
       - 'service/**'
 
