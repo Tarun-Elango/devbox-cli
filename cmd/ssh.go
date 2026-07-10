@@ -193,10 +193,6 @@ func SSH(args []string) {
 		os.Exit(1)
 	}
 
-	if err := service.UpdateHost(b.Name, b.PublicIP); err != nil {
-		fmt.Fprintf(os.Stderr, "ssh: warning: failed to update SSH config: %v\n", err)
-	}
-
 	sshBin, err := exec.LookPath("ssh")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ssh: ssh binary not found in PATH")
@@ -208,6 +204,10 @@ func SSH(args []string) {
 	if err := waitForoutpostReady(sshBin, parsed.Identity, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 		os.Exit(1)
+	}
+
+	if err := service.UpdateHost(b.Name, b.PublicIP); err != nil {
+		fmt.Fprintf(os.Stderr, "ssh: warning: failed to update SSH config: %v\n", err)
 	}
 
 	fmt.Fprintf(os.Stderr, "Connecting to %s (box %s)...\n", sshTarget, targetLabel)
