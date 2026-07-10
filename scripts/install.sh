@@ -141,11 +141,6 @@ if [ "${EUID}" -eq 0 ] && [ -z "${SUDO_USER:-}" ]; then
   exit 0
 fi
 
-# Skip if install dir is already on PATH
-if echo ":${PATH}:" | grep -q ":${install_dir}:"; then
-  exit 0
-fi
-
 # checks if the install directory is already configured in the shell config
 # if so, skips the path setup
 path_configured_in_rc() {
