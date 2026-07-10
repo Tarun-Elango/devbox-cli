@@ -21,7 +21,7 @@ func WrapError(operation string, err error) error {
 	}
 	switch {
 	case IsAuthError(err):
-		return fmt.Errorf("%s: %w\nhint: invalid AWS credentials — run: devbox setup", operation, err)
+		return fmt.Errorf("%s: %w\nhint: invalid AWS credentials — run: outpost setup", operation, err)
 	case IsQuotaError(err):
 		return fmt.Errorf("%s: %w\nhint: AWS account limit reached — request a quota increase in the AWS console", operation, err)
 	case IsThrottlingError(err):
@@ -31,7 +31,7 @@ func WrapError(operation string, err error) error {
 	case IsServerError(err):
 		return fmt.Errorf("%s: %w\nhint: AWS service temporarily unavailable — retry in a moment", operation, err)
 	case IsRegionError(err):
-		return fmt.Errorf("%s: %w\nhint: resource not available in this region — check your region in: devbox setup", operation, err)
+		return fmt.Errorf("%s: %w\nhint: resource not available in this region — check your region in: outpost setup", operation, err)
 	case IsPermissionError(err):
 		return fmt.Errorf("%s: %w\nhint: credentials are valid but lack permission for this operation — check your IAM policy", operation, err)
 	default:
@@ -191,7 +191,7 @@ func ShortMessage(err error) string {
 	}
 	switch {
 	case IsAuthError(err):
-		return "invalid or expired credentials — run: devbox setup"
+		return "invalid or expired credentials — run: outpost setup"
 	case IsPermissionError(err):
 		return "credentials valid but lack permission — check IAM policy"
 	case IsThrottlingError(err):
@@ -203,7 +203,7 @@ func ShortMessage(err error) string {
 	case IsQuotaError(err):
 		return "AWS account limit reached"
 	case IsRegionError(err):
-		return "resource not available in this region — check: devbox setup"
+		return "resource not available in this region — check: outpost setup"
 	default:
 		for e := err; e != nil; e = errors.Unwrap(e) {
 			var apiErr smithy.APIError
