@@ -87,7 +87,7 @@ export default function SetupDoc() {
           </summary>
           <p className="note">
             This policy grants only the EC2 and STS permissions Outpost needs to manage boxes,
-            snapshots, imports, security groups, and <code>outpost health</code>. You must still
+            snapshots, imports, security groups, and health checks. You must still
             attach <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> for budget controls
             and <code>AmazonSSMReadOnlyAccess</code> to resolve latest AMI IDs.
           </p>
