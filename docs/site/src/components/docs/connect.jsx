@@ -107,8 +107,8 @@ export default function ConnectDoc() {
             <code>outpost cp [-i key] {'<source>'} {'<dest>'}</code>
           </dd>
           <dd className="example">
-            Example: <code>outpost cp ./main.go mybox:/home/ec2-user/app/</code> (upload),{' '}
-            <code>outpost cp mybox:/home/ec2-user/app/main.go ./</code> (download)
+            Example: <code>outpost cp ./main.go mybox:~/app/</code> (upload),{' '}
+            <code>outpost cp mybox:~/app/main.go ./</code> (download)
           </dd>
         </dl>
         <dl className="cmd-variant">
@@ -123,8 +123,8 @@ export default function ConnectDoc() {
             source; the source is never changed.
           </dd>
           <dd className="example">
-            Upload: <code>outpost sync ./src mybox:/home/ec2-user/app/</code> (updates the box).
-            Download: <code>outpost sync mybox:/home/ec2-user/app/ ./src</code> (updates your
+            Upload: <code>outpost sync ./src mybox:~/app/</code> (updates the box).
+            Download: <code>outpost sync mybox:~/app/ ./src</code> (updates your
             machine).
           </dd>
           <dd className="example">

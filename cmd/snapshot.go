@@ -19,6 +19,7 @@ type snapshotItem struct {
 	BoxAwsID string `json:"boxAwsId"`
 	Region   string `json:"region"`
 	Provider string `json:"provider"`
+	OSFamily string `json:"osFamily"`
 }
 
 // Snapshot dispatches snapshot sub-commands.
@@ -143,6 +144,7 @@ func snapshotsToItems(snaps []*service.Snapshot) []snapshotItem {
 			BoxAwsID: s.BoxAwsID,
 			Region:   s.Region,
 			Provider: s.Provider,
+			OSFamily: s.OSFamily,
 		}
 	}
 	return items
@@ -179,9 +181,13 @@ func snapshotsDelete(amiID string) {
 }
 
 func printSnapshotTable(items []snapshotItem) {
-	fmt.Printf("%-24s  %-20s  %-12s  %-14s  %-10s  %s\n", "AMI ID", "NAME", "STATE", "REGION", "PROVIDER", "BOX ID")
-	fmt.Println(strings.Repeat("-", 120))
+	fmt.Printf("%-24s  %-18s  %-12s  %-14s  %-14s  %-10s  %s\n", "AMI ID", "NAME", "STATE", "OS", "REGION", "PROVIDER", "BOX ID")
+	fmt.Println(strings.Repeat("-", 130))
 	for _, s := range items {
-		fmt.Printf("%-24s  %-20s  %-12s  %-14s  %-10s  %s\n", s.AmiID, s.Name, s.State, s.Region, s.Provider, s.BoxAwsID)
+		osLabel := s.OSFamily
+		if p, ok := service.OSProfileFor(s.OSFamily); ok {
+			osLabel = p.DisplayName
+		}
+		fmt.Printf("%-24s  %-18s  %-12s  %-14s  %-14s  %-10s  %s\n", s.AmiID, s.Name, s.State, osLabel, s.Region, s.Provider, s.BoxAwsID)
 	}
 }

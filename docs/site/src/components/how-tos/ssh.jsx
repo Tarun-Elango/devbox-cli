@@ -95,7 +95,8 @@ outpost ssh mybox -- -o SetEnv=TERM=xterm-256color`}</code>
           </li>
           <li>
             That key is embedded in the box&apos;s startup script and added to{' '}
-            <code>authorized_keys</code> for the <code>ec2-user</code> account.
+            <code>authorized_keys</code> for the box&apos;s Linux login account
+            (<code>ec2-user</code>, <code>ubuntu</code>, or <code>admin</code>).
           </li>
           <li>
             A <code>Host outpost-mybox</code> block is written to{' '}
@@ -115,7 +116,7 @@ outpost ssh mybox -- -o SetEnv=TERM=xterm-256color`}</code>
           </li>
           <li>
             It execs your system <code>ssh</code> with{' '}
-            <code>ec2-user@&lt;ip&gt;</code>, your private key, and any options
+            <code>&lt;user&gt;@&lt;ip&gt;</code>, your private key, and any options
             you passed after <code>--</code>.
           </li>
         </ol>

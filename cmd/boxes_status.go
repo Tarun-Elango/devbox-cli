@@ -32,6 +32,9 @@ func Status(args []string) {
 	fmt.Printf("ID:        %s\n", b.ID)
 	fmt.Printf("Name:      %s\n", b.Name)
 	fmt.Printf("Status:    %s\n", b.Status)
+	if b.OSFamily != "" {
+		fmt.Printf("OS:        %s\n", service.MustOSProfile(b.OSFamily).DisplayName)
+	}
 	fmt.Printf("Public IP:  %s\n", b.PublicIP)
 	fmt.Printf("Private IP: %s\n", b.PrivateIP)
 	fmt.Printf("Type:       %s\n", b.InstanceType)

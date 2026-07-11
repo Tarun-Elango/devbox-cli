@@ -28,6 +28,7 @@ func TestSnapshotsToItemsMapsFields(t *testing.T) {
 			BoxAwsID: "i-abc",
 			Region:   "us-east-1",
 			Provider: "aws",
+			OSFamily: "amazon-linux",
 		},
 		{
 			AmiID:    "ami-222",
@@ -36,6 +37,7 @@ func TestSnapshotsToItemsMapsFields(t *testing.T) {
 			BoxAwsID: "i-def",
 			Region:   "eu-west-1",
 			Provider: "aws",
+			OSFamily: "ubuntu",
 		},
 	}
 
@@ -45,8 +47,8 @@ func TestSnapshotsToItemsMapsFields(t *testing.T) {
 	}
 
 	want := []snapshotItem{
-		{AmiID: "ami-111", Name: "before-upgrade", State: "available", BoxAwsID: "i-abc", Region: "us-east-1", Provider: "aws"},
-		{AmiID: "ami-222", Name: "backup", State: "pending", BoxAwsID: "i-def", Region: "eu-west-1", Provider: "aws"},
+		{AmiID: "ami-111", Name: "before-upgrade", State: "available", BoxAwsID: "i-abc", Region: "us-east-1", Provider: "aws", OSFamily: "amazon-linux"},
+		{AmiID: "ami-222", Name: "backup", State: "pending", BoxAwsID: "i-def", Region: "eu-west-1", Provider: "aws", OSFamily: "ubuntu"},
 	}
 	for i := range want {
 		if got[i] != want[i] {

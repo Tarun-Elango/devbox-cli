@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	cpDefaultSSHUser = "ec2-user"
 	cpDefaultSSHPort = "22"
 )
 
@@ -171,8 +170,8 @@ func CP(args []string) {
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: outpost cp [-i key] <source> <dest>")
 		fmt.Fprintln(os.Stderr, "examples:")
-		fmt.Fprintln(os.Stderr, "  outpost cp ./main.go mybox:/home/ec2-user/app/")
-		fmt.Fprintln(os.Stderr, "  outpost cp mybox:/home/ec2-user/app/main.go ./")
+		fmt.Fprintln(os.Stderr, "  outpost cp ./main.go mybox:~/app/")
+		fmt.Fprintln(os.Stderr, "  outpost cp mybox:~/app/main.go ./")
 	}
 
 	parsed, err := helper.ParseCPCommandArgs(args, cpDefaultKeyPath())
@@ -219,13 +218,14 @@ func CP(args []string) {
 	}
 
 	// check if the box is ready
-	if err := waitForoutpostReady(sshBin, parsed.Identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
+	sshUser := service.SSHUserForOS(status.Instance.OSFamily)
+	if err := waitForoutpostReady(sshBin, parsed.Identity, sshUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "cp: %v\n", err)
 		os.Exit(1)
 	}
 
 	// build the scp command
-	argv := buildSCPArgs(parsed.Identity, transfer, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort)
+	argv := buildSCPArgs(parsed.Identity, transfer, sshUser, status.Instance.PublicIP, cpDefaultSSHPort)
 	cmd := exec.Command(scpBin, argv...) // run the scp command
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
