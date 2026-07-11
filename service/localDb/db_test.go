@@ -148,6 +148,9 @@ func TestMigrateSnapshotsRegionProviderBackfillsFromBox(t *testing.T) {
 	if err := db.migrateSnapshotsRegionProvider(); err != nil {
 		t.Fatalf("migrate snapshots region/provider: %v", err)
 	}
+	if err := db.migrateSnapshotsOSFamily(); err != nil {
+		t.Fatalf("migrate snapshots os_family: %v", err)
+	}
 
 	record, err := db.GetSnapshotByAmiIDAndUserID("ami-1234567890abcdef0", LocalUserID)
 	if err != nil {

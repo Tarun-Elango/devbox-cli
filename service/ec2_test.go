@@ -29,12 +29,12 @@ func TestCreateInstanceRejectsDuplicateNameBeforeAWS(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	if err := db.InsertInstance("box-1", "i-1234567890abcdef0", "alpha", LocalUserID, "running", DefaultInstanceType, "us-east-1", "aws"); err != nil {
+	if err := db.InsertInstance("box-1", "i-1234567890abcdef0", "alpha", LocalUserID, "running", DefaultInstanceType, "us-east-1", "aws", "amazon-linux"); err != nil {
 		t.Fatalf("insert existing instance: %v", err)
 	}
 
 	rt := &Runtime{ctx: context.Background(), db: db}
-	_, err = rt.CreateInstance("alpha", "", "", LocalUserID, DefaultInstanceType, DefaultVolumeSizeGB)
+	_, err = rt.CreateInstance("alpha", "", "", LocalUserID, DefaultInstanceType, DefaultOSFamily, DefaultVolumeSizeGB)
 	if err == nil {
 		t.Fatal("expected duplicate name error")
 	}

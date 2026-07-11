@@ -14,7 +14,7 @@ func TestUniqueImportName(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	if err := db.InsertInstance("box-1", "i-11111111111111111", "alpha", LocalUserID, "running", "t3.micro", "us-east-1", "aws"); err != nil {
+	if err := db.InsertInstance("box-1", "i-11111111111111111", "alpha", LocalUserID, "running", "t3.micro", "us-east-1", "aws", "amazon-linux"); err != nil {
 		t.Fatalf("insert: %v", err)
 	}
 

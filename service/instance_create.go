@@ -13,12 +13,12 @@ import (
 	"github.com/google/uuid"
 
 	awsclient "outpost-cli/service/aws"
+	localDb "outpost-cli/service/localDb"
 )
 
 // Create defaults — mirrors Lighthouse application.properties.
 const (
-	defaultAmiID           = "ami-096f34d377a72cea5" // amazon linux 2023 ami
-	defaultSecurityGroupID = ""                      // we dont have one, so we will default to creating in the code
+	defaultSecurityGroupID = "" // we dont have one, so we will default to creating in the code
 	defaultSubnetID        = ""
 
 	isolatedSecurityGroupName = "outpost-isolated"
@@ -29,11 +29,11 @@ const (
 
 // CreateInstance creates a new box locally.
 // Mirrors Lighthouse POST /v2/boxes: launchInstancev2(name, publicKey, snapshotAmiId, userId).
-func (r *Runtime) CreateInstance(name, publicKey, snapshotAmiID, userID, instanceType string, volumeSizeGB int) (*Instance, error) {
-	return r.createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, instanceType, volumeSizeGB, nil)
+func (r *Runtime) CreateInstance(name, publicKey, snapshotAmiID, userID, instanceType, osFamily string, volumeSizeGB int) (*Instance, error) {
+	return r.createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, instanceType, osFamily, volumeSizeGB, nil)
 }
 
-func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, instanceType string, volumeSizeGB int, startupScripts []string) (*Instance, error) {
+func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiID, userID, instanceType, osFamily string, volumeSizeGB int, startupScripts []string) (*Instance, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("box name is required")
@@ -69,8 +69,12 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 	}
 
 	launchRegion := appCfg.AwsRegion
-	effectiveAmiID := defaultAmiID
+	var effectiveAmiID string
 	var ec2Client *ec2.Client
+	resolvedOS := NormalizeOSFamily(osFamily)
+	if resolvedOS == "" {
+		resolvedOS = DefaultOSFamily
+	}
 
 	if fromSnapshot {
 		record, err := db.GetSnapshotByAmiIDAndUserID(snapshotAmiID, userID)
@@ -106,14 +110,26 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 		}
 
 		effectiveAmiID = snapshotAmiID
+		// Snapshot OS wins over the create-time picker.
+		if snapOS := localDb.StringValue(record.OSFamily); snapOS != "" {
+			resolvedOS = NormalizeOSFamily(snapOS)
+		}
 	} else {
+		if err := ValidateOSFamily(resolvedOS); err != nil {
+			return nil, err
+		}
 		ec2Client, err = r.EC2ForRegion(launchRegion)
+		if err != nil {
+			return nil, err
+		}
+		effectiveAmiID, err = r.ResolveAMIForOS(ctx, launchRegion, resolvedOS)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	userData, err := buildUserDataV2(publicKey, startupScripts)
+	profile := MustOSProfile(resolvedOS)
+	userData, err := buildUserDataV2(publicKey, profile.SSHUser, startupScripts)
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +201,7 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 		string(launched.InstanceType),
 		launchRegion,
 		provider,
+		resolvedOS,
 	); err != nil {
 		// if the instance cannot be added to the database, terminate it
 		_, termErr := ec2Client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{
@@ -202,6 +219,7 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 	dto := instanceFromAWS(launched)
 	dto.Region = launchRegion
 	dto.Provider = provider
+	dto.OSFamily = resolvedOS
 	return dto, nil
 }
 
@@ -286,13 +304,18 @@ func ensureIsolatedSecurityGroup(ctx context.Context, ec2Client *ec2.Client) (st
 }
 
 // buildUserDataV2 mirrors Ec2Service.buildUserDataV2 in Lighthouse.
-func buildUserDataV2(publicKey string, startupScripts []string) (string, error) {
+func buildUserDataV2(publicKey, sshUser string, startupScripts []string) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("#!/bin/bash\n")
 
+	sshUser = strings.TrimSpace(sshUser)
+	if sshUser == "" {
+		sshUser = SSHUserForOS(DefaultOSFamily)
+	}
+
 	if strings.TrimSpace(publicKey) != "" {
 		encodedKey := base64.StdEncoding.EncodeToString([]byte(publicKey))
-		sb.WriteString("USER=ec2-user\n")
+		fmt.Fprintf(&sb, "USER=%s\n", sshUser)
 		sb.WriteString("SSH_DIR=/home/$USER/.ssh\n")
 		sb.WriteString("mkdir -p \"$SSH_DIR\"\n")
 		fmt.Fprintf(&sb, "echo '%s' | base64 -d >> \"$SSH_DIR/authorized_keys\"\n", encodedKey)

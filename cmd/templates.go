@@ -112,7 +112,7 @@ func writeTemplateSearchOutput(w io.Writer, templates []*service.Template) error
 		if ref == "" {
 			ref = t.ID
 		}
-		if _, err := fmt.Fprintf(w, "%s\n  startup script:\n", ref); err != nil {
+		if _, err := fmt.Fprintf(w, "%s\n  os: %s\n  startup script:\n", ref, templateOSLabel(t)); err != nil {
 			return err
 		}
 		script := formatTemplateScriptFull(t.StartupScript)
@@ -131,17 +131,22 @@ func writeTemplateSearchOutput(w io.Writer, templates []*service.Template) error
 	return nil
 }
 
+// get the os label for the template
+func templateOSLabel(t *service.Template) string {
+	osLabel := t.OSFamily
+	if p, ok := service.OSProfileFor(t.OSFamily); ok {
+		osLabel = p.DisplayName
+	}
+	return osLabel
+}
+
 // writeTemplateRow: writes one row per template
 func writeTemplateRow(w io.Writer, t *service.Template, colSep string) error {
 	ref := t.ID
 	if ref == "" {
 		ref = t.Name
 	}
-	osLabel := t.OSFamily
-	if p, ok := service.OSProfileFor(t.OSFamily); ok {
-		osLabel = p.DisplayName
-	}
-	_, err := fmt.Fprintf(w, "%-20s%s%-14s%s%s\n", ref, colSep, osLabel, colSep, formatTemplateScript(t.StartupScript))
+	_, err := fmt.Fprintf(w, "%-20s%s%-14s%s%s\n", ref, colSep, templateOSLabel(t), colSep, formatTemplateScript(t.StartupScript))
 	return err
 }
 

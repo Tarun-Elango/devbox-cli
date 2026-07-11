@@ -26,7 +26,7 @@ func (db *DB) seedDefaultTemplates() error {
 			continue
 		}
 
-		existing, err := db.GetTemplateByNameAndUserID(tmpl.Name, LocalUserID)
+		existing, err := db.GetTemplateByNameUserIDAndOSFamily(tmpl.Name, LocalUserID, tmpl.OSFamily)
 		if err != nil && err != sql.ErrNoRows {
 			return fmt.Errorf("check existing template %s: %w", tmpl.Name, err)
 		}
@@ -54,13 +54,14 @@ func (db *DB) seedDefaultTemplates() error {
 		}
 
 		_, err = tx.Exec(`
-			INSERT INTO templates (id, user_id, name, description, startup_script, created_at)
-			VALUES (?, ?, ?, ?, ?, ?)`,
+			INSERT INTO templates (id, user_id, name, description, startup_script, os_family, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			tmpl.ID,
 			LocalUserID,
 			tmpl.Name,
 			nullIfEmpty(tmpl.Description),
 			nullIfEmpty(tmpl.Script),
+			nullIfEmpty(tmpl.OSFamily),
 			tmpl.CreatedAt,
 		)
 		if err != nil {
@@ -101,16 +102,18 @@ func (db *DB) syncDefaultTemplate(tmpl defaultTemplate) error {
 	wantDescription := tmpl.Description
 	wantScript := tmpl.Script
 	if StringValue(record.Description) == wantDescription &&
+		StringValue(record.OSFamily) == tmpl.OSFamily &&
 		StringValue(record.StartupScript) == wantScript {
 		return nil
 	}
 
 	_, err = db.conn.Exec(`
 		UPDATE templates
-		SET description = ?, startup_script = ?
+		SET description = ?, startup_script = ?, os_family = ?
 		WHERE id = ? AND user_id = ?`,
 		nullIfEmpty(wantDescription),
 		nullIfEmpty(wantScript),
+		nullIfEmpty(tmpl.OSFamily),
 		tmpl.ID,
 		LocalUserID,
 	)

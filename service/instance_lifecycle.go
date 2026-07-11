@@ -108,7 +108,7 @@ func (r *Runtime) StartInstance(instanceID, userID string) error {
 		return err
 	}
 	if ip, err := inst.SSHHost(); err == nil {
-		if err := syncSSHHostIP(record.Name, ip); err != nil {
+		if err := syncSSHHostIP(record.Name, ip, SSHUserForOS(osFamilyForRecord(*record))); err != nil {
 			return fmt.Errorf("box started but failed to update SSH config: %w", err)
 		}
 	}

@@ -218,7 +218,7 @@ func TestForwardAgentEnabledRejectsMissingHost(t *testing.T) {
 func TestSyncSSHHostIPUpdatesExistingHostAndAddsMissingHost(t *testing.T) {
 	path := writeTestSSHConfig(t, "Host outpost-alpha\n    HostName 10.0.0.1\n")
 
-	if err := syncSSHHostIP("alpha", "10.0.0.9"); err != nil {
+	if err := syncSSHHostIP("alpha", "10.0.0.9", "ec2-user"); err != nil {
 		t.Fatalf("sync existing host: %v", err)
 	}
 	data, err := os.ReadFile(path)
@@ -229,7 +229,7 @@ func TestSyncSSHHostIPUpdatesExistingHostAndAddsMissingHost(t *testing.T) {
 		t.Fatalf("updated ip not written:\n%s", string(data))
 	}
 
-	if err := syncSSHHostIP("beta", "10.0.0.2"); err != nil {
+	if err := syncSSHHostIP("beta", "10.0.0.2", "ec2-user"); err != nil {
 		t.Fatalf("sync missing host: %v", err)
 	}
 	data, err = os.ReadFile(path)

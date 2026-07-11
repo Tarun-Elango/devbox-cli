@@ -26,7 +26,7 @@ func TestResolveSnapshotByAmiIDOrName(t *testing.T) {
 		name   = "before-upgrade"
 	)
 
-	if err := db.InsertSnapshot("snap-1", amiID, name, userID, "", "pending", "us-east-1", "aws"); err != nil {
+	if err := db.InsertSnapshot("snap-1", amiID, name, userID, "", "pending", "us-east-1", "aws", "amazon-linux"); err != nil {
 		t.Fatalf("insert snapshot: %v", err)
 	}
 
@@ -74,7 +74,7 @@ func TestValidateSnapshotNameAvailable(t *testing.T) {
 	if err := db.ValidateSnapshotNameAvailable("before-upgrade", LocalUserID); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if err := db.InsertSnapshot("snap-1", "ami-1234567890abcdef0", "before-upgrade", LocalUserID, "", "pending", "us-east-1", "aws"); err != nil {
+	if err := db.InsertSnapshot("snap-1", "ami-1234567890abcdef0", "before-upgrade", LocalUserID, "", "pending", "us-east-1", "aws", "amazon-linux"); err != nil {
 		t.Fatalf("insert snapshot: %v", err)
 	}
 
@@ -92,7 +92,7 @@ func TestValidateSnapshotNameAvailable(t *testing.T) {
 func TestGetSnapshotByNameAndUserID(t *testing.T) {
 	db := openTestDB(t)
 
-	if err := db.InsertSnapshot("snap-1", "ami-1234567890abcdef0", "before-upgrade", LocalUserID, "", "pending", "us-east-1", "aws"); err != nil {
+	if err := db.InsertSnapshot("snap-1", "ami-1234567890abcdef0", "before-upgrade", LocalUserID, "", "pending", "us-east-1", "aws", "amazon-linux"); err != nil {
 		t.Fatalf("insert snapshot: %v", err)
 	}
 

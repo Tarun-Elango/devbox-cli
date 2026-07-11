@@ -29,7 +29,8 @@ func TestFormatTemplateScriptFullPreservesLines(t *testing.T) {
 
 func TestBuildTemplateSearchOutputShowsFullScript(t *testing.T) {
 	templates := []*service.Template{{
-		Name: "bun",
+		Name:          "bun",
+		OSFamily:      service.DefaultOSFamily,
 		StartupScript: `if ! command -v bun >/dev/null 2>&1; then
   curl -fsSL https://bun.sh/install | bash
 fi`,
@@ -41,7 +42,8 @@ fi`,
 	if !strings.Contains(out, "curl -fsSL https://bun.sh/install | bash") {
 		t.Fatalf("expected full script in output: %q", out)
 	}
-	if !strings.Contains(out, "bun\n  startup script:") {
-		t.Fatalf("expected template header in output: %q", out)
+	wantOS := service.MustOSProfile(service.DefaultOSFamily).DisplayName
+	if !strings.Contains(out, "bun\n  os: "+wantOS+"\n  startup script:") {
+		t.Fatalf("expected template header with os in output: %q", out)
 	}
 }
