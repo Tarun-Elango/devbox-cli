@@ -107,14 +107,14 @@ Commands:
                             -L 8080:localhost:8080); for one-off remote commands use exec
   cp [-i key] <source> <dest>
                       Copy a file to or from a box
-                        outpost cp ./main.go mybox:/home/ec2-user/app/
-                        outpost cp mybox:/home/ec2-user/app/main.go ./
+                        outpost cp ./main.go mybox:~/app/
+                        outpost cp mybox:~/app/main.go ./
   sync [-i key] [--delete] <source> <dest>
                       Sync directories via rsync over SSH (one local path, one box:/path)
                         Only dest is modified; source is read-only.
                         --delete also removes files on dest that are not in source
-                        outpost sync ./project mybox:/home/ec2-user/project
-                        outpost sync mybox:/home/ec2-user/project ./project
+                        outpost sync ./project mybox:~/project
+                        outpost sync mybox:~/project ./project
   exec [-i key] [-s] [-t] <id|name> -- <command>
                       Run a one-off command on a running box
                         -s  Run as a shell snippet via sh -lc (pipes, &&, cd)
@@ -194,14 +194,14 @@ func helpSSH() {
                             -L 8080:localhost:8080); for one-off remote commands use exec
   cp [-i key] <source> <dest>
                       Copy a file to or from a box
-                        outpost cp ./main.go mybox:/home/ec2-user/app/
-                        outpost cp mybox:/home/ec2-user/app/main.go ./
+                        outpost cp ./main.go mybox:~/app/
+                        outpost cp mybox:~/app/main.go ./
   sync [-i key] [--delete] <source> <dest>
                       Sync directories via rsync over SSH (one local path, one box:/path)
                         Only dest is modified; source is read-only
                         --delete  Also remove files on dest that are not in source
-                        outpost sync ./project mybox:/home/ec2-user/project
-                        outpost sync mybox:/home/ec2-user/project ./project
+                        outpost sync ./project mybox:~/project
+                        outpost sync mybox:~/project ./project
   exec [-i key] [-s] [-t] <id|name> -- <command>
                       Run a one-off command on a running box
                         -s  Run as a shell snippet via sh -lc (pipes, &&, cd)

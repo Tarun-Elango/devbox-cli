@@ -75,6 +75,45 @@ func TestMigrateInstancesRegionProviderIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestMigrateInstancesOSFamilyToleratesDuplicateColumn(t *testing.T) {
+	db := newLegacyInstancesDB(t)
+
+	if _, err := db.conn.Exec(`ALTER TABLE instances ADD COLUMN os_family TEXT`); err != nil {
+		t.Fatalf("pre-add os_family column: %v", err)
+	}
+
+	if err := db.migrateInstancesOSFamily(); err != nil {
+		t.Fatalf("migrate after concurrent os_family add: %v", err)
+	}
+
+	cols, err := db.tableColumns("instances")
+	if err != nil {
+		t.Fatalf("inspect instances schema: %v", err)
+	}
+	if !cols["os_family"] {
+		t.Fatalf("instances schema missing os_family: %#v", cols)
+	}
+}
+
+func TestMigrateInstancesOSFamilyIsIdempotent(t *testing.T) {
+	db := newLegacyInstancesDB(t)
+
+	if err := db.migrateInstancesOSFamily(); err != nil {
+		t.Fatalf("first migrate: %v", err)
+	}
+	if err := db.migrateInstancesOSFamily(); err != nil {
+		t.Fatalf("second migrate: %v", err)
+	}
+
+	cols, err := db.tableColumns("instances")
+	if err != nil {
+		t.Fatalf("inspect instances schema: %v", err)
+	}
+	if !cols["os_family"] {
+		t.Fatalf("instances schema missing os_family: %#v", cols)
+	}
+}
+
 func newLegacySnapshotsDB(t *testing.T) *DB {
 	t.Helper()
 
@@ -148,6 +187,9 @@ func TestMigrateSnapshotsRegionProviderBackfillsFromBox(t *testing.T) {
 	if err := db.migrateSnapshotsRegionProvider(); err != nil {
 		t.Fatalf("migrate snapshots region/provider: %v", err)
 	}
+	if err := db.migrateSnapshotsOSFamily(); err != nil {
+		t.Fatalf("migrate snapshots os_family: %v", err)
+	}
 
 	record, err := db.GetSnapshotByAmiIDAndUserID("ami-1234567890abcdef0", LocalUserID)
 	if err != nil {
@@ -158,6 +200,63 @@ func TestMigrateSnapshotsRegionProviderBackfillsFromBox(t *testing.T) {
 	}
 	if !record.Provider.Valid || record.Provider.String != "aws" {
 		t.Fatalf("got provider=%+v, want aws", record.Provider)
+	}
+}
+
+func newLegacyTemplatesDB(t *testing.T) *DB {
+	t.Helper()
+
+	db := newLegacyInstancesDB(t)
+	if _, err := db.conn.Exec(`CREATE TABLE templates (
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES users(id),
+  name            TEXT NOT NULL,
+  description     TEXT,
+  startup_script  TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, name)
+)`); err != nil {
+		t.Fatalf("create legacy templates table: %v", err)
+	}
+	return db
+}
+
+func TestMigrateTemplatesOSFamilyToleratesDuplicateColumn(t *testing.T) {
+	db := newLegacyTemplatesDB(t)
+
+	if _, err := db.conn.Exec(`ALTER TABLE templates ADD COLUMN os_family TEXT`); err != nil {
+		t.Fatalf("pre-add os_family column: %v", err)
+	}
+
+	if err := db.migrateTemplatesOSFamily(); err != nil {
+		t.Fatalf("migrate after concurrent os_family add: %v", err)
+	}
+
+	cols, err := db.tableColumns("templates")
+	if err != nil {
+		t.Fatalf("inspect templates schema: %v", err)
+	}
+	if !cols["os_family"] {
+		t.Fatalf("templates schema missing os_family: %#v", cols)
+	}
+}
+
+func TestMigrateTemplatesOSFamilyIsIdempotent(t *testing.T) {
+	db := newLegacyTemplatesDB(t)
+
+	if err := db.migrateTemplatesOSFamily(); err != nil {
+		t.Fatalf("first migrate: %v", err)
+	}
+	if err := db.migrateTemplatesOSFamily(); err != nil {
+		t.Fatalf("second migrate: %v", err)
+	}
+
+	cols, err := db.tableColumns("templates")
+	if err != nil {
+		t.Fatalf("inspect templates schema: %v", err)
+	}
+	if !cols["os_family"] {
+		t.Fatalf("templates schema missing os_family: %#v", cols)
 	}
 }
 

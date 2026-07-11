@@ -32,6 +32,20 @@ func Create(args []string) {
 
 	volumeSizeGB := service.DefaultVolumeSizeGB
 
+	osFamily := service.DefaultOSFamily
+	if fromSnapshot == "" {
+		selectedOS, err := helper.SelectOSFamily()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error selecting OS: %v\n", err)
+			os.Exit(1)
+		}
+		if err := service.ValidateOSFamily(selectedOS); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		osFamily = selectedOS
+	}
+
 	instanceType, err := helper.SelectInstanceType(service.AllInstanceTypes())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error selecting instance type: %v\n", err)
@@ -58,7 +72,7 @@ func Create(args []string) {
 	if fromSnapshot != "" {
 		fmt.Printf("Creating box %q from snapshot %s...\n", name, fromSnapshot)
 	} else {
-		fmt.Printf("Creating box %q...\n", name)
+		fmt.Printf("Creating box %q (%s)...\n", name, service.MustOSProfile(osFamily).DisplayName)
 	}
 
 	var b Box
@@ -73,7 +87,7 @@ func Create(args []string) {
 		fromSnapshot = snapshotTarget.AmiID
 	}
 
-	inst, err := rt.CreateInstance(name, pubKey, fromSnapshot, service.LocalUserID, instanceType, volumeSizeGB)
+	inst, err := rt.CreateInstance(name, pubKey, fromSnapshot, service.LocalUserID, instanceType, osFamily, volumeSizeGB)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -84,6 +98,9 @@ func Create(args []string) {
 	fmt.Printf("  ID:        %s\n", b.ID)
 	fmt.Printf("  Name:      %s\n", b.Name)
 	fmt.Printf("  Status:    %s\n", b.Status)
+	if b.OSFamily != "" {
+		fmt.Printf("  OS:        %s\n", service.MustOSProfile(b.OSFamily).DisplayName)
+	}
 	if b.InstanceType != "" {
 		fmt.Printf("  Type:      %s\n", b.InstanceType)
 	}

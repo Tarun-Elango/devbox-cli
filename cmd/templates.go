@@ -45,10 +45,10 @@ func buildTemplateListOutput(templates []*service.Template) string {
 // writeTemplateTable: creates header and separator
 func writeTemplateTable(w io.Writer, templates []*service.Template) error {
 	const colSep = "  |  "
-	if _, err := fmt.Fprintf(w, "%-20s%s%s\n", "TEMPLATE NAME", colSep, "STARTUP SCRIPT"); err != nil {
+	if _, err := fmt.Fprintf(w, "%-20s%s%-14s%s%s\n", "TEMPLATE NAME", colSep, "OS", colSep, "STARTUP SCRIPT"); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintln(w, strings.Repeat("-", 60)); err != nil {
+	if _, err := fmt.Fprintln(w, strings.Repeat("-", 70)); err != nil {
 		return err
 	}
 	for _, t := range templates {
@@ -112,7 +112,7 @@ func writeTemplateSearchOutput(w io.Writer, templates []*service.Template) error
 		if ref == "" {
 			ref = t.ID
 		}
-		if _, err := fmt.Fprintf(w, "%s\n  startup script:\n", ref); err != nil {
+		if _, err := fmt.Fprintf(w, "%s\n  os: %s\n  startup script:\n", ref, templateOSLabel(t)); err != nil {
 			return err
 		}
 		script := formatTemplateScriptFull(t.StartupScript)
@@ -131,13 +131,22 @@ func writeTemplateSearchOutput(w io.Writer, templates []*service.Template) error
 	return nil
 }
 
+// get the os label for the template
+func templateOSLabel(t *service.Template) string {
+	osLabel := t.OSFamily
+	if p, ok := service.OSProfileFor(t.OSFamily); ok {
+		osLabel = p.DisplayName
+	}
+	return osLabel
+}
+
 // writeTemplateRow: writes one row per template
 func writeTemplateRow(w io.Writer, t *service.Template, colSep string) error {
 	ref := t.ID
 	if ref == "" {
 		ref = t.Name
 	}
-	_, err := fmt.Fprintf(w, "%-20s%s%s\n", ref, colSep, formatTemplateScript(t.StartupScript))
+	_, err := fmt.Fprintf(w, "%-20s%s%-14s%s%s\n", ref, colSep, templateOSLabel(t), colSep, formatTemplateScript(t.StartupScript))
 	return err
 }
 
@@ -174,6 +183,20 @@ func createFromTemplates(name string, templateRefs []string, fromSnapshot string
 	}
 
 	volumeSizeGB := service.DefaultVolumeSizeGB
+	osFamily := service.DefaultOSFamily
+	if fromSnapshot == "" {
+		selectedOS, err := helper.SelectOSFamily()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error selecting OS: %v\n", err)
+			os.Exit(1)
+		}
+		if err := service.ValidateOSFamily(selectedOS); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		osFamily = selectedOS
+	}
+
 	instanceType, err := helper.SelectInstanceType(service.AllInstanceTypes())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error selecting instance type: %v\n", err)
@@ -200,7 +223,7 @@ func createFromTemplates(name string, templateRefs []string, fromSnapshot string
 	if fromSnapshot != "" {
 		fmt.Printf("Creating box %q from templates %s (snapshot %s)...\n", name, strings.Join(templateRefs, ", "), fromSnapshot)
 	} else {
-		fmt.Printf("Creating box %q from templates %s...\n", name, strings.Join(templateRefs, ", "))
+		fmt.Printf("Creating box %q (%s) from templates %s...\n", name, service.MustOSProfile(osFamily).DisplayName, strings.Join(templateRefs, ", "))
 	}
 	fmt.Println("Note: older startup scripts may not fully install — after SSH, verify your tools/libraries are present.")
 
@@ -216,7 +239,7 @@ func createFromTemplates(name string, templateRefs []string, fromSnapshot string
 		}
 		fromSnapshot = snapshotTarget.AmiID
 	}
-	inst, err := rt.CreateBoxFromTemplates(name, templateRefs, pubKey, fromSnapshot, service.LocalUserID, instanceType, volumeSizeGB)
+	inst, err := rt.CreateBoxFromTemplates(name, templateRefs, pubKey, fromSnapshot, service.LocalUserID, instanceType, osFamily, volumeSizeGB)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -227,6 +250,9 @@ func createFromTemplates(name string, templateRefs []string, fromSnapshot string
 	fmt.Printf("  ID:        %s\n", b.ID)
 	fmt.Printf("  Name:      %s\n", b.Name)
 	fmt.Printf("  Status:    %s\n", b.Status)
+	if b.OSFamily != "" {
+		fmt.Printf("  OS:        %s\n", service.MustOSProfile(b.OSFamily).DisplayName)
+	}
 	if b.InstanceType != "" {
 		fmt.Printf("  Type:      %s\n", b.InstanceType)
 	}

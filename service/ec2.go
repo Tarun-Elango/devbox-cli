@@ -27,6 +27,7 @@ type Instance struct {
 	PrivateIPAddress string
 	Region           string
 	Provider         string
+	OSFamily         string
 }
 
 // SSHHost returns the public IP if set, otherwise the private IP.
@@ -127,6 +128,7 @@ func (r *Runtime) ListInstances(userID string) ([]*Instance, error) {
 				dto := instanceFromAWS(inst)
 				dto.Region = region
 				dto.Provider = providerForRecord(record, region)
+				dto.OSFamily = osFamilyForRecord(record)
 				ip := dto.IPAddress
 				if ip == "" {
 					ip = dto.PrivateIPAddress
@@ -144,7 +146,7 @@ func (r *Runtime) ListInstances(userID string) ([]*Instance, error) {
 					}
 
 					if ip != "" {
-						if err := syncSSHHostIP(record.Name, ip); err != nil {
+						if err := syncSSHHostIP(record.Name, ip, SSHUserForOS(dto.OSFamily)); err != nil {
 							return fmt.Errorf("update SSH config for %q: %w", record.Name, err)
 						}
 					}
@@ -180,6 +182,13 @@ func providerForRecord(record localDb.InstanceRecord, region string) string {
 		return provider
 	}
 	return ProviderForRegion(region)
+}
+
+func osFamilyForRecord(record localDb.InstanceRecord) string {
+	if family := localDb.StringValue(record.OSFamily); family != "" {
+		return NormalizeOSFamily(family)
+	}
+	return DefaultOSFamily
 }
 
 // EC2ForInstance returns an EC2 client scoped to the box's stored AWS region.
@@ -252,11 +261,13 @@ func (r *Runtime) getInstanceFromAWS(instanceId string) (*Instance, error) {
 	if err == nil {
 		dto.Region = regionForRecord(*record, cfg.AwsRegion)
 		dto.Provider = providerForRecord(*record, dto.Region)
+		dto.OSFamily = osFamilyForRecord(*record)
 	} else if err != sql.ErrNoRows {
 		return nil, err
 	} else {
 		dto.Region = cfg.AwsRegion
 		dto.Provider = ProviderForRegion(cfg.AwsRegion)
+		dto.OSFamily = DefaultOSFamily
 	}
 	return dto, nil
 }
@@ -341,9 +352,10 @@ func (r *Runtime) RenameInstance(instanceID, userID, newName string) (*Instance,
 	}
 
 	renamed := &Instance{
-		ID:     instanceID,
-		Name:   newName,
-		Status: record.Status,
+		ID:       instanceID,
+		Name:     newName,
+		Status:   record.Status,
+		OSFamily: osFamilyForRecord(*record),
 	}
 	if record.InstanceType.Valid {
 		renamed.InstanceType = record.InstanceType.String
@@ -401,7 +413,7 @@ func (r *Runtime) ForwardPort(instanceID, port, userID string) (*PortForwardResp
 
 	return &PortForwardResponse{
 		Host:       host,
-		User:       "ec2-user",
+		User:       SSHUserForOS(box.OSFamily),
 		RemotePort: port,
 	}, nil
 }

@@ -8,11 +8,11 @@ import (
 func TestValidateTemplateNameAvailableForRenameAllowsCurrentName(t *testing.T) {
 	db := newTestDB(t)
 
-	if err := db.InsertTemplate("tmpl-1", LocalUserID, "alpha", ""); err != nil {
+	if err := db.InsertTemplate("tmpl-1", LocalUserID, "alpha", "", "amazon-linux"); err != nil {
 		t.Fatalf("insert template: %v", err)
 	}
 
-	if err := db.ValidateTemplateNameAvailableForRename("alpha", LocalUserID, "alpha"); err != nil {
+	if err := db.ValidateTemplateNameAvailableForRename("alpha", LocalUserID, "alpha", "amazon-linux"); err != nil {
 		t.Fatalf("validate current name for rename: %v", err)
 	}
 }
@@ -20,14 +20,14 @@ func TestValidateTemplateNameAvailableForRenameAllowsCurrentName(t *testing.T) {
 func TestValidateTemplateNameAvailableForRenameRejectsAnotherTemplateName(t *testing.T) {
 	db := newTestDB(t)
 
-	if err := db.InsertTemplate("tmpl-1", LocalUserID, "alpha", ""); err != nil {
+	if err := db.InsertTemplate("tmpl-1", LocalUserID, "alpha", "", "amazon-linux"); err != nil {
 		t.Fatalf("insert first template: %v", err)
 	}
-	if err := db.InsertTemplate("tmpl-2", LocalUserID, "beta", ""); err != nil {
+	if err := db.InsertTemplate("tmpl-2", LocalUserID, "beta", "", "amazon-linux"); err != nil {
 		t.Fatalf("insert second template: %v", err)
 	}
 
-	err := db.ValidateTemplateNameAvailableForRename("beta", LocalUserID, "alpha")
+	err := db.ValidateTemplateNameAvailableForRename("beta", LocalUserID, "alpha", "amazon-linux")
 	if err == nil {
 		t.Fatal("expected duplicate name error")
 	}
@@ -39,14 +39,14 @@ func TestValidateTemplateNameAvailableForRenameRejectsAnotherTemplateName(t *tes
 func TestUpdateTemplateNameRejectsDuplicateName(t *testing.T) {
 	db := newTestDB(t)
 
-	if err := db.InsertTemplate("tmpl-1", LocalUserID, "alpha", ""); err != nil {
+	if err := db.InsertTemplate("tmpl-1", LocalUserID, "alpha", "", "amazon-linux"); err != nil {
 		t.Fatalf("insert first template: %v", err)
 	}
-	if err := db.InsertTemplate("tmpl-2", LocalUserID, "beta", ""); err != nil {
+	if err := db.InsertTemplate("tmpl-2", LocalUserID, "beta", "", "amazon-linux"); err != nil {
 		t.Fatalf("insert second template: %v", err)
 	}
 
-	err := db.UpdateTemplateName("alpha", LocalUserID, "beta")
+	err := db.UpdateTemplateName("alpha", LocalUserID, "beta", "amazon-linux")
 	if err == nil {
 		t.Fatal("expected duplicate name error")
 	}
@@ -58,11 +58,11 @@ func TestUpdateTemplateNameRejectsDuplicateName(t *testing.T) {
 func TestUpdateTemplateNamePersistsTrimmedName(t *testing.T) {
 	db := newTestDB(t)
 
-	if err := db.InsertTemplate("tmpl-1", LocalUserID, "alpha", "echo hello"); err != nil {
+	if err := db.InsertTemplate("tmpl-1", LocalUserID, "alpha", "echo hello", "amazon-linux"); err != nil {
 		t.Fatalf("insert template: %v", err)
 	}
 
-	if err := db.UpdateTemplateName("alpha", LocalUserID, " beta "); err != nil {
+	if err := db.UpdateTemplateName("alpha", LocalUserID, " beta ", "amazon-linux"); err != nil {
 		t.Fatalf("update template name: %v", err)
 	}
 
@@ -90,7 +90,7 @@ func TestSearchTemplatesByUserIDMatchesPartialName(t *testing.T) {
 		{"tmpl-4", "springWithJava"},
 		{"tmpl-5", "python"},
 	} {
-		if err := db.InsertTemplate(tmpl.id, LocalUserID, tmpl.name, ""); err != nil {
+		if err := db.InsertTemplate(tmpl.id, LocalUserID, tmpl.name, "", "amazon-linux"); err != nil {
 			t.Fatalf("insert template %s: %v", tmpl.name, err)
 		}
 	}
@@ -118,7 +118,7 @@ func TestSearchTemplatesByUserIDMatchesPartialName(t *testing.T) {
 func TestSearchTemplatesByUserIDIsCaseInsensitive(t *testing.T) {
 	db := newTestDB(t)
 
-	if err := db.InsertTemplate("tmpl-1", LocalUserID, "JavaSDK", ""); err != nil {
+	if err := db.InsertTemplate("tmpl-1", LocalUserID, "JavaSDK", "", "amazon-linux"); err != nil {
 		t.Fatalf("insert template: %v", err)
 	}
 
@@ -146,7 +146,7 @@ func TestSeedDefaultTemplates(t *testing.T) {
 		t.Fatalf("got %d templates, want %d", len(records), len(defaultTemplates))
 	}
 
-	python, err := db.GetTemplateByNameAndUserID("python3", LocalUserID)
+	python, err := db.GetTemplateByNameUserIDAndOSFamily("python3", LocalUserID, "amazon-linux")
 	if err != nil {
 		t.Fatalf("get python3 template: %v", err)
 	}
@@ -169,6 +169,7 @@ func TestSeedDefaultTemplates(t *testing.T) {
 		t.Fatalf("after re-seed got %d templates, want %d", len(records), len(defaultTemplates))
 	}
 
+	// Delete removes every OS variant with that name.
 	if err := db.DeleteTemplateByNameAndUserID("python3", LocalUserID); err != nil {
 		t.Fatalf("delete python3 template: %v", err)
 	}
@@ -182,15 +183,21 @@ func TestSeedDefaultTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list templates after delete and re-seed: %v", err)
 	}
-	if len(records) != len(defaultTemplates)-1 {
-		t.Fatalf("after delete and re-seed got %d templates, want %d", len(records), len(defaultTemplates)-1)
+	var pythonVariants int
+	for _, tmpl := range defaultTemplates {
+		if tmpl.Name == "python3" {
+			pythonVariants++
+		}
+	}
+	if len(records) != len(defaultTemplates)-pythonVariants {
+		t.Fatalf("after delete and re-seed got %d templates, want %d", len(records), len(defaultTemplates)-pythonVariants)
 	}
 }
 
 func TestSeedDefaultTemplatesSkipsUserNameCollision(t *testing.T) {
 	db := newTestDB(t)
 
-	if err := db.InsertTemplate("user-python3", LocalUserID, "python3", "echo user"); err != nil {
+	if err := db.InsertTemplate("user-python3", LocalUserID, "python3", "echo user", "amazon-linux"); err != nil {
 		t.Fatalf("insert user template: %v", err)
 	}
 
@@ -198,7 +205,7 @@ func TestSeedDefaultTemplatesSkipsUserNameCollision(t *testing.T) {
 		t.Fatalf("seed default templates: %v", err)
 	}
 
-	userTmpl, err := db.GetTemplateByNameAndUserID("python3", LocalUserID)
+	userTmpl, err := db.GetTemplateByNameUserIDAndOSFamily("python3", LocalUserID, "amazon-linux")
 	if err != nil {
 		t.Fatalf("get user python3 template: %v", err)
 	}
@@ -228,7 +235,7 @@ func TestSeedDefaultTemplatesSkipsUserNameCollision(t *testing.T) {
 	if err := db.seedDefaultTemplates(); err != nil {
 		t.Fatalf("re-seed default templates: %v", err)
 	}
-	userTmpl, err = db.GetTemplateByNameAndUserID("python3", LocalUserID)
+	userTmpl, err = db.GetTemplateByNameUserIDAndOSFamily("python3", LocalUserID, "amazon-linux")
 	if err != nil {
 		t.Fatalf("get user python3 template after re-seed: %v", err)
 	}
@@ -245,7 +252,7 @@ func TestSeedDefaultTemplatesPreservesUserRename(t *testing.T) {
 	}
 
 	pythonID := "00000000-0000-0000-0001-000000000001"
-	if err := db.UpdateTemplateName("python3", LocalUserID, "my-python"); err != nil {
+	if err := db.UpdateTemplateName("python3", LocalUserID, "my-python", "amazon-linux"); err != nil {
 		t.Fatalf("rename python3 template: %v", err)
 	}
 

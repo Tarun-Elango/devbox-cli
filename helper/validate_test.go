@@ -259,7 +259,7 @@ func TestResolveBoxTarget(t *testing.T) {
 	)
 
 	if err := rt.DB().InsertInstance(
-		boxID, awsID, name, service.LocalUserID, "running", "t3.micro", "us-east-1", "aws",
+		boxID, awsID, name, service.LocalUserID, "running", "t3.micro", "us-east-1", "aws", "amazon-linux",
 	); err != nil {
 		t.Fatalf("insert instance: %v", err)
 	}
@@ -330,7 +330,7 @@ func TestResolveSnapshotTarget(t *testing.T) {
 		name  = "before-upgrade"
 	)
 
-	if err := rt.DB().InsertSnapshot("snap-1", amiID, name, service.LocalUserID, "", "pending", "us-east-1", "aws"); err != nil {
+	if err := rt.DB().InsertSnapshot("snap-1", amiID, name, service.LocalUserID, "", "pending", "us-east-1", "aws", "amazon-linux"); err != nil {
 		t.Fatalf("insert snapshot: %v", err)
 	}
 	t.Cleanup(func() {

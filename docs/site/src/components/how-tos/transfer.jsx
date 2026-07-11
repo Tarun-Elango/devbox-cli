@@ -41,12 +41,12 @@ export default function TransferHowTo() {
 
         <p>Upload a local file to the box:</p>
         <pre>
-          <code>outpost cp ./main.go mybox:/home/ec2-user/app/</code>
+          <code>outpost cp ./main.go mybox:~/app/</code>
         </pre>
 
         <p>Download a file from the box:</p>
         <pre>
-          <code>outpost cp mybox:/home/ec2-user/app/main.go ./</code>
+          <code>outpost cp mybox:~/app/main.go ./</code>
         </pre>
 
         <p>
@@ -66,12 +66,12 @@ export default function TransferHowTo() {
 
         <p>Upload your local project to the box (updates files on the box):</p>
         <pre>
-          <code>outpost sync ./project mybox:/home/ec2-user/project</code>
+          <code>outpost sync ./project mybox:~/project</code>
         </pre>
 
         <p>Download the project from the box to your laptop (updates your local copy):</p>
         <pre>
-          <code>outpost sync mybox:/home/ec2-user/project ./project</code>
+          <code>outpost sync mybox:~/project ./project</code>
         </pre>
 
         <p>
@@ -79,7 +79,7 @@ export default function TransferHowTo() {
           — files on the destination that are not in the source are removed:
         </p>
         <pre>
-          <code>outpost sync --delete ./project mybox:/home/ec2-user/project</code>
+          <code>outpost sync --delete ./project mybox:~/project</code>
         </pre>
         <p className="note">
           <code>--delete</code> only affects the <strong>destination</strong>. Your source

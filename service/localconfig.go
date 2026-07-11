@@ -152,10 +152,13 @@ func findBlockByHost(content, name string) (hostBlock, bool) {
 	return hostBlock{}, false
 }
 
-func formatHostBlock(name, ipAddress string) string {
+func formatHostBlock(name, ipAddress, sshUser string) string {
+	if strings.TrimSpace(sshUser) == "" {
+		sshUser = "ec2-user"
+	}
 	return fmt.Sprintf(
-		"Host %s\n    HostName %s\n    User ec2-user\n    IdentityFile ~/.ssh/id_ed25519\n    StrictHostKeyChecking accept-new\n",
-		name, ipAddress,
+		"Host %s\n    HostName %s\n    User %s\n    IdentityFile ~/.ssh/id_ed25519\n    StrictHostKeyChecking accept-new\n",
+		name, ipAddress, sshUser,
 	)
 }
 
@@ -182,8 +185,8 @@ func validateSSHIPAddress(ipAddress string) error {
 	return nil
 }
 
-// add new host in .ssh/config ( name, ip address)
-func AddHost(name, ipAddress string) error {
+// AddHost adds a new host in ~/.ssh/config (name, ip address, ssh user).
+func AddHost(name, ipAddress, sshUser string) error {
 	if err := validateSSHBoxName(name); err != nil {
 		return err
 	}
@@ -198,7 +201,7 @@ func AddHost(name, ipAddress string) error {
 		if content != "" && !strings.HasSuffix(content, "\n") { // if empty or not a new line, add a new line
 			content += "\n"
 		}
-		content += formatHostBlock(host, ipAddress)
+		content += formatHostBlock(host, ipAddress, sshUser)
 		return content, nil
 	})
 }
@@ -288,8 +291,51 @@ func RenameHost(oldName, newName string) error {
 	})
 }
 
+// UpdateHostUser sets the User directive for an existing outpost host.
+func UpdateHostUser(name, sshUser string) error {
+	if err := validateSSHBoxName(name); err != nil {
+		return err
+	}
+	sshUser = strings.TrimSpace(sshUser)
+	if sshUser == "" {
+		return fmt.Errorf("ssh user cannot be empty")
+	}
+	host := OutpostHostName(name)
+	return updateSSHConfig(func(content string) (string, error) {
+		block, found := findBlockByHost(content, host)
+		if !found {
+			return "", sshHostNotFound(host)
+		}
+
+		lines, trailing := sshConfigLines(content)
+		blockLines := lines[block.start:block.end]
+
+		userUpdated := false
+		for i, line := range blockLines {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(strings.ToLower(trimmed), "user ") {
+				indent := lineIndent(line)
+				blockLines[i] = indent + "User " + sshUser
+				userUpdated = true
+				break
+			}
+		}
+		if !userUpdated {
+			insert := blockOptionIndent(blockLines) + "User " + sshUser
+			updatedBlock := make([]string, 0, len(blockLines)+1)
+			updatedBlock = append(updatedBlock, blockLines[0])
+			updatedBlock = append(updatedBlock, insert)
+			updatedBlock = append(updatedBlock, blockLines[1:]...)
+			blockLines = updatedBlock
+		}
+
+		newLines := append(lines[:block.start], append(blockLines, lines[block.end:]...)...)
+		return formatSSHConfig(newLines, trailing), nil
+	})
+}
+
 // syncSSHHostIP updates the HostName for an existing entry, or adds one if missing.
-func syncSSHHostIP(name, ipAddress string) error {
+func syncSSHHostIP(name, ipAddress, sshUser string) error {
 	if ipAddress == "" {
 		return nil
 	}
@@ -297,7 +343,10 @@ func syncSSHHostIP(name, ipAddress string) error {
 		if !errors.Is(err, errSSHHostNotFound) {
 			return err
 		}
-		return AddHost(name, ipAddress)
+		return AddHost(name, ipAddress, sshUser)
+	}
+	if sshUser != "" {
+		_ = UpdateHostUser(name, sshUser)
 	}
 	return nil
 }

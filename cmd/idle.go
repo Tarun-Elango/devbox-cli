@@ -114,7 +114,8 @@ func idleSet(ref, minutesStr string) {
 	}
 
 	identity := defaultKeyPath()
-	ready, err := checkoutpostReady(sshBin, identity, "ec2-user", host, "22")
+	sshUser := service.SSHUserForOS(box.OSFamily)
+	ready, err := checkoutpostReady(sshBin, identity, sshUser, host, "22")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: readiness probe failed: %v\n", err)
 		os.Exit(1)
@@ -125,7 +126,7 @@ func idleSet(ref, minutesStr string) {
 	}
 
 	// install idle stop to the host( ip address )
-	if err := installIdleStop(sshBin, identity, "ec2-user", host, minutesInt); err != nil {
+	if err := installIdleStop(sshBin, identity, sshUser, host, minutesInt); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
@@ -207,7 +208,8 @@ func deleteIdleStop(ref string) {
 	}
 
 	identity := defaultKeyPath()
-	ready, err := checkoutpostReady(sshBin, identity, "ec2-user", host, "22")
+	sshUser := service.SSHUserForOS(box.OSFamily)
+	ready, err := checkoutpostReady(sshBin, identity, sshUser, host, "22")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: readiness probe failed: %v\n", err)
 		os.Exit(1)
@@ -217,7 +219,7 @@ func deleteIdleStop(ref string) {
 		os.Exit(1)
 	}
 
-	if err := uninstallIdleStop(sshBin, identity, "ec2-user", host); err != nil {
+	if err := uninstallIdleStop(sshBin, identity, sshUser, host); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
@@ -307,7 +309,8 @@ func updateIdleStop(ref, minutesStr string) {
 	}
 
 	identity := defaultKeyPath()
-	ready, err := checkoutpostReady(sshBin, identity, "ec2-user", host, "22")
+	sshUser := service.SSHUserForOS(box.OSFamily)
+	ready, err := checkoutpostReady(sshBin, identity, sshUser, host, "22")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: readiness probe failed: %v\n", err)
 		os.Exit(1)
@@ -317,7 +320,7 @@ func updateIdleStop(ref, minutesStr string) {
 		os.Exit(1)
 	}
 
-	if err := updateIdleStopOnHost(sshBin, identity, "ec2-user", host, minutesInt); err != nil {
+	if err := updateIdleStopOnHost(sshBin, identity, sshUser, host, minutesInt); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}

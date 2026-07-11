@@ -149,6 +149,7 @@ type Box struct {
 	PrivateIP    string `json:"privateIpAddress"`
 	Region       string `json:"region"`
 	Provider     string `json:"provider"`
+	OSFamily     string `json:"osFamily"`
 }
 
 func instancesToBoxes(instances []*service.Instance) []Box {
@@ -163,6 +164,7 @@ func instancesToBoxes(instances []*service.Instance) []Box {
 			PrivateIP:    inst.PrivateIPAddress,
 			Region:       inst.Region,
 			Provider:     inst.Provider,
+			OSFamily:     inst.OSFamily,
 		}
 	}
 	return boxes
@@ -174,7 +176,7 @@ func addSSHHostOrWarn(name string, inst *service.Instance) {
 	if err != nil {
 		return
 	}
-	if err := service.AddHost(name, ip); err != nil {
+	if err := service.AddHost(name, ip, service.SSHUserForOS(inst.OSFamily)); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: box created but failed to update SSH config on this machine (~/.ssh/config): %v\n", err)
 		return
 	}

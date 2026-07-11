@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"outpost-cli/helper"
+	"outpost-cli/service"
 )
 
 func syncRemoteShell(identity, portArg string) string {
@@ -47,8 +48,8 @@ func Sync(args []string) {
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: outpost sync [-i key] [--delete] <source> <dest>")
 		fmt.Fprintln(os.Stderr, "examples:")
-		fmt.Fprintln(os.Stderr, "  outpost sync ./project mybox:/home/ec2-user/project")
-		fmt.Fprintln(os.Stderr, "  outpost sync mybox:/home/ec2-user/project ./project")
+		fmt.Fprintln(os.Stderr, "  outpost sync ./project mybox:~/project")
+		fmt.Fprintln(os.Stderr, "  outpost sync mybox:~/project ./project")
 	}
 
 	parsed, err := helper.ParseSyncCommandArgs(args, cpDefaultKeyPath())
@@ -94,13 +95,13 @@ func Sync(args []string) {
 		os.Exit(1)
 	}
 
-	if err := waitForoutpostReady(sshBin, parsed.Identity, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
+	if err := waitForoutpostReady(sshBin, parsed.Identity, service.SSHUserForOS(status.Instance.OSFamily), status.Instance.PublicIP, cpDefaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "sync: %v\n", err)
 		os.Exit(1)
 	}
 
 	// build the rsync command
-	argv := buildRsyncArgs(parsed.Identity, transfer, cpDefaultSSHUser, status.Instance.PublicIP, cpDefaultSSHPort, parsed.DeleteExtra)
+	argv := buildRsyncArgs(parsed.Identity, transfer, service.SSHUserForOS(status.Instance.OSFamily), status.Instance.PublicIP, cpDefaultSSHPort, parsed.DeleteExtra)
 	cmd := exec.Command(rsyncBin, argv...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

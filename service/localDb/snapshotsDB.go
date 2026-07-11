@@ -19,10 +19,11 @@ type SnapshotRecord struct {
 	State     sql.NullString
 	Region    sql.NullString
 	Provider  sql.NullString
+	OSFamily  sql.NullString
 	CreatedAt string
 }
 
-const snapshotSelectColumns = `id, ami_id, name, user_id, box_id, state, region, provider, created_at`
+const snapshotSelectColumns = `id, ami_id, name, user_id, box_id, state, region, provider, os_family, created_at`
 
 // scanSnapshotRecord scans a row from the snapshots table into a SnapshotRecord.
 func scanSnapshotRecord(scanner interface {
@@ -38,6 +39,7 @@ func scanSnapshotRecord(scanner interface {
 		&r.State,
 		&r.Region,
 		&r.Provider,
+		&r.OSFamily,
 		&r.CreatedAt,
 	)
 	if err != nil {
@@ -80,18 +82,18 @@ func (db *DB) ValidateSnapshotNameAvailable(name, userID string) error {
 	return nil
 }
 
-// InsertSnapshot creates a new snapshot row owned by userID. region and provider
-// are captured at creation time so the snapshot remains addressable even if its
-// source box is later deleted.
-func (db *DB) InsertSnapshot(id, amiID, name, userID, boxID, state, region, provider string) error {
+// InsertSnapshot creates a new snapshot row owned by userID. region, provider,
+// and os_family are captured at creation time so the snapshot remains addressable
+// and OS-aware even if its source box is later deleted.
+func (db *DB) InsertSnapshot(id, amiID, name, userID, boxID, state, region, provider, osFamily string) error {
 	if err := db.ValidateSnapshotNameAvailable(name, userID); err != nil {
 		return err
 	}
 
 	_, err := db.conn.Exec(`
-		INSERT INTO snapshots (id, ami_id, name, user_id, box_id, state, region, provider)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, amiID, strings.TrimSpace(name), userID, nullIfEmpty(boxID), nullIfEmpty(state), nullIfEmpty(region), nullIfEmpty(provider),
+		INSERT INTO snapshots (id, ami_id, name, user_id, box_id, state, region, provider, os_family)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, amiID, strings.TrimSpace(name), userID, nullIfEmpty(boxID), nullIfEmpty(state), nullIfEmpty(region), nullIfEmpty(provider), nullIfEmpty(osFamily),
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: snapshots.user_id, snapshots.name") {
@@ -218,7 +220,7 @@ func (db *DB) ListSnapshotsByBoxIDAndUserID(boxID, userID string) ([]SnapshotRec
 // ListSnapshotsByUserIDWithBoxAwsID returns snapshots for userID with aws_instance_id joined from instances.
 func (db *DB) ListSnapshotsByUserIDWithBoxAwsID(userID string) ([]SnapshotWithBoxAwsID, error) {
 	rows, err := db.conn.Query(`
-		SELECT s.id, s.ami_id, s.name, s.user_id, s.box_id, s.state, s.region, s.provider, s.created_at, i.aws_instance_id
+		SELECT s.id, s.ami_id, s.name, s.user_id, s.box_id, s.state, s.region, s.provider, s.os_family, s.created_at, i.aws_instance_id
 		FROM snapshots s
 		LEFT JOIN instances i ON s.box_id = i.id AND i.user_id = s.user_id
 		WHERE s.user_id = ?
@@ -243,6 +245,7 @@ func (db *DB) ListSnapshotsByUserIDWithBoxAwsID(userID string) ([]SnapshotWithBo
 			&r.State,
 			&r.Region,
 			&r.Provider,
+			&r.OSFamily,
 			&r.CreatedAt,
 			&r.BoxAwsID,
 		); err != nil {

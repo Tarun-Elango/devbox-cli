@@ -21,10 +21,11 @@ type InstanceRecord struct {
 	InstanceType    sql.NullString
 	Region          sql.NullString
 	Provider        sql.NullString
+	OSFamily        sql.NullString
 	IdleStopMinutes sql.NullInt64 // NULL = off
 }
 
-const instanceSelectColumns = `id, aws_instance_id, name, user_id, ip_address, status, instance_type, region, provider, idle_stop_minutes`
+const instanceSelectColumns = `id, aws_instance_id, name, user_id, ip_address, status, instance_type, region, provider, os_family, idle_stop_minutes`
 
 // scanInstanceRecord scans a row from the instances table into an InstanceRecord.
 func scanInstanceRecord(scanner interface {
@@ -41,6 +42,7 @@ func scanInstanceRecord(scanner interface {
 		&r.InstanceType,
 		&r.Region,
 		&r.Provider,
+		&r.OSFamily,
 		&r.IdleStopMinutes,
 	)
 	if err != nil {
@@ -161,7 +163,7 @@ func (db *DB) DeleteInstanceByAwsInstanceID(awsInstanceID string) error {
 }
 
 // InsertInstance creates a new instance row owned by userID.
-func (db *DB) InsertInstance(id, awsInstanceID, name, userID, status, instanceType, region, provider string) error {
+func (db *DB) InsertInstance(id, awsInstanceID, name, userID, status, instanceType, region, provider, osFamily string) error {
 	name = strings.TrimSpace(name) // trim the name
 
 	// before inserting, check if the name is available, in case there is conflict/race condition
@@ -170,9 +172,9 @@ func (db *DB) InsertInstance(id, awsInstanceID, name, userID, status, instanceTy
 	}
 
 	_, err := db.conn.Exec(`
-		INSERT INTO instances (id, aws_instance_id, name, user_id, status, instance_type, region, provider)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, awsInstanceID, name, userID, status, instanceType, region, provider,
+		INSERT INTO instances (id, aws_instance_id, name, user_id, status, instance_type, region, provider, os_family)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, awsInstanceID, name, userID, status, instanceType, region, provider, nullIfEmpty(osFamily),
 	)
 	if err != nil {
 		// if the error is because the name already exists, return a specific error

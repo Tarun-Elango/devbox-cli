@@ -95,10 +95,16 @@ func TemplateNew(args []string) {
 		os.Exit(1)
 	}
 
+	osFamily, err := helper.SelectOSFamily()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error selecting OS: %v\n", err)
+		os.Exit(1)
+	}
+
 	var created service.Template
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
-	tmpl, err := rt.CreateTemplate(name, startupScript, service.LocalUserID)
+	tmpl, err := rt.CreateTemplate(name, startupScript, service.LocalUserID, osFamily)
 	if err != nil {
 		FailBox("template new", err)
 	}
@@ -106,6 +112,7 @@ func TemplateNew(args []string) {
 
 	fmt.Printf("Template created.\n")
 	fmt.Printf("  Name: %s\n", created.Name)
+	fmt.Printf("  OS:   %s\n", service.MustOSProfile(created.OSFamily).DisplayName)
 	if created.Description != "" {
 		fmt.Printf("  Description: %s\n", created.Description)
 	}

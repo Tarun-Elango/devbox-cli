@@ -54,54 +54,52 @@ export default function SetupDoc() {
       <DocOutline items={sections} />
 
       <div className="card">
-        <h2 id="aws-credentials">AWS setup — get access key and secret access key</h2>
+        <h2 id="aws-credentials">Create AWS credentials</h2>
         <p className="note">
-          Create a dedicated IAM user before running the setup wizard.
+          Create a dedicated IAM user for Outpost, then create an access key for that user.
+          You will enter the access key and secret access key when you run <code>outpost setup</code>.
         </p>
         <ol>
           <li>
-            IAM console → <strong>Users</strong> → <strong>Create user</strong> (e.g.{' '}
-            <code>outpost</code>)
+            In the AWS IAM console, go to <strong>Users</strong> → <strong>Create user</strong>.
+            Name it something recognizable, such as <code>outpost</code>.
           </li>
           <li>
-            Attach <code>AmazonEC2FullAccess</code> and{' '}
-            <code>AWSBudgetsActionsWithAWSResourceControlAccess</code>, then create the
-            user. Prefer tighter EC2 access? Open the drawer below instead of{' '}
-            <code>AmazonEC2FullAccess</code> (still attach the budgets policy).
+            Give the user permissions by attaching <code>AmazonEC2FullAccess</code> and{' '}
+            <code>AWSBudgetsActionsWithAWSResourceControlAccess</code>, then create the user.
+            For more limited EC2 permissions, use the custom policy below in place of{' '}
+            <code>AmazonEC2FullAccess</code>.
           </li>
           <li>
-            Open the user → <strong>Security credentials</strong> → create an access key
-            (choose <strong>Local code</strong>)
+            Open the new user, select <strong>Security credentials</strong>, then create an
+            access key. Choose <strong>Local code</strong> when AWS asks how the key will be used.
           </li>
           <li>
-            Copy the access key and secret access key (secret access key shown only once)
+            Save both values: the access key ID and secret access key. AWS shows the secret
+            access key only once.
           </li>
         </ol>
 
         <details className="drawer" id="least-privilege">
           <summary>
-            Least-privilege IAM — custom EC2 policy (instead of{' '}
-            <code>AmazonEC2FullAccess</code>)
+            Use a custom EC2 policy instead of <code>AmazonEC2FullAccess</code>
           </summary>
           <p className="note">
-            Covers the EC2 and STS calls Outpost makes (create / start / stop / reboot /
-            resize / delete boxes, snapshots, import, security group setup, and{' '}
-            <code>outpost health</code>). Still attach{' '}
-            <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> separately for
-            budgets.
+            This policy grants only the EC2 and STS permissions Outpost needs to manage boxes,
+            snapshots, imports, security groups, and <code>outpost health</code>. You must still
+            attach <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> for budget controls.
           </p>
           <ol>
             <li>
-              IAM → <strong>Policies</strong> → <strong>Create policy</strong> →{' '}
-              <strong>JSON</strong>
+              In IAM, go to <strong>Policies</strong> → <strong>Create policy</strong> →{' '}
+              <strong>JSON</strong>.
             </li>
             <li>
-              Paste the policy below, name it (e.g. <code>OutpostEC2</code>), and create
-              it
+              Paste the policy below, name it (for example, <code>OutpostEC2</code>), and create it.
             </li>
             <li>
               Attach <code>OutpostEC2</code> and{' '}
-              <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> to your IAM user
+              <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> to the IAM user you created.
             </li>
           </ol>
           <pre>

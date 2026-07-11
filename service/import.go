@@ -27,10 +27,16 @@ type ImportCandidate struct {
 	State        string
 	InstanceType string
 	IPAddress    string
+	OSFamily     string
+	// NeedsOSPrompt is true when the image looks Linux but the distro is unknown.
+	NeedsOSPrompt bool
+	// SkipReason explains why a resource was excluded from interactive import.
+	SkipReason string
 }
 
 // ListUntrackedImportCandidates returns EC2 instances and self-owned AMIs in
 // the configured region that are not already tracked for userID.
+// Non-Linux images are omitted with SkipReason left empty (filtered out).
 func (r *Runtime) ListUntrackedImportCandidates(userID string) ([]ImportCandidate, error) {
 	cfg, err := awsclient.LoadConfig()
 	if err != nil {
@@ -50,6 +56,7 @@ func (r *Runtime) ListUntrackedImportCandidates(userID string) ([]ImportCandidat
 
 	var out []ImportCandidate
 	instanceNames := make(map[string]struct{})
+	imageCache := make(map[string]types.Image)
 
 	instancePages := ec2.NewDescribeInstancesPaginator(ec2Client, &ec2.DescribeInstancesInput{
 		Filters: []types.Filter{{
@@ -81,13 +88,21 @@ func (r *Runtime) ListUntrackedImportCandidates(userID string) ([]ImportCandidat
 				if ip == "" {
 					ip = dto.PrivateIPAddress
 				}
+
+				osFamily, needsPrompt, skip := r.classifyInstanceImport(ec2Client, imageCache, inst)
+				if skip {
+					continue
+				}
+
 				out = append(out, ImportCandidate{
-					Kind:         ImportKindBox,
-					AWSID:        awsID,
-					Name:         name,
-					State:        dto.Status,
-					InstanceType: dto.InstanceType,
-					IPAddress:    ip,
+					Kind:          ImportKindBox,
+					AWSID:         awsID,
+					Name:          name,
+					State:         dto.Status,
+					InstanceType:  dto.InstanceType,
+					IPAddress:     ip,
+					OSFamily:      osFamily,
+					NeedsOSPrompt: needsPrompt,
 				})
 			}
 		}
@@ -115,16 +130,48 @@ func (r *Runtime) ListUntrackedImportCandidates(userID string) ([]ImportCandidat
 			if err != nil {
 				return nil, err
 			}
+			family, isLinux := ClassifyImageOSFamily(img)
+			if !isLinux {
+				continue
+			}
 			out = append(out, ImportCandidate{
-				Kind:  ImportKindSnapshot,
-				AWSID: amiID,
-				Name:  name,
-				State: string(img.State),
+				Kind:          ImportKindSnapshot,
+				AWSID:         amiID,
+				Name:          name,
+				State:         string(img.State),
+				OSFamily:      family,
+				NeedsOSPrompt: family == "",
 			})
 		}
 	}
 
 	return out, nil
+}
+
+func (r *Runtime) classifyInstanceImport(ec2Client *ec2.Client, cache map[string]types.Image, inst types.Instance) (osFamily string, needsPrompt bool, skip bool) {
+	imageID := aws.ToString(inst.ImageId)
+	if imageID == "" {
+		return "", true, false
+	}
+	img, ok := cache[imageID]
+	if !ok {
+		resp, err := ec2Client.DescribeImages(r.Context(), &ec2.DescribeImagesInput{
+			ImageIds: []string{imageID},
+		})
+		if err != nil || len(resp.Images) == 0 {
+			return "", true, false
+		}
+		img = resp.Images[0]
+		cache[imageID] = img
+	}
+	family, isLinux := ClassifyImageOSFamily(img)
+	if !isLinux {
+		return "", false, true
+	}
+	if family == "" {
+		return "", true, false
+	}
+	return family, false, false
 }
 
 // ImportCandidate inserts a listed candidate into the local DB.
@@ -137,11 +184,19 @@ func (r *Runtime) ImportCandidate(c ImportCandidate, userID string) error {
 	provider := ProviderForRegion(region)
 	db := r.DB()
 
+	osFamily := NormalizeOSFamily(c.OSFamily)
+	if osFamily == "" {
+		osFamily = DefaultOSFamily
+	}
+	if err := ValidateOSFamily(osFamily); err != nil {
+		return err
+	}
+
 	switch c.Kind {
 	case ImportKindBox:
 		if err := db.InsertInstance(
 			uuid.New().String(), c.AWSID, c.Name, userID,
-			c.State, c.InstanceType, region, provider,
+			c.State, c.InstanceType, region, provider, osFamily,
 		); err != nil {
 			return err
 		}
@@ -153,7 +208,7 @@ func (r *Runtime) ImportCandidate(c ImportCandidate, userID string) error {
 	case ImportKindSnapshot:
 		return db.InsertSnapshot(
 			uuid.New().String(), c.AWSID, c.Name, userID,
-			"", c.State, region, provider,
+			"", c.State, region, provider, osFamily,
 		)
 	default:
 		return fmt.Errorf("unknown import kind: %s", c.Kind)

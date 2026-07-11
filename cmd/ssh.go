@@ -20,7 +20,6 @@ const (
 	outpostReadyPath         = "/var/lib/outpost/ready"
 	outpostReadyMessage      = "the user data script is completed"
 	outpostReadyPollInterval = 5 * time.Second
-	defaultSSHUser           = "ec2-user"
 	defaultSSHPort           = "22"
 )
 
@@ -199,15 +198,19 @@ func SSH(args []string) {
 		os.Exit(1)
 	}
 
-	sshTarget := fmt.Sprintf("%s@%s", defaultSSHUser, b.PublicIP)
+	sshUser := service.SSHUserForOS(b.OSFamily)            // get the ssh user for the os family
+	sshTarget := fmt.Sprintf("%s@%s", sshUser, b.PublicIP) // create the ssh target
 
-	if err := waitForoutpostReady(sshBin, parsed.Identity, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
+	if err := waitForoutpostReady(sshBin, parsed.Identity, sshUser, b.PublicIP, defaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 		os.Exit(1)
 	}
 
 	if err := service.UpdateHost(b.Name, b.PublicIP); err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: warning: failed to update SSH config: %v\n", err)
+	}
+	if err := service.UpdateHostUser(b.Name, sshUser); err != nil {
+		fmt.Fprintf(os.Stderr, "ssh: warning: failed to update SSH config user: %v\n", err)
 	}
 
 	fmt.Fprintf(os.Stderr, "Connecting to %s (box %s)...\n", sshTarget, targetLabel)
@@ -287,12 +290,13 @@ func Exec(args []string) {
 		os.Exit(1)
 	}
 
-	if err := waitForoutpostReady(sshBin, identityPath, defaultSSHUser, b.PublicIP, defaultSSHPort); err != nil {
+	sshUser := service.SSHUserForOS(b.OSFamily)
+	if err := waitForoutpostReady(sshBin, identityPath, sshUser, b.PublicIP, defaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "exec: %v\n", err)
 		os.Exit(1)
 	}
 
-	sshTarget := fmt.Sprintf("%s@%s", defaultSSHUser, b.PublicIP)
+	sshTarget := fmt.Sprintf("%s@%s", sshUser, b.PublicIP)
 	argv := sshBaseArgs(identityPath, defaultSSHPort)
 	if *allocateTTY {
 		argv = append(argv, "-t")

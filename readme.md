@@ -4,7 +4,7 @@ Manage remote dev boxes from the CLI — provision, connect, sync, and destroy t
 
 ## What is a box?
 
-A **box** is a personal dev machine on AWS — an EC2 instance running Amazon Linux that you provision, connect to, and tear down from your local machine.
+A **box** is a personal Linux dev machine on AWS — an EC2 instance (Amazon Linux, Ubuntu, or Debian) that you provision, connect to, and tear down from your local machine.
 
 ## Why was this created?
 The idea of keeping your dev environment away from your machine, keeps the blast radius small when installing any new packages or dependencies. Having a seperate environment for AI agents to do their thing, without having to worry about our computer. All while staying in the terminal, and keeping credentials secure locally.
@@ -68,7 +68,7 @@ Run `outpost help` to print usage, or see the table below.
 | Command | Notes |
 | --- | --- |
 | `ssh [-i key] <id-or-name> [-- <ssh-option>...]` | Open an SSH session to a box (`-i` path to private key; default `~/.ssh/id_ed25519`; `--` passes native ssh options before the target, e.g. `-v`, `-A`, `-L 8080:localhost:8080`; for one-off remote commands use `exec`) |
-| `cp [-i key] <source> <dest>` | Copy a file to or from a box (e.g. `outpost cp ./main.go mybox:/home/ec2-user/app/`) |
+| `cp [-i key] <source> <dest>` | Copy a file to or from a box (e.g. `outpost cp ./main.go mybox:~/app/`) |
 | `sync [-i key] [--delete] <source> <dest>` | Incremental directory sync via rsync over SSH (same path syntax as `cp`: one local path, one `box:/path`). Only **dest** is modified — copies new/changed files from source; source is never changed. `--delete` also removes files on dest that are not in source |
 | `exec [-i key] [-s] [-t] <id-or-name> -- <command>` | Run a one-off command on a running box (`-s` run as a shell snippet via `sh -lc`; `-t` allocate a pseudo-TTY for sudo or interactive commands) |
 | `forward <id-or-name> <port>` | Forward a port from a box |

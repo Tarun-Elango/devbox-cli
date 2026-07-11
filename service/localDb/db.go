@@ -140,10 +140,67 @@ func (db *DB) migrate() error {
 			return fmt.Errorf("migrate: %w", err)
 		}
 	}
-	if err := db.migrateInstancesRegionProvider(); err != nil {
+	// if err := db.migrateInstancesRegionProvider(); err != nil {
+	// 	return err
+	// }
+	// if err := db.migrateSnapshotsRegionProvider(); err != nil {
+	// 	return err
+	// }
+	// if err := db.migrateInstancesOSFamily(); err != nil {
+	// 	return err
+	// }
+	// if err := db.migrateSnapshotsOSFamily(); err != nil {
+	// 	return err
+	// }
+	// return db.migrateTemplatesOSFamily()
+
+	return nil
+}
+
+// Add-only migration for os_family on instances (no row backfill; empty DB assumed).
+func (db *DB) migrateInstancesOSFamily() error {
+	cols, err := db.tableColumns("instances")
+	if err != nil {
 		return err
 	}
-	return db.migrateSnapshotsRegionProvider()
+	if cols["os_family"] {
+		return nil
+	}
+	if _, err := db.conn.Exec(`ALTER TABLE instances ADD COLUMN os_family TEXT`); err != nil && !isDuplicateColumnError(err, "os_family") {
+		return fmt.Errorf("migrate instances os_family: %w", err)
+	}
+	return nil
+}
+
+// Add-only migration for os_family on snapshots (no row backfill; empty DB assumed).
+func (db *DB) migrateSnapshotsOSFamily() error {
+	cols, err := db.tableColumns("snapshots")
+	if err != nil {
+		return err
+	}
+	if cols["os_family"] {
+		return nil
+	}
+	if _, err := db.conn.Exec(`ALTER TABLE snapshots ADD COLUMN os_family TEXT`); err != nil && !isDuplicateColumnError(err, "os_family") {
+		return fmt.Errorf("migrate snapshots os_family: %w", err)
+	}
+	return nil
+}
+
+// Add-only migration for os_family on templates. Existing DBs may still have
+// UNIQUE(user_id, name); fresh installs get UNIQUE(user_id, name, os_family).
+func (db *DB) migrateTemplatesOSFamily() error {
+	cols, err := db.tableColumns("templates")
+	if err != nil {
+		return err
+	}
+	if cols["os_family"] {
+		return nil
+	}
+	if _, err := db.conn.Exec(`ALTER TABLE templates ADD COLUMN os_family TEXT`); err != nil && !isDuplicateColumnError(err, "os_family") {
+		return fmt.Errorf("migrate templates os_family: %w", err)
+	}
+	return nil
 }
 
 // one time migration to add region and provider columns to instances table

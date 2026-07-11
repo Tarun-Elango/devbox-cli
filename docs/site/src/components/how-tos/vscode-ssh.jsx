@@ -26,7 +26,7 @@ export default function VscodeSshHowTo() {
         <pre>
           <code>{`Host outpost-mybox
     HostName 203.0.113.42
-    User ec2-user
+    User ubuntu
     IdentityFile ~/.ssh/id_ed25519
     StrictHostKeyChecking accept-new`}</code>
         </pre>
@@ -49,7 +49,7 @@ export default function VscodeSshHowTo() {
           <code>scp</code>, <code>rsync</code>, and so on:
         </p>
         <pre>
-          <code>{`scp ./app.go outpost-mybox:/home/ec2-user/
+          <code>{`scp ./app.go outpost-mybox:~/
 ssh outpost-mybox -L 8080:localhost:8080`}</code>
         </pre>
         <p className="note">
@@ -82,7 +82,7 @@ ssh outpost-mybox -L 8080:localhost:8080`}</code>
           </li>
           <li>
             Open a folder on the remote machine, e.g.{' '}
-            <code>/home/ec2-user</code>.
+            <code>~/</code>.
           </li>
         </ol>
         <p className="note">

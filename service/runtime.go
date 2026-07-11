@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 
 	awsclient "outpost-cli/service/aws"
 	localDb "outpost-cli/service/localDb"
@@ -21,6 +22,11 @@ type Runtime struct {
 	ec2Mu          sync.Mutex             // mutex for the ec2 clients, so we don't have race conditions when accessing the clients
 	ec2ByRegion    map[string]*ec2.Client // map of ec2 clients by region
 	ec2ErrByRegion map[string]error       // map of errors by region
+
+	// cache for ssm clients
+	ssmMu          sync.Mutex
+	ssmByRegion    map[string]*ssm.Client
+	ssmErrByRegion map[string]error
 }
 
 // Open connects to the local database. AWS clients are created lazily on first use.
@@ -102,5 +108,31 @@ func (r *Runtime) EC2ForRegion(region string) (*ec2.Client, error) {
 	}
 	client := ec2.NewFromConfig(awsClient.Config())
 	r.ec2ByRegion[region] = client
+	return client, nil
+}
+
+// SSMForRegion returns a cached SSM client for the given AWS region.
+func (r *Runtime) SSMForRegion(region string) (*ssm.Client, error) {
+	r.ssmMu.Lock()
+	defer r.ssmMu.Unlock()
+
+	if r.ssmByRegion == nil {
+		r.ssmByRegion = make(map[string]*ssm.Client)
+		r.ssmErrByRegion = make(map[string]error)
+	}
+	if client, ok := r.ssmByRegion[region]; ok {
+		if err := r.ssmErrByRegion[region]; err != nil {
+			return nil, err
+		}
+		return client, nil
+	}
+
+	awsClient, err := awsclient.NewClientForRegion(r.Context(), region)
+	if err != nil {
+		r.ssmErrByRegion[region] = err
+		return nil, err
+	}
+	client := ssm.NewFromConfig(awsClient.Config()) // create the ssm client
+	r.ssmByRegion[region] = client
 	return client, nil
 }

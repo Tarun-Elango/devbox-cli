@@ -13,10 +13,10 @@ export default function BoxesDoc() {
       <DocOutline items={sections} />
 
       <p className="note">
-        A box is an EC2 instance running <strong>Amazon Linux 2023</strong> — you
-        provision, connect to, and tear it down from your laptop. Templates and
-        startup scripts use <code>dnf</code> and the default login user is{' '}
-        <code>ec2-user</code>.
+        A box is an EC2 instance running a supported <strong>Linux</strong> distro —
+        Amazon Linux 2023, Ubuntu 24.04, or Debian 12. You choose the OS when creating
+        a box. Templates and SSH login users are scoped to that OS (
+        <code>ec2-user</code>, <code>ubuntu</code>, or <code>admin</code>).
       </p>
 
       <div className="card">
@@ -25,9 +25,9 @@ export default function BoxesDoc() {
           <code>outpost create mybox</code>
         </pre>
         <p className="note">
-          Launches an interactive wizard. You will be asked to choose an instance type
-          (↑/↓, Enter to confirm) and a root disk size in GB (press Enter to accept the
-          default). Press Ctrl+C at any prompt to cancel.
+          Launches an interactive wizard. You will be asked to choose a Linux OS,
+          an instance type (↑/↓, Enter to confirm), and a root disk size in GB (press
+          Enter to accept the default). Press Ctrl+C at any prompt to cancel.
         </p>
         <dl className="cmd-variant">
           <dt>Restore from a snapshot</dt>

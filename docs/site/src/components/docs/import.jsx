@@ -40,10 +40,10 @@ export default function ImportDoc() {
           <code>chmod 400 ~/Downloads/my-key.pem</code>.
         </p>
         <p className="note">
-          Imported boxes must run Amazon Linux for <code>outpost ssh</code> and{' '}
-          <code>outpost idle-stop</code> to work. Other Linux distributions may be
-          imported and tracked, but Outpost-specific SSH setup and idle detection are
-          not guaranteed to work.
+          Import supports Linux images only. Outpost detects Amazon Linux, Ubuntu, and
+          Debian when possible; for unrecognized Linux AMIs you pick the OS during
+          import so SSH and idle-stop use the correct login user. Non-Linux images
+          (for example Windows) are skipped.
         </p>
       </div>
 

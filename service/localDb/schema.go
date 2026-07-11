@@ -16,6 +16,7 @@ var createTables = []string{
   instance_type    TEXT,
   region           TEXT,
   provider         TEXT,
+  os_family        TEXT,
   idle_stop_minutes  INTEGER,   -- NULL = off
   created_at       TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at       TEXT
@@ -31,6 +32,7 @@ var createTables = []string{
   state      TEXT,
   region     TEXT,
   provider   TEXT,
+  os_family  TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )`,
 	`CREATE INDEX IF NOT EXISTS idx_snapshots_box ON snapshots(box_id)`,
@@ -42,8 +44,9 @@ var createTables = []string{
   name            TEXT NOT NULL,
   description     TEXT,
   startup_script  TEXT,
+  os_family       TEXT,
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(user_id, name)
+  UNIQUE(user_id, name, os_family)
 )`,
 	// Tracks built-in template IDs already offered; survives user deletes so Open() won't re-seed.
 	`CREATE TABLE IF NOT EXISTS default_template_seeds (

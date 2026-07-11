@@ -13,8 +13,8 @@ import (
 )
 
 // Snapshot mirrors lighthouse SnapshotDto (amiId, name, state, boxAwsId), plus
-// region/provider captured at creation time so the snapshot remains addressable
-// even after its source box is deleted.
+// region/provider/os_family captured at creation time so the snapshot remains
+// addressable even after its source box is deleted.
 type Snapshot struct {
 	AmiID    string `json:"amiId"`
 	Name     string `json:"name"`
@@ -22,6 +22,7 @@ type Snapshot struct {
 	BoxAwsID string `json:"boxAwsId"`
 	Region   string `json:"region"`
 	Provider string `json:"provider"`
+	OSFamily string `json:"osFamily"`
 }
 
 // CreateSnapshot creates an AMI snapshot of the given box.
@@ -42,12 +43,16 @@ func (r *Runtime) CreateSnapshot(boxID, name, userID string) (*Snapshot, error) 
 		return nil, fmt.Errorf("cannot snapshot a %s instance: %s", instance.Status, boxID)
 	}
 
-	// Capture the box's region/provider on the snapshot itself so it stays
+	// Capture the box's region/provider/os on the snapshot itself so it stays
 	// addressable even if the source box is later deleted.
 	region := instance.Region
 	provider := instance.Provider
 	if provider == "" {
 		provider = ProviderForRegion(region)
+	}
+	osFamily := osFamilyForRecord(*box)
+	if osFamily == "" {
+		osFamily = DefaultOSFamily
 	}
 
 	ec2Client, err := r.EC2ForRegion(region) // get ec2 client scoped to the box's region
@@ -76,6 +81,7 @@ func (r *Runtime) CreateSnapshot(boxID, name, userID string) (*Snapshot, error) 
 		"pending",
 		region,
 		provider,
+		osFamily,
 	); err != nil {
 		return nil, err
 	}
@@ -87,6 +93,7 @@ func (r *Runtime) CreateSnapshot(boxID, name, userID string) (*Snapshot, error) 
 		BoxAwsID: boxID,
 		Region:   region,
 		Provider: provider,
+		OSFamily: osFamily,
 	}, nil
 }
 
@@ -155,6 +162,7 @@ func (r *Runtime) ListSnapshots(userID string) ([]*Snapshot, error) {
 				BoxAwsID: localDb.StringValue(rec.BoxAwsID),
 				Region:   region,
 				Provider: providerForSnapshotRecord(rec.SnapshotRecord, region),
+				OSFamily: osFamilyForSnapshotRecord(rec.SnapshotRecord),
 			})
 			return nil
 		},
@@ -226,6 +234,7 @@ func (r *Runtime) GetSnapshot(amiID, userID string) (*Snapshot, error) {
 		BoxAwsID: boxAwsID,
 		Region:   region,
 		Provider: providerForSnapshotRecord(*record, region),
+		OSFamily: osFamilyForSnapshotRecord(*record),
 	}, nil
 }
 
@@ -296,6 +305,14 @@ func providerForSnapshotRecord(record localDb.SnapshotRecord, region string) str
 		return provider
 	}
 	return ProviderForRegion(region)
+}
+
+// get the os family for the snapshot record
+func osFamilyForSnapshotRecord(record localDb.SnapshotRecord) string {
+	if family := localDb.StringValue(record.OSFamily); family != "" {
+		return NormalizeOSFamily(family)
+	}
+	return DefaultOSFamily
 }
 
 func (r *Runtime) ec2ForSnapshotRecord(record localDb.SnapshotRecord) (*ec2.Client, error) {

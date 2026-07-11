@@ -18,9 +18,7 @@ import (
 // public key to authorized_keys so outpost ssh works.
 func Import(args []string) {
 	helper.RejectExtraArgs(args, "usage: outpost import")
-
-	fmt.Fprintln(os.Stderr, "warning: if an instance is not Amazon Linux, commands like outpost idle-stop and outpost ssh will not work")
-
+	fmt.Fprintln(os.Stderr, "WARNING: if an instance is not linux, commands like 'outpost ssh' will not work")
 	rt := helper.MustOpenRuntime()
 	defer func() { _ = rt.Close() }()
 
@@ -43,6 +41,11 @@ func Import(args []string) {
 		} else if c.InstanceType != "" {
 			extra = c.State + ", " + c.InstanceType
 		}
+		if c.OSFamily != "" {
+			extra += ", " + service.MustOSProfile(c.OSFamily).DisplayName
+		} else if c.NeedsOSPrompt {
+			extra += ", Linux (unknown distro)"
+		}
 		fmt.Printf("Import %s %s (%s) as %q? [y/N] ", kind, c.AWSID, extra, c.Name)
 
 		line, err := helper.ReadStdinLine()
@@ -53,6 +56,19 @@ func Import(args []string) {
 		if line != "y" && line != "Y" {
 			fmt.Printf("  skipped %s\n", c.AWSID)
 			continue
+		}
+
+		if c.NeedsOSPrompt || c.OSFamily == "" {
+			osFamily, err := helper.SelectOSFamily(
+				"Could not detect the Linux distro from this AMI.",
+				"Choose the closest match so outpost ssh uses the correct login user.",
+			)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "  skipped %s: %v\n", c.AWSID, err)
+				continue
+			}
+			c.OSFamily = osFamily
+			c.NeedsOSPrompt = false
 		}
 
 		identityPath := ""
@@ -72,17 +88,22 @@ func Import(args []string) {
 			continue
 		}
 		imported++
-		fmt.Printf("  imported %s as %q\n", c.AWSID, c.Name)
+		fmt.Printf("  imported %s as %q (%s)\n", c.AWSID, c.Name, service.MustOSProfile(c.OSFamily).DisplayName)
 
 		if c.Kind != service.ImportKindBox {
 			continue
 		}
 		if c.IPAddress != "" {
-			addSSHHostOrWarn(c.Name, &service.Instance{Name: c.Name, IPAddress: c.IPAddress, Status: c.State})
+			addSSHHostOrWarn(c.Name, &service.Instance{
+				Name:      c.Name,
+				IPAddress: c.IPAddress,
+				Status:    c.State,
+				OSFamily:  c.OSFamily,
+			})
 		}
 		switch {
 		case identityPath != "": // If the user provided a private key path, authorize SSH access
-			if err := authorizeImportedBox(identityPath, c.IPAddress); err != nil {
+			if err := authorizeImportedBox(identityPath, c.IPAddress, service.SSHUserForOS(c.OSFamily)); err != nil {
 				fmt.Fprintf(os.Stderr, "  warning: could not authorize outpost SSH key: %v\n", err)
 				printImportAuthorizeManual(c, identityPath)
 			} else {
@@ -131,9 +152,10 @@ func printImportAuthorizeManual(c service.ImportCandidate, identityPath string) 
 	if identityPath != "" {
 		keyFlag = "-i " + identityPath
 	}
+	sshUser := service.SSHUserForOS(c.OSFamily)
 	fmt.Printf("  note: add your outpost public key once, then use outpost ssh:\n")
-	fmt.Printf("    ssh %s ec2-user@%s 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys' < ~/.ssh/id_ed25519.pub\n",
-		keyFlag, c.IPAddress)
+	fmt.Printf("    ssh %s %s@%s 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys' < ~/.ssh/id_ed25519.pub\n",
+		keyFlag, sshUser, c.IPAddress)
 }
 
 // expandUserPath strips quotes and expands a leading ~/ to the home directory.
@@ -170,7 +192,7 @@ func buildAuthorizeRemoteCommand(publicKey string) string {
 // authorizeImportedBox SSHes with identity and appends the local outpost
 // public key to the box's authorized_keys. Does not wait for outpost ready
 // markers (imported boxes typically have none).
-func authorizeImportedBox(identity, host string) error {
+func authorizeImportedBox(identity, host, sshUser string) error {
 	pubKey, err := readPublicKey()
 	if err != nil {
 		return err
@@ -183,12 +205,15 @@ func authorizeImportedBox(identity, host string) error {
 	if err != nil {
 		return fmt.Errorf("ssh binary not found in PATH")
 	}
+	if strings.TrimSpace(sshUser) == "" {
+		sshUser = service.SSHUserForOS(service.DefaultOSFamily)
+	}
 
 	argv := sshBaseArgs(identity, defaultSSHPort)
 	argv = append(argv,
 		"-o", "BatchMode=yes",
 		"-o", "LogLevel=ERROR",
-		fmt.Sprintf("%s@%s", defaultSSHUser, host),
+		fmt.Sprintf("%s@%s", sshUser, host),
 		buildAuthorizeRemoteCommand(pubKey),
 	)
 
