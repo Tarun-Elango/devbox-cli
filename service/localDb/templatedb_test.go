@@ -145,6 +145,26 @@ func TestSeedDefaultTemplates(t *testing.T) {
 	if len(records) != len(defaultTemplates) {
 		t.Fatalf("got %d templates, want %d", len(records), len(defaultTemplates))
 	}
+	if len(records) != len(defaultTemplateDefinitions)*3 {
+		t.Fatalf("got %d built-ins, want %d", len(records), len(defaultTemplateDefinitions)*3)
+	}
+
+	expectedNames := make(map[string]bool, len(defaultTemplateDefinitions))
+	for _, definition := range defaultTemplateDefinitions {
+		expectedNames[definition.name] = true
+	}
+	variantsByName := make(map[string]int, len(expectedNames))
+	for _, record := range records {
+		if !expectedNames[record.Name] {
+			t.Fatalf("unexpected built-in template %q", record.Name)
+		}
+		variantsByName[record.Name]++
+	}
+	for name := range expectedNames {
+		if variantsByName[name] != 3 {
+			t.Fatalf("template %q has %d OS variants, want 3", name, variantsByName[name])
+		}
+	}
 
 	python, err := db.GetTemplateByNameUserIDAndOSFamily("python3", LocalUserID, "amazon-linux")
 	if err != nil {
@@ -224,7 +244,14 @@ func TestSeedDefaultTemplatesSkipsUserNameCollision(t *testing.T) {
 		t.Fatalf("got %d templates, want %d (built-in python3 skipped)", len(records), len(defaultTemplates))
 	}
 
-	seeded, err := db.defaultTemplateAlreadySeeded("00000000-0000-0000-0001-000000000001")
+	var pythonDefault defaultTemplate
+	for _, tmpl := range defaultTemplates {
+		if tmpl.Name == "python3" && tmpl.OSFamily == "amazon-linux" {
+			pythonDefault = tmpl
+			break
+		}
+	}
+	seeded, err := db.defaultTemplateAlreadySeeded(pythonDefault.ID)
 	if err != nil {
 		t.Fatalf("check python3 seed state: %v", err)
 	}
@@ -251,7 +278,10 @@ func TestSeedDefaultTemplatesPreservesUserRename(t *testing.T) {
 		t.Fatalf("seed default templates: %v", err)
 	}
 
-	pythonID := "00000000-0000-0000-0001-000000000001"
+	python, err := db.GetTemplateByNameUserIDAndOSFamily("python3", LocalUserID, "amazon-linux")
+	if err != nil {
+		t.Fatalf("get python3 template: %v", err)
+	}
 	if err := db.UpdateTemplateName("python3", LocalUserID, "my-python", "amazon-linux"); err != nil {
 		t.Fatalf("rename python3 template: %v", err)
 	}
@@ -260,7 +290,7 @@ func TestSeedDefaultTemplatesPreservesUserRename(t *testing.T) {
 		t.Fatalf("re-seed default templates: %v", err)
 	}
 
-	record, err := db.GetTemplateByID(pythonID)
+	record, err := db.GetTemplateByID(python.ID)
 	if err != nil {
 		t.Fatalf("get renamed template: %v", err)
 	}
