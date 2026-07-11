@@ -201,6 +201,8 @@ func SSH(args []string) {
 	sshUser := service.SSHUserForOS(b.OSFamily)            // get the ssh user for the os family
 	sshTarget := fmt.Sprintf("%s@%s", sshUser, b.PublicIP) // create the ssh target
 
+	fmt.Println("tip: SSH is available quickly; template startup may still be running — wait a few minutes before checking tools.")
+
 	if err := waitForoutpostReady(sshBin, parsed.Identity, sshUser, b.PublicIP, defaultSSHPort); err != nil {
 		fmt.Fprintf(os.Stderr, "ssh: %v\n", err)
 		os.Exit(1)

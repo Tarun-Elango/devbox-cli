@@ -130,7 +130,7 @@ List and manage AWS account cost budgets. Results are cached under `~/.outpost/`
 Go to your AWS console 
 
 1. **create an IAM user**
-Go to the IAM console → **Users** → **Create user**. Name it (e.g. `outpost`), choose **Attach policies directly**, search for `AmazonEC2FullAccess` and `AWSBudgetsActionsWithAWSResourceControlAccess`, select it, and create the user.
+Go to the IAM console → **Users** → **Create user**. Name it (e.g. `outpost`), choose **Attach policies directly**, search for `AmazonEC2FullAccess`, `AWSBudgetsActionsWithAWSResourceControlAccess`, and `AmazonSSMReadOnlyAccess`, select them, and create the user.
 
 2. **Access keys** 
 Open the user → **Security credentials** → **Access keys** → **Create access key**. Select **Local code**, confirm, then copy the **Access key ID** and **Secret access key** (the secret is shown only once).

@@ -225,8 +225,6 @@ func createFromTemplates(name string, templateRefs []string, fromSnapshot string
 	} else {
 		fmt.Printf("Creating box %q (%s) from templates %s...\n", name, service.MustOSProfile(osFamily).DisplayName, strings.Join(templateRefs, ", "))
 	}
-	fmt.Println("Note: older startup scripts may not fully install — after SSH, verify your tools/libraries are present.")
-
 	var b Box
 
 	rt := helper.MustOpenRuntime()

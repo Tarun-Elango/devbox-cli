@@ -49,6 +49,10 @@ export default function BoxesDoc() {
             Example:{' '}
             <code>outpost create mybox --template node go opencode</code>
           </dd>
+          <dd className="note">
+            You can <code>outpost ssh</code> quickly, but template startup may
+            still be running — wait a few minutes before checking installed tools.
+          </dd>
         </dl>
         <dl className="cmd-variant">
           <dt>Templates and snapshot together</dt>

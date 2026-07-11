@@ -128,6 +128,10 @@ export default function SnapshotsDoc() {
           <dd className="example">
             Example: <code>outpost create mybox --template node go</code>
           </dd>
+          <dd className="note">
+            You can <code>outpost ssh</code> quickly, but template startup may
+            still be running — wait a few minutes before checking installed tools.
+          </dd>
         </dl>
       </div>
     </DocPage>

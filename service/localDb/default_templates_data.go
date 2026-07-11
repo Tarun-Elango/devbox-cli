@@ -67,12 +67,9 @@ func amazonLinuxTemplateScript(name, user string) string {
 	dnf := func(command, packages string) string {
 		return fmt.Sprintf("command -v %s >/dev/null 2>&1 || dnf install -y %s\n", command, packages)
 	}
-	node := dnf("node", "nodejs22 nodejs22-npm")
-	userNPMInstall := func(command, packageName string) string {
-		return node + fmt.Sprintf(
-			"if ! runuser -u %s -- bash -lc 'command -v %s >/dev/null 2>&1'; then\n  runuser -u %s -- bash -lc 'npm install -g %s'\nfi\n",
-			user, command, user, packageName,
-		)
+	node := ensureNode22AmazonLinux()
+	userNPM := func(command, packageName string, ignoreScripts bool) string {
+		return userNPMGlobalInstall(user, command, packageName, node, ignoreScripts)
 	}
 
 	switch name {
@@ -86,13 +83,14 @@ enabled=1
 gpgcheck=1
 gpgkey=https://downloads.claude.ai/keys/claude-code.asc
 EOF
+  rpm --import https://downloads.claude.ai/keys/claude-code.asc
   dnf install -y claude-code
 fi
 `
 	case "pi":
-		return userNPMInstall("pi", "@earendil-works/pi-coding-agent")
+		return userNPM("pi", "@earendil-works/pi-coding-agent", true)
 	case "opencode":
-		return fmt.Sprintf("if ! runuser -u %s -- bash -lc 'command -v opencode >/dev/null 2>&1'; then\n  runuser -u %s -- bash -lc 'curl -fsSL https://opencode.ai/install | bash'\nfi\n", user, user)
+		return userOpenCodeInstall(user)
 	case "go":
 		return dnf("go", "golang")
 	case "python3":
@@ -104,14 +102,9 @@ fi
 	case "node22", "npm":
 		return node
 	case "pnpm":
-		return userNPMInstall("pnpm", "pnpm")
+		return userNPM("pnpm", "pnpm", false)
 	case "bun":
-		return `if ! command -v bun >/dev/null 2>&1; then
-  export BUN_INSTALL=/usr/local/bun
-  curl -fsSL https://bun.sh/install | bash
-  ln -sf /usr/local/bun/bin/bun /usr/local/bin/bun
-fi
-`
+		return bunInstallScript("dnf install -y curl unzip")
 	case "docker":
 		return fmt.Sprintf(`if ! command -v docker >/dev/null 2>&1; then
   dnf install -y docker
@@ -129,20 +122,22 @@ func debianTemplateScript(name, user string) string {
 		return fmt.Sprintf("export DEBIAN_FRONTEND=noninteractive\ncommand -v %s >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y %s)\n", command, packages)
 	}
 	node := ensureNode22()
-	userNPMInstall := func(command, packageName string) string {
-		return node + fmt.Sprintf(
-			"if ! runuser -u %s -- bash -lc 'command -v %s >/dev/null 2>&1'; then\n  runuser -u %s -- bash -lc 'npm install -g %s'\nfi\n",
-			user, command, user, packageName,
-		)
+	userNPM := func(command, packageName string, ignoreScripts bool) string {
+		return userNPMGlobalInstall(user, command, packageName, node, ignoreScripts)
 	}
 
 	switch name {
 	case "claude":
-		return fmt.Sprintf("if ! runuser -u %s -- bash -lc 'command -v claude >/dev/null 2>&1'; then\n  runuser -u %s -- bash -lc 'curl -fsSL https://claude.ai/install.sh | bash'\nfi\n", user, user)
+		return fmt.Sprintf(`export DEBIAN_FRONTEND=noninteractive
+if ! runuser -u %s -- bash -lc 'command -v claude >/dev/null 2>&1'; then
+  apt-get update -qq && apt-get install -y curl
+  runuser -u %s -- bash -lc 'curl -fsSL https://claude.ai/install.sh | bash'
+fi
+`, user, user)
 	case "pi":
-		return userNPMInstall("pi", "@earendil-works/pi-coding-agent")
+		return userNPM("pi", "@earendil-works/pi-coding-agent", true)
 	case "opencode":
-		return fmt.Sprintf("if ! runuser -u %s -- bash -lc 'command -v opencode >/dev/null 2>&1'; then\n  runuser -u %s -- bash -lc 'curl -fsSL https://opencode.ai/install | bash'\nfi\n", user, user)
+		return userOpenCodeInstall(user)
 	case "go":
 		return apt("go", "golang-go")
 	case "python3":
@@ -154,14 +149,9 @@ func debianTemplateScript(name, user string) string {
 	case "node22", "npm":
 		return node
 	case "pnpm":
-		return userNPMInstall("pnpm", "pnpm")
+		return userNPM("pnpm", "pnpm", false)
 	case "bun":
-		return `if ! command -v bun >/dev/null 2>&1; then
-  export BUN_INSTALL=/usr/local/bun
-  curl -fsSL https://bun.sh/install | bash
-  ln -sf /usr/local/bun/bin/bun /usr/local/bin/bun
-fi
-`
+		return bunInstallScript("export DEBIAN_FRONTEND=noninteractive\napt-get update -qq && apt-get install -y curl unzip")
 	case "docker":
 		return fmt.Sprintf(`export DEBIAN_FRONTEND=noninteractive
 if ! command -v docker >/dev/null 2>&1; then
@@ -175,6 +165,41 @@ usermod -aG docker %s 2>/dev/null || true
 	return ""
 }
 
+// userNPMGlobalInstall installs an npm package for the SSH user under ~/.local so
+// global installs do not require write access to /usr/local.
+func userNPMGlobalInstall(user, command, packageName, prerequisites string, ignoreScripts bool) string {
+	flags := ""
+	if ignoreScripts {
+		flags = " --ignore-scripts"
+	}
+	return prerequisites + fmt.Sprintf(`if ! runuser -u %s -- bash -lc 'command -v %s >/dev/null 2>&1'; then
+  runuser -u %s -- bash -lc 'mkdir -p ~/.local/bin && npm config set prefix ~/.local && npm install -g%s %s'
+fi
+`, user, command, user, flags, packageName)
+}
+
+// userOpenCodeInstall installs OpenCode for the SSH user, then symlinks it into
+// /usr/local/bin so opencode is on PATH for root and non-login shells too.
+func userOpenCodeInstall(user string) string {
+	return fmt.Sprintf(`if ! command -v opencode >/dev/null 2>&1; then
+  if ! runuser -u %s -- bash -lc 'command -v opencode >/dev/null 2>&1'; then
+    runuser -u %s -- bash -lc 'export OPENCODE_INSTALL_DIR="$HOME/.opencode/bin" && mkdir -p "$OPENCODE_INSTALL_DIR" && curl -fsSL https://opencode.ai/install | bash'
+  fi
+  ln -sf /home/%s/.opencode/bin/opencode /usr/local/bin/opencode
+fi
+`, user, user, user)
+}
+
+// ensureNode22AmazonLinux installs Node.js 22 from AL2023 repos and activates it
+// via alternatives when an older Node version is already present.
+func ensureNode22AmazonLinux() string {
+	return `if ! command -v node >/dev/null 2>&1 || ! node -e 'process.exit(Number(process.versions.node.split(".")[0])>=22?0:1)' 2>/dev/null; then
+  dnf install -y nodejs22 nodejs22-npm
+  alternatives --set node /usr/bin/node-22 2>/dev/null || true
+fi
+`
+}
+
 // ensureNode22 installs Node.js 22 and npm from NodeSource because distro
 // repositories frequently provide an older Node version.
 func ensureNode22() string {
@@ -182,11 +207,19 @@ func ensureNode22() string {
 if ! command -v node >/dev/null 2>&1 || ! node -e 'process.exit(Number(process.versions.node.split(".")[0])>=22?0:1)' 2>/dev/null; then
   apt-get update -qq
   apt-get install -y ca-certificates curl gnupg
-  mkdir -p /etc/apt/keyrings
-  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
-  apt-get update -qq
+  apt-get remove -y nodejs npm 2>/dev/null || true
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
 fi
 `
+}
+
+func bunInstallScript(prerequisites string) string {
+	return fmt.Sprintf(`if ! command -v bun >/dev/null 2>&1; then
+  %s
+  export BUN_INSTALL=/usr/local/bun
+  curl -fsSL https://bun.sh/install | bash
+  ln -sf /usr/local/bun/bin/bun /usr/local/bin/bun
+fi
+`, prerequisites)
 }

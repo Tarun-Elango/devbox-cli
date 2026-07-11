@@ -65,8 +65,9 @@ export default function SetupDoc() {
             Name it something recognizable, such as <code>outpost</code>.
           </li>
           <li>
-            Give the user permissions by attaching <code>AmazonEC2FullAccess</code> and{' '}
-            <code>AWSBudgetsActionsWithAWSResourceControlAccess</code>, then create the user.
+            Give the user permissions by attaching <code>AmazonEC2FullAccess</code>,{' '}
+            <code>AWSBudgetsActionsWithAWSResourceControlAccess</code>, and{' '}
+            <code>AmazonSSMReadOnlyAccess</code>, then create the user.
             For more limited EC2 permissions, use the custom policy below in place of{' '}
             <code>AmazonEC2FullAccess</code>.
           </li>
@@ -87,7 +88,8 @@ export default function SetupDoc() {
           <p className="note">
             This policy grants only the EC2 and STS permissions Outpost needs to manage boxes,
             snapshots, imports, security groups, and <code>outpost health</code>. You must still
-            attach <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> for budget controls.
+            attach <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> for budget controls
+            and <code>AmazonSSMReadOnlyAccess</code> to resolve latest AMI IDs.
           </p>
           <ol>
             <li>
@@ -98,8 +100,9 @@ export default function SetupDoc() {
               Paste the policy below, name it (for example, <code>OutpostEC2</code>), and create it.
             </li>
             <li>
-              Attach <code>OutpostEC2</code> and{' '}
-              <code>AWSBudgetsActionsWithAWSResourceControlAccess</code> to the IAM user you created.
+              Attach <code>OutpostEC2</code>,{' '}
+              <code>AWSBudgetsActionsWithAWSResourceControlAccess</code>, and{' '}
+              <code>AmazonSSMReadOnlyAccess</code> to the IAM user you created.
             </li>
           </ol>
           <pre>
