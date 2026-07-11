@@ -5,133 +5,111 @@ import (
 	"fmt"
 )
 
-// seedDefaultTemplates offers each built-in template at most once.
-// default_template_seeds records offerings so user deletes are not restored on Open().
-// When a seeded row still exists, description and startup_script are synced from
-// default_templates_data.go.
+// seedDefaultTemplates offers every built-in template once. The seed record is
+// intentionally retained after a user deletes a template, so it is not restored
+// on a later Open(). Existing built-ins have their content refreshed by ID while
+// keeping their user-selected name.
 func (db *DB) seedDefaultTemplates() error {
-	if err := db.backfillDefaultTemplateSeeds(); err != nil {
-		return err
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return fmt.Errorf("begin default template seed: %w", err)
 	}
+	defer func() { _ = tx.Rollback() }()
 
 	for _, tmpl := range defaultTemplates {
-		seeded, err := db.defaultTemplateAlreadySeeded(tmpl.ID)
+		seeded, err := defaultTemplateSeeded(tx, tmpl.ID)
 		if err != nil {
 			return fmt.Errorf("check seed state for %s: %w", tmpl.Name, err)
 		}
 		if seeded {
-			if err := db.syncDefaultTemplate(tmpl); err != nil {
+			if err := syncDefaultTemplate(tx, tmpl); err != nil {
 				return fmt.Errorf("sync template %s: %w", tmpl.Name, err)
 			}
 			continue
 		}
 
-		existing, err := db.GetTemplateByNameUserIDAndOSFamily(tmpl.Name, LocalUserID, tmpl.OSFamily)
-		if err != nil && err != sql.ErrNoRows {
+		var existingID string
+		err = tx.QueryRow(
+			`SELECT id FROM templates WHERE user_id = ? AND name = ? AND os_family = ?`,
+			LocalUserID, tmpl.Name, tmpl.OSFamily,
+		).Scan(&existingID)
+		switch {
+		case err == sql.ErrNoRows:
+			if _, err := tx.Exec(`
+				INSERT INTO templates (id, user_id, name, description, startup_script, os_family, created_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				tmpl.ID,
+				LocalUserID,
+				tmpl.Name,
+				nullIfEmpty(tmpl.Description),
+				nullIfEmpty(tmpl.Script),
+				tmpl.OSFamily,
+				tmpl.CreatedAt,
+			); err != nil {
+				return fmt.Errorf("insert template %s: %w", tmpl.Name, err)
+			}
+		case err != nil:
 			return fmt.Errorf("check existing template %s: %w", tmpl.Name, err)
-		}
-		if err == nil {
-			if existing.ID != tmpl.ID {
-				// User-owned template already uses this name; skip offering the built-in.
-				if err := db.recordDefaultTemplateSeed(tmpl.ID); err != nil {
-					return fmt.Errorf("record seed for %s: %w", tmpl.Name, err)
-				}
-				continue
-			}
-			// Built-in row exists but seed metadata is missing.
-			if err := db.recordDefaultTemplateSeed(tmpl.ID); err != nil {
-				return fmt.Errorf("record seed for %s: %w", tmpl.Name, err)
-			}
-			if err := db.syncDefaultTemplate(tmpl); err != nil {
+		case existingID == tmpl.ID:
+			if err := syncDefaultTemplate(tx, tmpl); err != nil {
 				return fmt.Errorf("sync template %s: %w", tmpl.Name, err)
 			}
-			continue
 		}
 
-		tx, err := db.conn.Begin()
-		if err != nil {
-			return fmt.Errorf("seed template %s: %w", tmpl.Name, err)
-		}
-
-		_, err = tx.Exec(`
-			INSERT INTO templates (id, user_id, name, description, startup_script, os_family, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			tmpl.ID,
-			LocalUserID,
-			tmpl.Name,
-			nullIfEmpty(tmpl.Description),
-			nullIfEmpty(tmpl.Script),
-			nullIfEmpty(tmpl.OSFamily),
-			tmpl.CreatedAt,
-		)
-		if err != nil {
-			_ = tx.Rollback()
-			return fmt.Errorf("seed template %s: %w", tmpl.Name, err)
-		}
-
-		_, err = tx.Exec(
+		// A same-name user template counts as an offer; never replace it later.
+		if _, err := tx.Exec(
 			`INSERT INTO default_template_seeds (template_id) VALUES (?)`,
 			tmpl.ID,
-		)
-		if err != nil {
-			_ = tx.Rollback()
+		); err != nil {
 			return fmt.Errorf("record seed for %s: %w", tmpl.Name, err)
 		}
+	}
 
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("seed template %s: %w", tmpl.Name, err)
-		}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit default template seed: %w", err)
 	}
 	return nil
 }
 
-// syncDefaultTemplate updates description and startup_script when the built-in row
-// still exists. User renames and user-deleted templates are left unchanged.
-func (db *DB) syncDefaultTemplate(tmpl defaultTemplate) error {
-	record, err := db.GetTemplateByID(tmpl.ID)
-	if err == sql.ErrNoRows {
+// syncDefaultTemplate updates built-in content without changing the name, so a
+// user rename survives future database opens. A missing row was deleted by the
+// user and must stay deleted.
+func syncDefaultTemplate(tx *sql.Tx, tmpl defaultTemplate) error {
+	var userID string
+	err := tx.QueryRow(`SELECT user_id FROM templates WHERE id = ?`, tmpl.ID).Scan(&userID)
+	if err == sql.ErrNoRows || userID != LocalUserID {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	if record.UserID != LocalUserID {
-		return nil
-	}
 
-	wantDescription := tmpl.Description
-	wantScript := tmpl.Script
-	if StringValue(record.Description) == wantDescription &&
-		StringValue(record.OSFamily) == tmpl.OSFamily &&
-		StringValue(record.StartupScript) == wantScript {
-		return nil
-	}
-
-	_, err = db.conn.Exec(`
+	_, err = tx.Exec(`
 		UPDATE templates
 		SET description = ?, startup_script = ?, os_family = ?
 		WHERE id = ? AND user_id = ?`,
-		nullIfEmpty(wantDescription),
-		nullIfEmpty(wantScript),
-		nullIfEmpty(tmpl.OSFamily),
+		nullIfEmpty(tmpl.Description),
+		nullIfEmpty(tmpl.Script),
+		tmpl.OSFamily,
 		tmpl.ID,
 		LocalUserID,
 	)
-	if err != nil {
-		return fmt.Errorf("update template content: %w", err)
-	}
-	return nil
+	return err
 }
 
-func (db *DB) recordDefaultTemplateSeed(templateID string) error {
-	_, err := db.conn.Exec(
-		`INSERT OR IGNORE INTO default_template_seeds (template_id) VALUES (?)`,
+func defaultTemplateSeeded(tx *sql.Tx, templateID string) (bool, error) {
+	var exists int
+	err := tx.QueryRow(
+		`SELECT 1 FROM default_template_seeds WHERE template_id = ? LIMIT 1`,
 		templateID,
-	)
-	if err != nil {
-		return err
+	).Scan(&exists)
+	if err == sql.ErrNoRows {
+		return false, nil
 	}
-	return nil
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (db *DB) defaultTemplateAlreadySeeded(templateID string) (bool, error) {
@@ -147,38 +125,4 @@ func (db *DB) defaultTemplateAlreadySeeded(templateID string) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-// backfillDefaultTemplateSeeds upgrades DBs seeded before default_template_seeds existed.
-// If any built-in template row remains, treat the whole initial batch as already offered
-// (including ones the user deleted before upgrading).
-func (db *DB) backfillDefaultTemplateSeeds() error {
-	var seedCount int
-	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM default_template_seeds`).Scan(&seedCount); err != nil {
-		return fmt.Errorf("count default template seeds: %w", err)
-	}
-	if seedCount > 0 {
-		return nil
-	}
-
-	var existing int
-	if err := db.conn.QueryRow(`
-		SELECT COUNT(*) FROM templates WHERE id LIKE '00000000-0000-0000-0001-%'`,
-	).Scan(&existing); err != nil {
-		return fmt.Errorf("count existing default templates: %w", err)
-	}
-	if existing == 0 {
-		return nil
-	}
-
-	for _, tmpl := range defaultTemplates {
-		_, err := db.conn.Exec(
-			`INSERT OR IGNORE INTO default_template_seeds (template_id) VALUES (?)`,
-			tmpl.ID,
-		)
-		if err != nil {
-			return fmt.Errorf("backfill seed for %s: %w", tmpl.Name, err)
-		}
-	}
-	return nil
 }
