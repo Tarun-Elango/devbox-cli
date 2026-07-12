@@ -26,25 +26,17 @@ func TestFormatTemplateScriptCollapsesWhitespace(t *testing.T) {
 	}
 }
 
-func TestBuildTemplateListOutputSeparatesRows(t *testing.T) {
+func TestBuildTemplateListOutputCollapsesScript(t *testing.T) {
 	templates := []*service.Template{
 		{Name: "claude", OSFamily: service.DefaultOSFamily, StartupScript: "echo one\necho two"},
 		{Name: "pi", OSFamily: service.DefaultOSFamily, StartupScript: "echo three"},
 	}
 	out := buildTemplateListOutput(templates)
-	lines := strings.Split(out, "\n")
-	foundBlank := false
-	for i := 1; i < len(lines)-1; i++ {
-		if lines[i] == "" && strings.Contains(lines[i-1], "claude") && strings.Contains(lines[i+1], "pi") {
-			foundBlank = true
-			break
-		}
-	}
-	if !foundBlank {
-		t.Fatalf("expected blank line between claude and pi rows: %q", out)
-	}
 	if !strings.Contains(out, "echo one echo two") {
 		t.Fatalf("expected collapsed script preview: %q", out)
+	}
+	if strings.Contains(out, "claude") && strings.Contains(out, "\n\npi") {
+		t.Fatalf("did not expect blank line between rows: %q", out)
 	}
 }
 
