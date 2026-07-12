@@ -70,7 +70,7 @@ func TestPrintSnapshotTable(t *testing.T) {
 	}
 
 	out := captureStdout(t, func() {
-		printSnapshotTable(items)
+		printSnapshotTableWidth(items, 120)
 	})
 
 	if !strings.Contains(out, "AMI ID") || !strings.Contains(out, "NAME") || !strings.Contains(out, "STATE") {
@@ -90,5 +90,28 @@ func TestPrintSnapshotTable(t *testing.T) {
 	}
 	if !strings.Contains(out, "i-abc") {
 		t.Fatalf("missing box id: %q", out)
+	}
+}
+
+func TestPrintSnapshotTableFitsWidth(t *testing.T) {
+	items := []snapshotItem{
+		{
+			AmiID:    "ami-0abcdefghijklmnopqrstuvwxyz",
+			Name:     "very-long-snapshot-name-here",
+			State:    "available",
+			BoxAwsID: "i-0abcdefghijklmnopqrstuvwxyz",
+			Region:   "ap-southeast-2",
+			Provider: "aws",
+			OSFamily: "ubuntu",
+		},
+	}
+	const width = 80
+	out := captureStdout(t, func() {
+		printSnapshotTableWidth(items, width)
+	})
+	for i, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+		if len(line) > width {
+			t.Fatalf("line %d length %d exceeds %d: %q", i, len(line), width, line)
+		}
 	}
 }

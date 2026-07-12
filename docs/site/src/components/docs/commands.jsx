@@ -40,6 +40,10 @@ export default function CommandsDoc() {
             ['outpost setup', 'Configure AWS credentials and region'],
             ['outpost clear-creds', 'Clear saved AWS credentials'],
             ['outpost health', 'Check config, credentials, region, and database'],
+            [
+              'outpost import',
+              'Sync EC2 instances and self-owned AMIs from your AWS account (configured region) into the local DB; prompts for each untracked resource — answer y to import or press Enter to skip. For boxes, may ask for an existing .pem to authorize outpost SSH',
+            ],
           ]}
         />
       </div>
