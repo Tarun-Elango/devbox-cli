@@ -26,17 +26,51 @@ func TestFormatTemplateScriptCollapsesWhitespace(t *testing.T) {
 	}
 }
 
-func TestBuildTemplateListOutputCollapsesScript(t *testing.T) {
+func TestBuildTemplateListOutputShowsFullOS(t *testing.T) {
 	templates := []*service.Template{
-		{Name: "claude", OSFamily: service.DefaultOSFamily, StartupScript: "echo one\necho two"},
-		{Name: "pi", OSFamily: service.DefaultOSFamily, StartupScript: "echo three"},
+		{Name: "claude", OSFamily: service.OSFamilyAmazonLinux, StartupScript: "echo one\necho two"},
 	}
 	out := buildTemplateListOutput(templates)
+	wantOS := service.MustOSProfile(service.OSFamilyAmazonLinux).DisplayName
+	if !strings.Contains(out, wantOS) {
+		t.Fatalf("expected full OS label %q in output: %q", wantOS, out)
+	}
+	if strings.Contains(out, "Amazon Linu...") || strings.Contains(out, "Amazon Linux...") {
+		t.Fatalf("OS label should not be truncated: %q", out)
+	}
 	if !strings.Contains(out, "echo one echo two") {
 		t.Fatalf("expected collapsed script preview: %q", out)
 	}
-	if strings.Contains(out, "claude") && strings.Contains(out, "\n\npi") {
-		t.Fatalf("did not expect blank line between rows: %q", out)
+}
+
+func TestTemplateTableStartupScriptUsesTerminalWidth(t *testing.T) {
+	templates := []*service.Template{{
+		Name:          "claude",
+		OSFamily:      service.DefaultOSFamily,
+		StartupScript: strings.Repeat("a", 80),
+	}}
+
+	var narrow, wide strings.Builder
+	if err := writeTemplateTable(&narrow, templates, 70); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeTemplateTable(&wide, templates, 130); err != nil {
+		t.Fatal(err)
+	}
+
+	narrowLines := strings.Split(strings.TrimSpace(narrow.String()), "\n")
+	wideLines := strings.Split(strings.TrimSpace(wide.String()), "\n")
+	if len(narrowLines[2]) != 70 {
+		t.Fatalf("narrow row length = %d, want 70: %q", len(narrowLines[2]), narrowLines[2])
+	}
+	if len(wideLines[2]) != 124 {
+		t.Fatalf("wide row length = %d, want 124: %q", len(wideLines[2]), wideLines[2])
+	}
+	if !strings.HasSuffix(narrowLines[2], "...") {
+		t.Fatalf("expected narrow script to truncate: %q", narrowLines[2])
+	}
+	if strings.HasSuffix(wideLines[2], "...") {
+		t.Fatalf("wide script should not truncate: %q", wideLines[2])
 	}
 }
 
