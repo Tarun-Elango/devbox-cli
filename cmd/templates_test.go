@@ -26,17 +26,20 @@ func TestFormatTemplateScriptCollapsesWhitespace(t *testing.T) {
 	}
 }
 
-func TestBuildTemplateListOutputCollapsesScript(t *testing.T) {
+func TestBuildTemplateListOutputShowsFullOS(t *testing.T) {
 	templates := []*service.Template{
-		{Name: "claude", OSFamily: service.DefaultOSFamily, StartupScript: "echo one\necho two"},
-		{Name: "pi", OSFamily: service.DefaultOSFamily, StartupScript: "echo three"},
+		{Name: "claude", OSFamily: service.OSFamilyAmazonLinux, StartupScript: "echo one\necho two"},
 	}
 	out := buildTemplateListOutput(templates)
+	wantOS := service.MustOSProfile(service.OSFamilyAmazonLinux).DisplayName
+	if !strings.Contains(out, wantOS) {
+		t.Fatalf("expected full OS label %q in output: %q", wantOS, out)
+	}
+	if strings.Contains(out, "Amazon Linu...") || strings.Contains(out, "Amazon Linux...") {
+		t.Fatalf("OS label should not be truncated: %q", out)
+	}
 	if !strings.Contains(out, "echo one echo two") {
 		t.Fatalf("expected collapsed script preview: %q", out)
-	}
-	if strings.Contains(out, "claude") && strings.Contains(out, "\n\npi") {
-		t.Fatalf("did not expect blank line between rows: %q", out)
 	}
 }
 

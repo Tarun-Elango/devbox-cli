@@ -44,15 +44,22 @@ func buildTemplateListOutput(templates []*service.Template) string {
 
 // writeTemplateTable: creates header and separator
 func writeTemplateTable(w io.Writer, templates []*service.Template) error {
-	const colSep = "  |  "
-	if _, err := fmt.Fprintf(w, "%-20s%s%-14s%s%s\n", "TEMPLATE NAME", colSep, "OS", colSep, "STARTUP SCRIPT"); err != nil {
+	const (
+		colSep   = "  |  "
+		nameWidth = 16
+		osWidth   = 18
+	)
+	if _, err := fmt.Fprintf(w, "%s%s%s%s%s\n",
+		truncatePad("TEMPLATE NAME", nameWidth), colSep,
+		truncatePad("OS", osWidth), colSep,
+		"STARTUP SCRIPT"); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintln(w, strings.Repeat("-", 70)); err != nil {
 		return err
 	}
 	for _, t := range templates {
-		if err := writeTemplateRow(w, t, colSep); err != nil {
+		if err := writeTemplateRow(w, t, colSep, nameWidth, osWidth); err != nil {
 			return err
 		}
 	}
@@ -141,14 +148,15 @@ func templateOSLabel(t *service.Template) string {
 }
 
 // writeTemplateRow: writes one row per template
-func writeTemplateRow(w io.Writer, t *service.Template, colSep string) error {
+func writeTemplateRow(w io.Writer, t *service.Template, colSep string, nameWidth, osWidth int) error {
 	ref := t.Name
 	if ref == "" {
 		ref = t.ID
 	}
-	ref = truncatePad(ref, 20)
-	osLabel := truncatePad(templateOSLabel(t), 14)
-	_, err := fmt.Fprintf(w, "%s%s%s%s%s\n", ref, colSep, osLabel, colSep, formatTemplateScript(t.StartupScript))
+	_, err := fmt.Fprintf(w, "%s%s%s%s%s\n",
+		truncatePad(ref, nameWidth), colSep,
+		truncatePad(templateOSLabel(t), osWidth), colSep,
+		formatTemplateScript(t.StartupScript))
 	return err
 }
 
