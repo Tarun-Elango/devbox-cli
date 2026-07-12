@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"outpost-cli/helper"
 	"outpost-cli/service"
@@ -35,13 +34,21 @@ func Ls(args []string) {
 		return
 	}
 
-	fmt.Printf("%-24s  %-18s  %-10s  %-14s  %-8s  %-14s  %-16s\n", "ID", "NAME", "STATUS", "OS", "PROVIDER", "REGION", "PUBLIC IP")
-	fmt.Println(strings.Repeat("-", 120))
-	for _, b := range boxes {
+	printBoxTable(boxes, helper.StdoutWidth())
+}
+
+func printBoxTable(boxes []Box, termWidth int) {
+	headers := []string{"ID", "NAME", "STATUS", "OS", "PROVIDER", "REGION", "PUBLIC IP"}
+	preferred := []int{24, 18, 10, 14, 8, 14, 16}
+	min := []int{12, 8, 6, 8, 3, 8, 7}
+
+	rows := make([][]string, len(boxes))
+	for i, b := range boxes {
 		osLabel := b.OSFamily
 		if p, ok := service.OSProfileFor(b.OSFamily); ok {
 			osLabel = p.DisplayName
 		}
-		fmt.Printf("%-24s  %-18s  %-10s  %-14s  %-8s  %-14s  %-16s\n", b.ID, b.Name, b.Status, osLabel, b.Provider, b.Region, b.PublicIP)
+		rows[i] = []string{b.ID, b.Name, b.Status, osLabel, b.Provider, b.Region, b.PublicIP}
 	}
+	printTable(headers, rows, preferred, min, termWidth)
 }

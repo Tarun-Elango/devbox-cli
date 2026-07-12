@@ -181,13 +181,21 @@ func snapshotsDelete(amiID string) {
 }
 
 func printSnapshotTable(items []snapshotItem) {
-	fmt.Printf("%-24s  %-18s  %-12s  %-14s  %-14s  %-10s  %s\n", "AMI ID", "NAME", "STATE", "OS", "REGION", "PROVIDER", "BOX ID")
-	fmt.Println(strings.Repeat("-", 130))
-	for _, s := range items {
+	printSnapshotTableWidth(items, helper.StdoutWidth())
+}
+
+func printSnapshotTableWidth(items []snapshotItem, termWidth int) {
+	headers := []string{"AMI ID", "NAME", "STATE", "OS", "REGION", "PROVIDER", "BOX ID"}
+	preferred := []int{24, 18, 12, 14, 14, 10, 19}
+	min := []int{12, 8, 7, 8, 8, 3, 10}
+
+	rows := make([][]string, len(items))
+	for i, s := range items {
 		osLabel := s.OSFamily
 		if p, ok := service.OSProfileFor(s.OSFamily); ok {
 			osLabel = p.DisplayName
 		}
-		fmt.Printf("%-24s  %-18s  %-12s  %-14s  %-14s  %-10s  %s\n", s.AmiID, s.Name, s.State, osLabel, s.Region, s.Provider, s.BoxAwsID)
+		rows[i] = []string{s.AmiID, s.Name, s.State, osLabel, s.Region, s.Provider, s.BoxAwsID}
 	}
+	printTable(headers, rows, preferred, min, termWidth)
 }
