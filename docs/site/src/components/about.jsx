@@ -16,7 +16,7 @@ export default function AboutPage() {
 
         <div className="card card-purpose">
           <h2>Why outpost?</h2>
-          <figure className="purpose-diagram">
+          {/* <figure className="purpose-diagram">
             <div className="purpose-flow">
               <div className="purpose-step">
                 <span>Your terminal</span>
@@ -37,7 +37,7 @@ export default function AboutPage() {
               Create, connect to, and remove cloud development machines from your
               terminal. Your AWS credentials stay local.
             </figcaption>
-          </figure>
+          </figure> */}
           <ul>
             <li>
               <strong>Dedicated dev machine on the cloud</strong> — your own EC2
