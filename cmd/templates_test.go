@@ -10,11 +10,41 @@ import (
 func TestFormatTemplateScriptTruncates(t *testing.T) {
 	long := strings.Repeat("a", 80)
 	got := formatTemplateScript(long)
-	if len(got) != 72 {
-		t.Fatalf("expected truncated length 72, got %d (%q)", len(got), got)
+	if len(got) != 48 {
+		t.Fatalf("expected truncated length 48, got %d (%q)", len(got), got)
 	}
 	if !strings.HasSuffix(got, "...") {
 		t.Fatalf("expected ellipsis suffix, got %q", got)
+	}
+}
+
+func TestFormatTemplateScriptCollapsesWhitespace(t *testing.T) {
+	got := formatTemplateScript("if true; then\n  echo hi\nfi")
+	want := "if true; then echo hi fi"
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestBuildTemplateListOutputSeparatesRows(t *testing.T) {
+	templates := []*service.Template{
+		{Name: "claude", OSFamily: service.DefaultOSFamily, StartupScript: "echo one\necho two"},
+		{Name: "pi", OSFamily: service.DefaultOSFamily, StartupScript: "echo three"},
+	}
+	out := buildTemplateListOutput(templates)
+	lines := strings.Split(out, "\n")
+	foundBlank := false
+	for i := 1; i < len(lines)-1; i++ {
+		if lines[i] == "" && strings.Contains(lines[i-1], "claude") && strings.Contains(lines[i+1], "pi") {
+			foundBlank = true
+			break
+		}
+	}
+	if !foundBlank {
+		t.Fatalf("expected blank line between claude and pi rows: %q", out)
+	}
+	if !strings.Contains(out, "echo one echo two") {
+		t.Fatalf("expected collapsed script preview: %q", out)
 	}
 }
 

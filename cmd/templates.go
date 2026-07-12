@@ -51,7 +51,13 @@ func writeTemplateTable(w io.Writer, templates []*service.Template) error {
 	if _, err := fmt.Fprintln(w, strings.Repeat("-", 70)); err != nil {
 		return err
 	}
-	for _, t := range templates {
+	for i, t := range templates {
+		if i > 0 {
+			// Blank line between rows so wrapped scripts don't blur into the next template.
+			if _, err := fmt.Fprintln(w); err != nil {
+				return err
+			}
+		}
 		if err := writeTemplateRow(w, t, colSep); err != nil {
 			return err
 		}
@@ -142,12 +148,24 @@ func templateOSLabel(t *service.Template) string {
 
 // writeTemplateRow: writes one row per template
 func writeTemplateRow(w io.Writer, t *service.Template, colSep string) error {
-	ref := t.ID
+	ref := t.Name
 	if ref == "" {
-		ref = t.Name
+		ref = t.ID
 	}
-	_, err := fmt.Fprintf(w, "%-20s%s%-14s%s%s\n", ref, colSep, templateOSLabel(t), colSep, formatTemplateScript(t.StartupScript))
+	ref = truncatePad(ref, 20)
+	osLabel := truncatePad(templateOSLabel(t), 14)
+	_, err := fmt.Fprintf(w, "%s%s%s%s%s\n", ref, colSep, osLabel, colSep, formatTemplateScript(t.StartupScript))
 	return err
+}
+
+func truncatePad(s string, width int) string {
+	if len(s) > width {
+		if width <= 3 {
+			return s[:width]
+		}
+		return s[:width-3] + "..."
+	}
+	return fmt.Sprintf("%-*s", width, s)
 }
 
 func formatTemplateScript(s string) string {
@@ -155,8 +173,9 @@ func formatTemplateScript(s string) string {
 	if s == "-" {
 		return s
 	}
-	s = strings.ReplaceAll(s, "\n", " ")
-	const maxLen = 72
+	// Collapse whitespace so multi-line scripts stay a single compact preview.
+	s = strings.Join(strings.Fields(s), " ")
+	const maxLen = 48
 	if len(s) > maxLen {
 		s = s[:maxLen-3] + "..."
 	}
