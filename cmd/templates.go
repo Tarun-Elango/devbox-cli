@@ -51,13 +51,7 @@ func writeTemplateTable(w io.Writer, templates []*service.Template) error {
 	if _, err := fmt.Fprintln(w, strings.Repeat("-", 70)); err != nil {
 		return err
 	}
-	for i, t := range templates {
-		if i > 0 {
-			// Blank line between rows so wrapped scripts don't blur into the next template.
-			if _, err := fmt.Fprintln(w); err != nil {
-				return err
-			}
-		}
+	for _, t := range templates {
 		if err := writeTemplateRow(w, t, colSep); err != nil {
 			return err
 		}
