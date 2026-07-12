@@ -18,68 +18,24 @@ export default function AboutPage() {
           <h2>Why outpost?</h2>
           <figure className="purpose-diagram">
             <div className="purpose-flow">
-              <section className="purpose-stage">
-                <div className="purpose-stage-label">
-                  <span>1</span>
-                  Your laptop
-                </div>
-                <div className="purpose-terminal">
-                  <div className="purpose-terminal-bar" aria-hidden="true">
-                    <i />
-                    <i />
-                    <i />
-                    <small>terminal</small>
-                  </div>
-                  <code>
-                    <span>$ outpost create dev</span>
-                    <span className="purpose-terminal-success">✓ dev box ready</span>
-                    <span>$ outpost ssh dev</span>
-                  </code>
-                </div>
-                <p>Run one command. Credentials and config stay here.</p>
-              </section>
-
-              <div className="purpose-connection" aria-hidden="true">
-                <strong>OUTPOST</strong>
-                <span>AWS API</span>
-                <div>→</div>
+              <div className="purpose-step">
+                <span>Your terminal</span>
+                <strong>You</strong>
               </div>
-
-              <section className="purpose-stage purpose-stage-cloud">
-                <div className="purpose-stage-label">
-                  <span>2</span>
-                  Your AWS account
-                </div>
-                <div className="purpose-boxes">
-                  <div className="purpose-box">
-                    <span className="purpose-status" />
-                    <strong>dev</strong>
-                    <small>EC2 · running</small>
-                  </div>
-                  <div className="purpose-box">
-                    <span className="purpose-status purpose-status-idle" />
-                    <strong>project-b</strong>
-                    <small>EC2 · stopped</small>
-                  </div>
-                </div>
-                <p>Private dev machines you own and control.</p>
-              </section>
-            </div>
-
-            <div className="purpose-lifecycle" aria-label="Dev box lifecycle">
-              <span>create</span>
-              <b>→</b>
-              <span>start</span>
-              <b>→</b>
-              <span>ssh + sync</span>
-              <b>→</b>
-              <span>stop</span>
-              <b>→</b>
-              <span>delete</span>
+              <span className="purpose-arrow" aria-hidden="true">→</span>
+              <div className="purpose-step purpose-step-cli">
+                <span>Remote control</span>
+                <strong>Outpost CLI</strong>
+              </div>
+              <span className="purpose-arrow" aria-hidden="true">→</span>
+              <div className="purpose-step">
+                <span>Your AWS account</span>
+                <strong>Dev box</strong>
+              </div>
             </div>
             <figcaption>
-              Outpost is the remote control for disposable development machines in
-              your own cloud.
+              Create, connect to, and remove cloud development machines from your
+              terminal. Your AWS credentials stay local.
             </figcaption>
           </figure>
           <ul>
