@@ -76,6 +76,11 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 		resolvedOS = DefaultOSFamily
 	}
 
+	arch, err := ArchitectureForInstanceType(instanceType)
+	if err != nil {
+		return nil, err
+	}
+
 	if fromSnapshot {
 		record, err := db.GetSnapshotByAmiIDAndUserID(snapshotAmiID, userID)
 		if err == sql.ErrNoRows {
@@ -109,6 +114,14 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 			return nil, fmt.Errorf("snapshot AMI not found or not available: %s", snapshotAmiID)
 		}
 
+		amiArch := strings.TrimSpace(string(resp.Images[0].Architecture))
+		if amiArch != "" && amiArch != arch {
+			return nil, fmt.Errorf(
+				"snapshot AMI %s is %s but instance type %s requires %s",
+				snapshotAmiID, amiArch, instanceType, arch,
+			)
+		}
+
 		effectiveAmiID = snapshotAmiID
 		// Snapshot OS wins over the create-time picker.
 		if snapOS := localDb.StringValue(record.OSFamily); snapOS != "" {
@@ -119,10 +132,6 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 			return nil, err
 		}
 		ec2Client, err = r.EC2ForRegion(launchRegion)
-		if err != nil {
-			return nil, err
-		}
-		arch, err := ArchitectureForInstanceType(instanceType)
 		if err != nil {
 			return nil, err
 		}
