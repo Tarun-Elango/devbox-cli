@@ -169,9 +169,13 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 	// When using the default base AMI apply our standard storage spec.
 	// When restoring from a snapshot, honour the AMI's own block device mapping.
 	if !fromSnapshot {
+		rootDeviceName, err := rootDeviceNameForAMI(ctx, ec2Client, effectiveAmiID)
+		if err != nil {
+			return nil, err
+		}
 		input.BlockDeviceMappings = []types.BlockDeviceMapping{
 			{
-				DeviceName: aws.String("/dev/xvda"),
+				DeviceName: aws.String(rootDeviceName),
 				Ebs: &types.EbsBlockDevice{
 					VolumeSize:          aws.Int32(int32(volumeSizeGB)),
 					VolumeType:          types.VolumeTypeGp3,

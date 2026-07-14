@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 
 	awsclient "outpost-cli/service/aws"
@@ -49,4 +50,23 @@ func (r *Runtime) ResolveAMIForOS(ctx context.Context, region, osFamily, arch st
 		return "", fmt.Errorf("SSM parameter %s returned invalid AMI id %q for %s in %s", param, amiID, profile.DisplayName, region)
 	}
 	return amiID, nil
+}
+
+// rootDeviceNameForAMI returns the AMI's root EBS device name (e.g. /dev/xvda or /dev/sda1).
+// Volume size overrides must use this name or EC2 keeps the AMI's default root size.
+func rootDeviceNameForAMI(ctx context.Context, ec2Client *ec2.Client, amiID string) (string, error) {
+	resp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		ImageIds: []string{amiID},
+	})
+	if err != nil {
+		return "", awsclient.WrapError("describe image for root device", err)
+	}
+	if len(resp.Images) == 0 {
+		return "", fmt.Errorf("AMI not found: %s", amiID)
+	}
+	name := strings.TrimSpace(aws.ToString(resp.Images[0].RootDeviceName))
+	if name == "" {
+		return "", fmt.Errorf("AMI %s has no root device name", amiID)
+	}
+	return name, nil
 }
