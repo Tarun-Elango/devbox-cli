@@ -40,7 +40,12 @@ func Resize(args []string) {
 		os.Exit(1)
 	}
 	if changeType {
-		selected, err := helper.SelectInstanceTypeWithDefault(service.AllInstanceTypes(), info.Instance.InstanceType)
+		arch, err := service.ArchitectureForInstanceType(info.Instance.InstanceType)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		selected, err := helper.SelectInstanceTypeWithDefault(service.InstanceTypesForArch(arch), info.Instance.InstanceType)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error selecting instance type: %v\n", err)
 			os.Exit(1)

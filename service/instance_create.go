@@ -76,6 +76,11 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 		resolvedOS = DefaultOSFamily
 	}
 
+	arch, err := ArchitectureForInstanceType(instanceType)
+	if err != nil {
+		return nil, err
+	}
+
 	if fromSnapshot {
 		record, err := db.GetSnapshotByAmiIDAndUserID(snapshotAmiID, userID)
 		if err == sql.ErrNoRows {
@@ -109,6 +114,14 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 			return nil, fmt.Errorf("snapshot AMI not found or not available: %s", snapshotAmiID)
 		}
 
+		amiArch := strings.TrimSpace(string(resp.Images[0].Architecture))
+		if amiArch != "" && amiArch != arch {
+			return nil, fmt.Errorf(
+				"snapshot AMI %s is %s but instance type %s requires %s",
+				snapshotAmiID, amiArch, instanceType, arch,
+			)
+		}
+
 		effectiveAmiID = snapshotAmiID
 		// Snapshot OS wins over the create-time picker.
 		if snapOS := localDb.StringValue(record.OSFamily); snapOS != "" {
@@ -122,7 +135,7 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 		if err != nil {
 			return nil, err
 		}
-		effectiveAmiID, err = r.ResolveAMIForOS(ctx, launchRegion, resolvedOS)
+		effectiveAmiID, err = r.ResolveAMIForOS(ctx, launchRegion, resolvedOS, arch)
 		if err != nil {
 			return nil, err
 		}
@@ -165,9 +178,13 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 	// When using the default base AMI apply our standard storage spec.
 	// When restoring from a snapshot, honour the AMI's own block device mapping.
 	if !fromSnapshot {
+		rootDeviceName, err := rootDeviceNameForAMI(ctx, ec2Client, effectiveAmiID)
+		if err != nil {
+			return nil, err
+		}
 		input.BlockDeviceMappings = []types.BlockDeviceMapping{
 			{
-				DeviceName: aws.String("/dev/xvda"),
+				DeviceName: aws.String(rootDeviceName),
 				Ebs: &types.EbsBlockDevice{
 					VolumeSize:          aws.Int32(int32(volumeSizeGB)),
 					VolumeType:          types.VolumeTypeGp3,

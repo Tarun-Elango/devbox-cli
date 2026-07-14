@@ -54,7 +54,7 @@ func SelectInstanceTypeWithDefault(types []service.InstanceType, defaultType str
 			if i == selected {
 				prefix = "> "
 			}
-			fmt.Printf("%s%s\n", prefix, types[i].Label)
+			fmt.Printf("%s%s — %s\n", prefix, types[i].ID, types[i].Label)
 		}
 	}
 
