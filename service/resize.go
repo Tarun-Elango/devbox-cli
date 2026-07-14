@@ -64,7 +64,18 @@ func (r *Runtime) ResizeInstance(instanceID, userID, newInstanceType string, new
 		if err := ValidateInstanceType(newInstanceType); err != nil {
 			return nil, err
 		}
-		_, err := ec2Client.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
+		currentArch, err := ArchitectureForInstanceType(current.InstanceType)
+		if err != nil {
+			return nil, err
+		}
+		newArch, err := ArchitectureForInstanceType(newInstanceType)
+		if err != nil {
+			return nil, err
+		}
+		if currentArch != newArch {
+			return nil, fmt.Errorf("cannot resize from %s (%s) to %s (%s); architecture must match", current.InstanceType, currentArch, newInstanceType, newArch)
+		}
+		_, err = ec2Client.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
 			InstanceId: aws.String(instanceID),
 			InstanceType: &types.AttributeValue{
 				Value: aws.String(newInstanceType),

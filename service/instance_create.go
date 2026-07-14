@@ -122,7 +122,11 @@ func (r *Runtime) createInstanceWithStartupScripts(name, publicKey, snapshotAmiI
 		if err != nil {
 			return nil, err
 		}
-		effectiveAmiID, err = r.ResolveAMIForOS(ctx, launchRegion, resolvedOS)
+		arch, err := ArchitectureForInstanceType(instanceType)
+		if err != nil {
+			return nil, err
+		}
+		effectiveAmiID, err = r.ResolveAMIForOS(ctx, launchRegion, resolvedOS, arch)
 		if err != nil {
 			return nil, err
 		}
